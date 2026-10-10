@@ -48,62 +48,132 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
-  // Tilt & Magnetic effects
-  const heroCardRef = useRef<HTMLDivElement>(null);
-  const heroRightRef = useRef<HTMLDivElement>(null);
+  // Scroll-based video scrubbing + scene text (lerp-smoothed)
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroSectionRef = useRef<HTMLElement>(null);
+  const sceneRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const finaleRef = useRef<HTMLDivElement>(null);
+  const scrollHintRef = useRef<HTMLDivElement>(null);
+
+  // Scene definitions — each covers a [start, end] progress range (0–1)
+  const SCENES = [
+    {
+      tag: '01 / Seat Covers',
+      title: 'Quilted Perfection',
+      desc: 'Diamond-stitched leatherette that wraps every contour. Airbag-safe, sweat-proof, zero-compromise.',
+      start: 0.00, end: 0.20,
+    },
+    {
+      tag: '02 / Floor Mats',
+      title: 'All-Weather Guard',
+      desc: 'Deep-channel rubber mats cut to OEM tolerance. Mud, rain, and chai spills wiped clean in seconds.',
+      start: 0.20, end: 0.40,
+    },
+    {
+      tag: '03 / Steering Covers',
+      title: 'Grip Redefined',
+      desc: 'Micro-perforated sport leather with a slip-resistant inner lining. Feel every curve, command every turn.',
+      start: 0.40, end: 0.58,
+    },
+    {
+      tag: '04 / Dashboard Accessories',
+      title: 'Detail-Driven Craft',
+      desc: 'Sun shades, organisers and console trims built for the interior enthusiast. Premium, purposeful, precise.',
+      start: 0.58, end: 0.76,
+    },
+    {
+      tag: '05 / Car Care',
+      title: 'Showroom Finish',
+      desc: 'Ceramic-infused detailing products that protect paint, glass and fabric. One kit. Every surface.',
+      start: 0.76, end: 0.88,
+    },
+  ] as const;
 
   useEffect(() => {
-    const hr = heroRightRef.current;
-    const hc = heroCardRef.current;
-    if (!hr || !hc) return;
+    const video = heroVideoRef.current;
+    const section = heroSectionRef.current;
+    if (!video || !section) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const b = hr.getBoundingClientRect();
-      const x = (e.clientX - b.left) / b.width - 0.5;
-      const y = (e.clientY - b.top) / b.height - 0.5;
-      hc.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
-    };
+    video.pause();
+    video.currentTime = 0;
 
-    const handleMouseLeave = () => {
-      hc.style.transform = '';
-    };
+    let targetProgress = 0;
+    let currentProgress = 0;
+    let rafId: number;
+    const LERP_FACTOR = 0.06; // lower = slower / smoother
 
-    hr.addEventListener('mousemove', handleMouseMove);
-    hr.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      hr.removeEventListener('mousemove', handleMouseMove);
-      hr.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, []);
-
-  // Stats Counters
-  const [stats, setStats] = useState({ models: 0, drivers: 0, warranty: 0 });
-  useEffect(() => {
-    const duration = 1600;
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(1, elapsed / duration);
-      const ease = 1 - Math.pow(1 - progress, 3);
-
-      setStats({
-        models: Math.round(100 * ease),
-        drivers: Math.round(40 * ease),
-        warranty: Math.round(2 * ease),
+    const updateOverlays = (progress: number) => {
+      // Drive scene text panels
+      SCENES.forEach((scene, i) => {
+        const el = sceneRefs.current[i];
+        if (!el) return;
+        const fadeRange = 0.03;
+        let opacity = 0;
+        if (progress >= scene.start && progress <= scene.end) {
+          const fadeIn  = Math.min(1, (progress - scene.start) / fadeRange);
+          const fadeOut = Math.min(1, (scene.end - progress) / fadeRange);
+          opacity = Math.min(fadeIn, fadeOut);
+        }
+        el.style.opacity = String(opacity);
+        el.style.transform = opacity > 0
+          ? 'translateY(0)'
+          : progress < scene.start ? 'translateY(28px)' : 'translateY(-28px)';
       });
 
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+      // Finale overlay
+      const finale = finaleRef.current;
+      if (finale) {
+        const finaleProgress = Math.max(0, Math.min(1, (progress - 0.88) / 0.05));
+        finale.style.opacity = String(finaleProgress);
+        finale.style.pointerEvents = finaleProgress > 0.5 ? 'auto' : 'none';
+      }
+
+      // Hide scroll hint once user starts scrolling
+      const hint = scrollHintRef.current;
+      if (hint) {
+        hint.style.opacity = progress > 0.02 ? '0' : '1';
       }
     };
 
-    const timer = setTimeout(() => {
-      requestAnimationFrame(animate);
-    }, 400);
+    const tick = () => {
+      if (!video.duration) { rafId = requestAnimationFrame(tick); return; }
+      // Lerp toward target
+      currentProgress += (targetProgress - currentProgress) * LERP_FACTOR;
+      // Clamp tiny floating point tail
+      if (Math.abs(targetProgress - currentProgress) < 0.0001) {
+        currentProgress = targetProgress;
+      }
+      video.currentTime = currentProgress * video.duration;
+      updateOverlays(currentProgress);
+      rafId = requestAnimationFrame(tick);
+    };
 
-    return () => clearTimeout(timer);
+    const onScroll = () => {
+      const rect = section.getBoundingClientRect();
+      const sectionHeight = section.offsetHeight - window.innerHeight;
+      const scrolled = -rect.top;
+      targetProgress = Math.max(0, Math.min(1, scrolled / sectionHeight));
+
+      // Tell BackToTop whether we're inside the hero
+      const inHero = scrolled >= 0 && scrolled < sectionHeight;
+      window.dispatchEvent(new CustomEvent('hero-scroll', { detail: { inHero } }));
+    };
+
+    const onLoaded = () => {
+      video.pause();
+      onScroll();
+    };
+
+    video.addEventListener('loadedmetadata', onLoaded);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', onLoaded);
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Shop Filters State
@@ -293,139 +363,58 @@ export default function HomePage() {
 
   return (
     <main id="top">
-      {/* HERO SECTION */}
-      <section className="hero">
-        <div className="hero-bg" />
-        <div className="hero-ghost">CARXEN</div>
-        <div className="wrap hero-grid">
-          <div className="hero-l">
-            <p className="kick mono">
-              <span className="red">01</span>
-              <i />
-              Premium car accessories &amp; parts
-            </p>
-            <h1 className="disp">
-              <span className="mask">
-                <span>Engineered</span>
-              </span>
-              <span className="mask" style={{ ['--d' as any]: '.12s' }}>
-                <span>
-                  for <span className="o">every</span>
-                </span>
-              </span>
-              <span className="mask" style={{ ['--d' as any]: '.24s' }}>
-                <span>
-                  drive<span className="red">.</span>
-                </span>
-              </span>
-            </h1>
-            <p className="sub rv in" style={{ ['--d' as any]: '.6s' }}>
-              Premium car accessories crafted for a cleaner, safer and more expressive drive.
-              Cut to tolerance. Stitched to last. Fitted to 100+ models.
-            </p>
-            <div className="hero-cta rv in" style={{ ['--d' as any]: '.75s' }}>
-              <NextLink href="/shop" className="btn mag">
-                Shop now{' '}
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 12h16M13 5l7 7-7 7" />
-                </svg>
-              </NextLink>
-              <a href="#fitment" className="btn ghost mag">
-                Find your fit
-              </a>
+      {/* HERO SECTION — Scroll-based video with scene text */}
+      <section className="hero-video-section" ref={heroSectionRef} aria-label="Hero">
+        <div className="hero-video-sticky">
+          {/* Video layer */}
+          <video
+            ref={heroVideoRef}
+            className="hero-video-el"
+            src="/hero-video.mp4"
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          />
+
+          {/* Dark vignette base */}
+          <div className="hero-video-vignette" />
+
+          {/* Scene text panels — driven by scroll */}
+          {([
+            { tag: '01 / Seat Covers',          title: 'Quilted Perfection',       desc: 'Diamond-stitched leatherette that wraps every contour. Airbag-safe, sweat-proof, zero-compromise.' },
+            { tag: '02 / Floor Mats',            title: 'All-Weather Guard',        desc: 'Deep-channel rubber mats cut to OEM tolerance. Mud, rain, and chai spills wiped clean in seconds.' },
+            { tag: '03 / Steering Covers',       title: 'Grip Redefined',           desc: 'Micro-perforated sport leather with slip-resistant inner lining. Feel every curve, command every turn.' },
+            { tag: '04 / Dashboard Accessories', title: 'Detail-Driven Craft',      desc: 'Sun shades, organisers and console trims for the interior enthusiast. Premium, purposeful, precise.' },
+            { tag: '05 / Car Care',              title: 'Showroom Finish',          desc: 'Ceramic-infused detailing products that protect paint, glass and fabric. One kit. Every surface.' },
+          ] as const).map((scene, i) => (
+            <div
+              key={i}
+              className="hv-scene"
+              ref={(el) => { sceneRefs.current[i] = el; }}
+            >
+              <p className="hv-scene-tag mono">{scene.tag}</p>
+              <h2 className="hv-scene-title disp">{scene.title}</h2>
+              <p className="hv-scene-desc">{scene.desc}</p>
             </div>
-            <div className="trust rv in" style={{ ['--d' as any]: '.9s' }}>
-              <div className="avs">
-                <span style={{ background: '#e2231a' }}>AR</span>
-                <span style={{ background: '#1b1b1e' }}>PK</span>
-                <span style={{ background: '#5d5d64' }}>VM</span>
-                <span style={{ background: '#b91a12' }}>+</span>
-              </div>
-              <div className="tx">
-                <b>
-                  <span className="stars">★★★★★</span> 4.9 / 5
-                </b>
-                Loved by 40,000+ drivers
-              </div>
+          ))}
+
+          {/* Finale — CARXEN logo + slogan */}
+          <div className="hv-finale" ref={finaleRef}>
+            <div className="hv-finale-inner">
+              <p className="hv-finale-pre mono">The complete car accessories brand</p>
+              <h1 className="hv-finale-logo disp">CAR<span className="hv-finale-x">X</span>EN</h1>
+              <p className="hv-finale-slogan">Engineered for every drive<span className="hv-finale-dot">.</span></p>
+              <div className="hv-finale-line" />
+              <p className="hv-finale-sub mono">100+ Vehicle Models &nbsp;·&nbsp; 2-Year Warranty &nbsp;·&nbsp; Free Shipping</p>
             </div>
-            <ul className="stats rv in" style={{ ['--d' as any]: '1s' }}>
-              <li>
-                <b>
-                  <span>{stats.models}</span>
-                  <em>+</em>
-                </b>
-                <span>Vehicle models</span>
-              </li>
-              <li>
-                <b>
-                  <span>{stats.drivers}</span>
-                  <em>K</em>
-                </b>
-                <span>Happy drivers</span>
-              </li>
-              <li>
-                <b>
-                  <span>{stats.warranty}</span>
-                  <em>yr</em>
-                </b>
-                <span>Warranty</span>
-              </li>
-            </ul>
           </div>
 
-          <div className="hero-r" ref={heroRightRef}>
-            <div className="hero-card" ref={heroCardRef} id="heroCard">
-              <img
-                className="hero-photo"
-                src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=70&w=1200&auto=format&fit=crop"
-                alt="Interior"
-              />
-              <div className="hero-art">
-                <svg viewBox="0 0 320 400" aria-label="CARXEN quilted seat cover">
-                  <use href="#a-seat" />
-                </svg>
-              </div>
-            </div>
-            <div className="fl a">
-              <i />
-              <div>
-                Diamond quilt
-                <small>CX-GRAIN / 01</small>
-              </div>
-            </div>
-            <div className="fl b">
-              <div>
-                <span className="stars" style={{ fontSize: '11px' }}>
-                  ★★★★★
-                </span>
-                <small>412 REVIEWS</small>
-              </div>
-            </div>
-            <div className="fl c">
-              <div>
-                Airbag-safe seams
-                <small>CERTIFIED STITCH</small>
-              </div>
-            </div>
-            <div className="orb">
-              <svg className="ring" viewBox="0 0 120 120">
-                <defs>
-                  <path
-                    id="op"
-                    d="M60,60 m-48,0 a48,48 0 1,1 96,0 a48,48 0 1,1 -96,0"
-                  />
-                </defs>
-                <text>
-                  <textPath href="#op">
-                    Scroll to explore • CarXen • Scroll to explore •{' '}
-                  </textPath>
-                </text>
-              </svg>
-              <a href="#categories" className="core" aria-label="Scroll to categories">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 5v14M6 13l6 6 6-6" />
-                </svg>
-              </a>
+          {/* Scroll hint — fades away on first scroll */}
+          <div className="hero-video-scroll-hint-wrap" ref={scrollHintRef}>
+            <p className="hero-video-label mono">Scroll to explore</p>
+            <div className="hero-video-scroll-hint">
+              <span />
             </div>
           </div>
         </div>

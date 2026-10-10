@@ -4,13 +4,24 @@ import React, { useEffect, useState } from 'react';
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const [inHero, setInHero] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setVisible(window.scrollY > 700);
     };
+
+    const handleHeroScroll = (e: Event) => {
+      setInHero((e as CustomEvent<{ inHero: boolean }>).detail.inHero);
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('hero-scroll', handleHeroScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('hero-scroll', handleHeroScroll);
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -19,7 +30,7 @@ export function BackToTop() {
 
   return (
     <button
-      className={`totop ${visible ? 'on' : ''}`}
+      className={`totop ${visible && !inHero ? 'on' : ''}`}
       id="tt"
       onClick={scrollToTop}
       aria-label="Back to top"
