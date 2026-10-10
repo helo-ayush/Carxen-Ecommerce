@@ -48,51 +48,76 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
-  // Scroll-based video scrubbing + scene text (lerp-smoothed)
+  // Scroll-based video scrubbing + scene text (lerp-smoothed & flicker-free)
   const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroCanvasRef = useRef<HTMLCanvasElement>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
   const sceneRefs = useRef<(HTMLDivElement | null)[]>([]);
   const finaleRef = useRef<HTMLDivElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
 
-  // Scene definitions — each covers a [start, end] progress range (0–1)
+  // Scene definitions — aligned precisely to the actual video cuts in hero-video.mp4:
+  // 0.00s–1.85s (0.00–0.19) = Steering Wheel & Cockpit Cluster
+  // 1.95s–4.65s (0.19–0.47) = Quilted Diamond Seat Covers
+  // 4.75s–7.65s (0.47–0.77) = Custom 7D All-Weather Floor Mats
+  // 7.75s–8.90s (0.77–0.895)= Console, Armrest & Dash Accents
+  // 8.95s–9.85s (0.895–0.98)= Trunk Organizer & Detailing Car Care Kit
+  // 9.85s–10.0s (0.96–1.00) = Brand Finale
   const SCENES = [
     {
-      tag: '01 / Seat Covers',
+      tag: '01 / Steering Grip',
+      title: 'Grip Redefined',
+      desc: 'Micro-perforated sport leather with slip-resistant inner lining. Feel every curve, command every turn.',
+      start: 0.00,
+      peakStart: 0.00,
+      peakEnd: 0.13,
+      end: 0.19,
+    },
+    {
+      tag: '02 / Seat Covers',
       title: 'Quilted Perfection',
       desc: 'Diamond-stitched leatherette that wraps every contour. Airbag-safe, sweat-proof, zero-compromise.',
-      start: 0.00, end: 0.20,
+      start: 0.17,
+      peakStart: 0.22,
+      peakEnd: 0.42,
+      end: 0.47,
     },
     {
-      tag: '02 / Floor Mats',
+      tag: '03 / Floor Mats',
       title: 'All-Weather Guard',
-      desc: 'Deep-channel rubber mats cut to OEM tolerance. Mud, rain, and chai spills wiped clean in seconds.',
-      start: 0.20, end: 0.40,
+      desc: 'Deep-channel multi-layer mats cut to OEM tolerance. Mud, rain, and chai spills wiped clean in seconds.',
+      start: 0.45,
+      peakStart: 0.50,
+      peakEnd: 0.72,
+      end: 0.77,
     },
     {
-      tag: '03 / Steering Covers',
-      title: 'Grip Redefined',
-      desc: 'Micro-perforated sport leather with a slip-resistant inner lining. Feel every curve, command every turn.',
-      start: 0.40, end: 0.58,
-    },
-    {
-      tag: '04 / Dashboard Accessories',
+      tag: '04 / Dashboard & Console',
       title: 'Detail-Driven Craft',
-      desc: 'Sun shades, organisers and console trims built for the interior enthusiast. Premium, purposeful, precise.',
-      start: 0.58, end: 0.76,
+      desc: 'Armrest cushions, console trims and organisers for the interior enthusiast. Premium, purposeful, precise.',
+      start: 0.75,
+      peakStart: 0.79,
+      peakEnd: 0.86,
+      end: 0.90,
     },
     {
-      tag: '05 / Car Care',
+      tag: '05 / Car Care & Boot',
       title: 'Showroom Finish',
-      desc: 'Ceramic-infused detailing products that protect paint, glass and fabric. One kit. Every surface.',
-      start: 0.76, end: 0.88,
+      desc: 'All-in-one boot organisers and ceramic detailing products. Protect every surface, drive in pride.',
+      start: 0.88,
+      peakStart: 0.91,
+      peakEnd: 0.95,
+      end: 0.98,
     },
   ] as const;
 
   useEffect(() => {
     const video = heroVideoRef.current;
+    const canvas = heroCanvasRef.current;
     const section = heroSectionRef.current;
-    if (!video || !section) return;
+    if (!video || !canvas || !section) return;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
 
     video.pause();
     video.currentTime = 0;
@@ -100,51 +125,147 @@ export default function HomePage() {
     let targetProgress = 0;
     let currentProgress = 0;
     let rafId: number;
-    const LERP_FACTOR = 0.06; // lower = slower / smoother
+    const LERP_FACTOR = 0.08; // smooth & responsive interpolation
 
+    const syncCanvasSize = () => {
+      if (video.videoWidth && video.videoHeight) {
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+      }
+    };
+
+    const drawCurrentFrame = () => {
+      syncCanvasSize();
+      if (ctx && video.videoWidth && video.videoHeight) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    // Continuous, non-abrupt scene text panel interpolation
     const updateOverlays = (progress: number) => {
-      // Drive scene text panels
       SCENES.forEach((scene, i) => {
         const el = sceneRefs.current[i];
         if (!el) return;
-        const fadeRange = 0.03;
+
         let opacity = 0;
-        if (progress >= scene.start && progress <= scene.end) {
-          const fadeIn  = Math.min(1, (progress - scene.start) / fadeRange);
-          const fadeOut = Math.min(1, (scene.end - progress) / fadeRange);
-          opacity = Math.min(fadeIn, fadeOut);
+        let translateY = 24;
+
+        if (progress < scene.start) {
+          opacity = 0;
+          translateY = 24;
+        } else if (progress > scene.end) {
+          opacity = 0;
+          translateY = -24;
+        } else if (progress >= scene.peakStart && progress <= scene.peakEnd) {
+          opacity = 1;
+          translateY = 0;
+        } else if (progress < scene.peakStart) {
+          // Smooth fade & slide in from bottom
+          const range = Math.max(0.001, scene.peakStart - scene.start);
+          const t = Math.max(0, Math.min(1, (progress - scene.start) / range));
+          const ease = t * (2 - t);
+          opacity = ease;
+          translateY = (1 - ease) * 24;
+        } else {
+          // Smooth fade & slide out toward top
+          const range = Math.max(0.001, scene.end - scene.peakEnd);
+          const t = Math.max(0, Math.min(1, (scene.end - progress) / range));
+          const ease = t * (2 - t);
+          opacity = ease;
+          translateY = -(1 - ease) * 24;
         }
-        el.style.opacity = String(opacity);
-        el.style.transform = opacity > 0
-          ? 'translateY(0)'
-          : progress < scene.start ? 'translateY(28px)' : 'translateY(-28px)';
+
+        el.style.opacity = opacity.toFixed(3);
+        el.style.transform = `translateY(${translateY.toFixed(2)}px)`;
+        el.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
       });
 
       // Finale overlay
       const finale = finaleRef.current;
       if (finale) {
-        const finaleProgress = Math.max(0, Math.min(1, (progress - 0.88) / 0.05));
-        finale.style.opacity = String(finaleProgress);
-        finale.style.pointerEvents = finaleProgress > 0.5 ? 'auto' : 'none';
+        const finaleProgress = Math.max(0, Math.min(1, (progress - 0.96) / 0.035));
+        const ease = finaleProgress * (2 - finaleProgress);
+        finale.style.opacity = ease.toFixed(3);
+        finale.style.pointerEvents = ease > 0.5 ? 'auto' : 'none';
       }
 
       // Hide scroll hint once user starts scrolling
       const hint = scrollHintRef.current;
       if (hint) {
-        hint.style.opacity = progress > 0.02 ? '0' : '1';
+        const hintOpacity = Math.max(0, 1 - progress / 0.04);
+        hint.style.opacity = hintOpacity.toFixed(3);
+      }
+    };
+
+    // Flicker-free seeking: queue requests and only seek when decoder is ready
+    let isSeeking = false;
+    let pendingTime: number | null = null;
+    let lastSeekTime = -1;
+    let seekTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const requestSeek = (targetTime: number) => {
+      const dur = video.duration || 10;
+      // Clamp to prevent EOF freeze
+      const clamped = Math.max(0, Math.min(dur - 0.04, targetTime));
+
+      if (Math.abs(clamped - lastSeekTime) < 0.015) {
+        return;
+      }
+
+      if (isSeeking) {
+        pendingTime = clamped;
+      } else {
+        isSeeking = true;
+        lastSeekTime = clamped;
+        video.currentTime = clamped;
+
+        // Safety fallback in case a seek event is missed by browser
+        if (seekTimeout) clearTimeout(seekTimeout);
+        seekTimeout = setTimeout(() => {
+          if (isSeeking) {
+            isSeeking = false;
+            if (pendingTime !== null) {
+              const next = pendingTime;
+              pendingTime = null;
+              requestSeek(next);
+            }
+          }
+        }, 250);
+      }
+    };
+
+    const onSeeked = () => {
+      isSeeking = false;
+      if (seekTimeout) clearTimeout(seekTimeout);
+      drawCurrentFrame();
+
+      if (pendingTime !== null) {
+        const next = pendingTime;
+        pendingTime = null;
+        if (Math.abs(next - video.currentTime) > 0.015) {
+          isSeeking = true;
+          lastSeekTime = next;
+          video.currentTime = next;
+        }
       }
     };
 
     const tick = () => {
-      if (!video.duration) { rafId = requestAnimationFrame(tick); return; }
+      const dur = video.duration || 10;
+
       // Lerp toward target
-      currentProgress += (targetProgress - currentProgress) * LERP_FACTOR;
-      // Clamp tiny floating point tail
-      if (Math.abs(targetProgress - currentProgress) < 0.0001) {
+      const diff = targetProgress - currentProgress;
+      if (Math.abs(diff) < 0.0001) {
         currentProgress = targetProgress;
+      } else {
+        currentProgress += diff * LERP_FACTOR;
       }
-      video.currentTime = currentProgress * video.duration;
+
+      requestSeek(currentProgress * dur);
       updateOverlays(currentProgress);
+
       rafId = requestAnimationFrame(tick);
     };
 
@@ -161,16 +282,35 @@ export default function HomePage() {
 
     const onLoaded = () => {
       video.pause();
+      syncCanvasSize();
+      video.currentTime = 0.001;
       onScroll();
+      updateOverlays(0);
     };
 
     video.addEventListener('loadedmetadata', onLoaded);
+    video.addEventListener('loadeddata', drawCurrentFrame);
+    video.addEventListener('canplay', drawCurrentFrame);
+    video.addEventListener('seeked', onSeeked);
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', syncCanvasSize, { passive: true });
+
+    if (video.readyState >= 2) {
+      onLoaded();
+    } else {
+      updateOverlays(0);
+    }
+
     rafId = requestAnimationFrame(tick);
 
     return () => {
       video.removeEventListener('loadedmetadata', onLoaded);
+      video.removeEventListener('loadeddata', drawCurrentFrame);
+      video.removeEventListener('canplay', drawCurrentFrame);
+      video.removeEventListener('seeked', onSeeked);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', syncCanvasSize);
+      if (seekTimeout) clearTimeout(seekTimeout);
       cancelAnimationFrame(rafId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -366,7 +506,14 @@ export default function HomePage() {
       {/* HERO SECTION — Scroll-based video with scene text */}
       <section className="hero-video-section" ref={heroSectionRef} aria-label="Hero">
         <div className="hero-video-sticky">
-          {/* Video layer */}
+          {/* Canvas display layer — 100% flicker-free scroll scrubbing buffer */}
+          <canvas
+            ref={heroCanvasRef}
+            className="hero-video-canvas"
+            aria-hidden="true"
+          />
+
+          {/* Dedicated video decoder stream */}
           <video
             ref={heroVideoRef}
             className="hero-video-el"
@@ -380,14 +527,8 @@ export default function HomePage() {
           {/* Dark vignette base */}
           <div className="hero-video-vignette" />
 
-          {/* Scene text panels — driven by scroll */}
-          {([
-            { tag: '01 / Seat Covers',          title: 'Quilted Perfection',       desc: 'Diamond-stitched leatherette that wraps every contour. Airbag-safe, sweat-proof, zero-compromise.' },
-            { tag: '02 / Floor Mats',            title: 'All-Weather Guard',        desc: 'Deep-channel rubber mats cut to OEM tolerance. Mud, rain, and chai spills wiped clean in seconds.' },
-            { tag: '03 / Steering Covers',       title: 'Grip Redefined',           desc: 'Micro-perforated sport leather with slip-resistant inner lining. Feel every curve, command every turn.' },
-            { tag: '04 / Dashboard Accessories', title: 'Detail-Driven Craft',      desc: 'Sun shades, organisers and console trims for the interior enthusiast. Premium, purposeful, precise.' },
-            { tag: '05 / Car Care',              title: 'Showroom Finish',          desc: 'Ceramic-infused detailing products that protect paint, glass and fabric. One kit. Every surface.' },
-          ] as const).map((scene, i) => (
+          {/* Scene text panels — driven by scroll, aligned to exact video cuts */}
+          {SCENES.map((scene, i) => (
             <div
               key={i}
               className="hv-scene"

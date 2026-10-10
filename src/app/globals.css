@@ -726,7 +726,7 @@ nav.main a:hover::after {
   will-change: transform;
 }
 
-.hero-video-el {
+.hero-video-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -734,15 +734,20 @@ nav.main a:hover::after {
   object-fit: cover;
   display: block;
   z-index: 0;
-  /* Force GPU compositing layer — prevents browser downscaling blurring */
   transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: transform;
-  /* Boost contrast + saturation to compensate for low-bitrate compression wash */
-  filter: contrast(1.1) saturate(1.15) brightness(1.05);
-  /* Prevent browser from using lower-quality scaling */
-  image-rendering: -webkit-optimize-contrast;
+  will-change: contents;
+}
+
+.hero-video-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: -1;
+  opacity: 0.001;
+  pointer-events: none;
 }
 
 
