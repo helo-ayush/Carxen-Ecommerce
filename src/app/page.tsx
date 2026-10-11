@@ -14,6 +14,7 @@ import {
 } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
+import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
 
 export default function HomePage() {
   const router = useRouter();
@@ -122,28 +123,48 @@ export default function HomePage() {
     video.pause();
     video.currentTime = 0;
 
+    const mobileMedia = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+    let isMobileHero = mobileMedia.matches;
+    let mobileHeroVisible = true;
     let targetProgress = 0;
     let currentProgress = 0;
     let rafId: number;
-    const LERP_FACTOR = 0.08; // smooth & responsive interpolation
+    let lastTick = performance.now();
+    let lastPaintedProgress = -1;
+    let videoFrameCallbackId: number | null = null;
+    let readyObserver: MutationObserver | null = null;
+    const SMOOTHING_TIME = 180;
+    // The source is a ~30fps clip; seeking more often than its frame cadence
+    // makes the decoder do extra work without producing a new visible frame.
+    const SEEK_THRESHOLD = 1 / 30;
+
+    section.classList.toggle('hero-video-mobile', isMobileHero);
+
+    // Keep the hero's starting position correct if the header layout changes.
+    // The landing-page header is fixed over the hero, so only in-flow chrome
+    // contributes to the section's top offset.
+    const syncHeroOffset = () => {
+      const announcement = document.querySelector<HTMLElement>('.ann');
+      const header = document.querySelector<HTMLElement>('#hdr');
+      const headerPosition = header ? getComputedStyle(header).position : '';
+      const headerInFlow = headerPosition !== 'fixed' && headerPosition !== 'absolute';
+      const offset = (announcement?.offsetHeight ?? 0)
+        + (headerInFlow ? (header?.offsetHeight ?? 0) : 0);
+      section.style.setProperty('--hero-header-offset', `${offset}px`);
+    };
+
+    syncHeroOffset();
 
     const syncCanvasSize = () => {
       if (video.videoWidth && video.videoHeight) {
         if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
+          if (ctx) ctx.imageSmoothingEnabled = true;
         }
       }
     };
 
-    const drawCurrentFrame = () => {
-      syncCanvasSize();
-      if (ctx && video.videoWidth && video.videoHeight) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-    };
-
-    // Continuous, non-abrupt scene text panel interpolation
     const updateOverlays = (progress: number) => {
       SCENES.forEach((scene, i) => {
         const el = sceneRefs.current[i];
@@ -154,22 +175,18 @@ export default function HomePage() {
 
         if (progress < scene.start) {
           opacity = 0;
-          translateY = 24;
         } else if (progress > scene.end) {
-          opacity = 0;
           translateY = -24;
         } else if (progress >= scene.peakStart && progress <= scene.peakEnd) {
           opacity = 1;
           translateY = 0;
         } else if (progress < scene.peakStart) {
-          // Smooth fade & slide in from bottom
           const range = Math.max(0.001, scene.peakStart - scene.start);
           const t = Math.max(0, Math.min(1, (progress - scene.start) / range));
           const ease = t * (2 - t);
           opacity = ease;
           translateY = (1 - ease) * 24;
         } else {
-          // Smooth fade & slide out toward top
           const range = Math.max(0.001, scene.end - scene.peakEnd);
           const t = Math.max(0, Math.min(1, (scene.end - progress) / range));
           const ease = t * (2 - t);
@@ -178,11 +195,10 @@ export default function HomePage() {
         }
 
         el.style.opacity = opacity.toFixed(3);
-        el.style.transform = `translateY(${translateY.toFixed(2)}px)`;
+        el.style.transform = `translate3d(0, ${translateY.toFixed(2)}px, 0)`;
         el.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
       });
 
-      // Finale overlay
       const finale = finaleRef.current;
       if (finale) {
         const finaleProgress = Math.max(0, Math.min(1, (progress - 0.96) / 0.035));
@@ -191,7 +207,6 @@ export default function HomePage() {
         finale.style.pointerEvents = ease > 0.5 ? 'auto' : 'none';
       }
 
-      // Hide scroll hint once user starts scrolling
       const hint = scrollHintRef.current;
       if (hint) {
         const hintOpacity = Math.max(0, 1 - progress / 0.04);
@@ -199,101 +214,241 @@ export default function HomePage() {
       }
     };
 
-    // Flicker-free seeking: queue requests and only seek when decoder is ready
+    const getVideoProgress = (time = video.currentTime) => {
+      const duration = video.duration;
+      return Number.isFinite(duration) && duration > 0
+        ? Math.max(0, Math.min(1, time / duration))
+        : 0;
+    };
+
+    const updateVideoProgress = (time = video.currentTime) => {
+      const progress = getVideoProgress(time);
+      if (Math.abs(progress - lastPaintedProgress) > 0.0001) {
+        lastPaintedProgress = progress;
+        updateOverlays(progress);
+      }
+    };
+
+    // Paint the canvas and update the copy from the same decoded video frame.
+    // This keeps the overlays on the exact frame that is visible instead of
+    // letting them run ahead on the scroll interpolation clock.
+    const paintCurrentFrame = () => {
+      if (isMobileHero) {
+        updateVideoProgress();
+        return;
+      }
+
+      syncCanvasSize();
+      if (ctx && video.videoWidth && video.videoHeight) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        updateVideoProgress();
+      }
+    };
+
+    const stopMobileFrameLoop = () => {
+      if (videoFrameCallbackId !== null && typeof video.cancelVideoFrameCallback === 'function') {
+        video.cancelVideoFrameCallback(videoFrameCallbackId);
+      }
+      videoFrameCallbackId = null;
+    };
+
+    const scheduleMobileFrame = () => {
+      if (!isMobileHero || video.paused || video.ended) return;
+      if (typeof video.requestVideoFrameCallback !== 'function') return;
+
+      videoFrameCallbackId = video.requestVideoFrameCallback((_now, metadata) => {
+        videoFrameCallbackId = null;
+        if (!isMobileHero) return;
+        updateVideoProgress(metadata.mediaTime);
+        scheduleMobileFrame();
+      });
+    };
+
+    const startMobilePlayback = () => {
+      if (!isMobileHero || !mobileHeroVisible || !document.body.classList.contains('ready')) return;
+      if (video.ended) video.currentTime = 0;
+
+      const playPromise = video.play();
+      if (playPromise) playPromise.catch(() => undefined);
+      scheduleMobileFrame();
+    };
+
+    const pauseMobilePlayback = () => {
+      video.pause();
+      stopMobileFrameLoop();
+    };
+
+    const onTimeUpdate = () => {
+      if (isMobileHero) updateVideoProgress();
+    };
+
+    const onEnded = () => {
+      if (!isMobileHero) return;
+      stopMobileFrameLoop();
+      updateVideoProgress(video.duration);
+    };
+
+    // Keep only the newest seek request. A long queue of stale seeks is the
+    // main source of visible judder when the user changes scroll direction.
     let isSeeking = false;
     let pendingTime: number | null = null;
     let lastSeekTime = -1;
     let seekTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    const requestSeek = (targetTime: number) => {
-      const dur = video.duration || 10;
-      // Clamp to prevent EOF freeze
-      const clamped = Math.max(0, Math.min(dur - 0.04, targetTime));
+    const beginSeek = (time: number) => {
+      isSeeking = true;
+      lastSeekTime = time;
+      video.currentTime = time;
 
-      if (Math.abs(clamped - lastSeekTime) < 0.015) {
+      if (seekTimeout) clearTimeout(seekTimeout);
+      seekTimeout = setTimeout(() => {
+        if (!isSeeking) return;
+        isSeeking = false;
+        const next = pendingTime;
+        pendingTime = null;
+        if (next !== null) requestSeek(next);
+      }, 250);
+    };
+
+    const requestSeek = (targetTime: number) => {
+      const duration = video.duration;
+      if (!Number.isFinite(duration) || duration <= 0) return;
+
+      // Leave a small safety margin so seeking never gets stuck at EOF.
+      const clamped = Math.max(0, Math.min(duration - 0.04, targetTime));
+
+      if (isSeeking) {
+        const latest = pendingTime ?? lastSeekTime;
+        if (Math.abs(clamped - latest) >= SEEK_THRESHOLD) pendingTime = clamped;
         return;
       }
 
-      if (isSeeking) {
-        pendingTime = clamped;
-      } else {
-        isSeeking = true;
-        lastSeekTime = clamped;
-        video.currentTime = clamped;
-
-        // Safety fallback in case a seek event is missed by browser
-        if (seekTimeout) clearTimeout(seekTimeout);
-        seekTimeout = setTimeout(() => {
-          if (isSeeking) {
-            isSeeking = false;
-            if (pendingTime !== null) {
-              const next = pendingTime;
-              pendingTime = null;
-              requestSeek(next);
-            }
-          }
-        }, 250);
-      }
+      if (Math.abs(clamped - lastSeekTime) < SEEK_THRESHOLD) return;
+      beginSeek(clamped);
     };
 
     const onSeeked = () => {
       isSeeking = false;
       if (seekTimeout) clearTimeout(seekTimeout);
-      drawCurrentFrame();
+      paintCurrentFrame();
 
       if (pendingTime !== null) {
         const next = pendingTime;
         pendingTime = null;
-        if (Math.abs(next - video.currentTime) > 0.015) {
-          isSeeking = true;
-          lastSeekTime = next;
-          video.currentTime = next;
-        }
+        if (Math.abs(next - video.currentTime) >= SEEK_THRESHOLD) beginSeek(next);
       }
     };
 
     const tick = () => {
-      const dur = video.duration || 10;
+      const now = performance.now();
+      const elapsed = Math.min(64, Math.max(1, now - lastTick));
+      lastTick = now;
 
-      // Lerp toward target
+      // Use time-based easing so the scroll response is consistent across
+      // displays with different refresh rates.
       const diff = targetProgress - currentProgress;
+      const amount = 1 - Math.exp(-elapsed / SMOOTHING_TIME);
       if (Math.abs(diff) < 0.0001) {
         currentProgress = targetProgress;
       } else {
-        currentProgress += diff * LERP_FACTOR;
+        currentProgress += diff * amount;
       }
 
-      requestSeek(currentProgress * dur);
-      updateOverlays(currentProgress);
+      const duration = video.duration;
+      if (!isMobileHero && Number.isFinite(duration) && duration > 0) {
+        requestSeek(currentProgress * duration);
+      }
 
       rafId = requestAnimationFrame(tick);
     };
 
     const onScroll = () => {
       const rect = section.getBoundingClientRect();
-      const sectionHeight = section.offsetHeight - window.innerHeight;
+      const sectionHeight = Math.max(1, section.offsetHeight - window.innerHeight);
       const scrolled = -rect.top;
       targetProgress = Math.max(0, Math.min(1, scrolled / sectionHeight));
 
       // Tell BackToTop whether we're inside the hero
-      const inHero = scrolled >= 0 && scrolled < sectionHeight;
+      const inHero = isMobileHero
+        ? rect.bottom > 0 && rect.top < window.innerHeight
+        : scrolled >= 0 && scrolled < sectionHeight;
       window.dispatchEvent(new CustomEvent('hero-scroll', { detail: { inHero } }));
     };
 
+    const applyHeroMode = () => {
+      const nextIsMobile = mobileMedia.matches;
+      if (nextIsMobile === isMobileHero) return;
+
+      isMobileHero = nextIsMobile;
+      section.classList.toggle('hero-video-mobile', isMobileHero);
+      lastPaintedProgress = -1;
+      pendingTime = null;
+      isSeeking = false;
+
+      if (isMobileHero) {
+        if (video.readyState >= 2) {
+          updateVideoProgress(0);
+          if (mobileHeroVisible) startMobilePlayback();
+        }
+      } else {
+        pauseMobilePlayback();
+        onScroll();
+        if (Number.isFinite(video.duration) && video.duration > 0) {
+          video.currentTime = Math.max(
+            0,
+            Math.min(video.duration - 0.04, currentProgress * video.duration)
+          );
+        }
+        if (video.readyState >= 2) paintCurrentFrame();
+      }
+    };
+
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        mobileHeroVisible = entry.isIntersecting;
+        if (!isMobileHero) return;
+        if (mobileHeroVisible) startMobilePlayback();
+        else pauseMobilePlayback();
+      },
+      { threshold: 0.1 }
+    );
+    visibilityObserver.observe(section);
+
+    readyObserver = new MutationObserver(() => {
+      if (document.body.classList.contains('ready')) startMobilePlayback();
+    });
+    readyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
     const onLoaded = () => {
-      video.pause();
-      syncCanvasSize();
-      video.currentTime = 0.001;
       onScroll();
-      updateOverlays(0);
+      lastPaintedProgress = -1;
+
+      if (isMobileHero) {
+        video.currentTime = 0;
+        updateVideoProgress(0);
+        startMobilePlayback();
+      } else {
+        video.pause();
+        syncCanvasSize();
+        video.currentTime = 0.001;
+        updateOverlays(0);
+      }
     };
 
     video.addEventListener('loadedmetadata', onLoaded);
-    video.addEventListener('loadeddata', drawCurrentFrame);
-    video.addEventListener('canplay', drawCurrentFrame);
+    video.addEventListener('loadeddata', paintCurrentFrame);
+    video.addEventListener('canplay', paintCurrentFrame);
     video.addEventListener('seeked', onSeeked);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', syncCanvasSize, { passive: true });
+    window.addEventListener('resize', syncHeroOffset, { passive: true });
+
+    if (typeof mobileMedia.addEventListener === 'function') {
+      mobileMedia.addEventListener('change', applyHeroMode);
+    } else {
+      mobileMedia.addListener(applyHeroMode);
+    }
 
     if (video.readyState >= 2) {
       onLoaded();
@@ -305,13 +460,24 @@ export default function HomePage() {
 
     return () => {
       video.removeEventListener('loadedmetadata', onLoaded);
-      video.removeEventListener('loadeddata', drawCurrentFrame);
-      video.removeEventListener('canplay', drawCurrentFrame);
+      video.removeEventListener('loadeddata', paintCurrentFrame);
+      video.removeEventListener('canplay', paintCurrentFrame);
       video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', syncCanvasSize);
+      window.removeEventListener('resize', syncHeroOffset);
+      if (typeof mobileMedia.removeEventListener === 'function') {
+        mobileMedia.removeEventListener('change', applyHeroMode);
+      } else {
+        mobileMedia.removeListener(applyHeroMode);
+      }
+      visibilityObserver.disconnect();
+      readyObserver?.disconnect();
+      stopMobileFrameLoop();
       if (seekTimeout) clearTimeout(seekTimeout);
       cancelAnimationFrame(rafId);
+      section.style.removeProperty('--hero-header-offset');
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -584,135 +750,12 @@ export default function HomePage() {
       {/* CATEGORIES */}
       <section className="sec" id="categories">
         <div className="wrap">
-          <div className="sec-head rv in">
-            <span className="no">02</span>
-            <span className="t">Featured categories</span>
-            <span className="rule" />
-            <span className="note">Explore our signature collection</span>
-          </div>
-          <div className="cats">
-            <button
-              className="cat rv in"
-              onClick={() => {
-                setFilterCat('seats');
-                document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              <div
-                className="ph"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1571607388263-1044f9ea01dd?q=70&w=1200&auto=format&fit=crop')",
-                }}
-              />
-              <div className="art">
-                <svg viewBox="0 0 320 400">
-                  <use href="#a-seat" />
-                </svg>
-              </div>
-              <span className="n">01</span>
-              <span className="tg">
-                Comfort
-                <br />
-                Style
-                <br />
-                Durability
-              </span>
-              <div className="ft">
-                <div>
-                  <h3>Seat covers</h3>
-                  <p>Custom fit. Premium finish.</p>
-                </div>
-                <span className="go">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M4 12h16M13 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </button>
-
-            <button
-              className="cat rv in"
-              style={{ ['--d' as any]: '.1s' }}
-              onClick={() => {
-                setFilterCat('mats');
-                document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              <div
-                className="ph"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=70&w=900&auto=format&fit=crop')",
-                }}
-              />
-              <div className="art">
-                <svg viewBox="0 0 400 300">
-                  <use href="#a-mats" />
-                </svg>
-              </div>
-              <span className="n">02</span>
-              <span className="tg">
-                All-weather
-                <br />
-                Protection
-                <br />
-                Easy to clean
-              </span>
-              <div className="ft">
-                <div>
-                  <h3>Floor mats</h3>
-                  <p>Built for real-world roads.</p>
-                </div>
-                <span className="go">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M4 12h16M13 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </button>
-
-            <button
-              className="cat rv in"
-              style={{ ['--d' as any]: '.2s' }}
-              onClick={() => {
-                setFilterCat('steering');
-                document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              <div
-                className="ph"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?q=70&w=900&auto=format&fit=crop')",
-                }}
-              />
-              <div className="art">
-                <svg viewBox="0 0 320 320">
-                  <use href="#a-wheel" />
-                </svg>
-              </div>
-              <span className="n">03</span>
-              <span className="tg">
-                Better grip
-                <br />
-                Modern style
-                <br />
-                Universal fit
-              </span>
-              <div className="ft">
-                <div>
-                  <h3>Steering covers</h3>
-                  <p>Control meets comfort.</p>
-                </div>
-                <span className="go">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M4 12h16M13 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </button>
-          </div>
+          <AppleCardsCarouselDemo
+            onCategorySelect={(filter) => {
+              setFilterCat(filter);
+              document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          />
         </div>
       </section>
 

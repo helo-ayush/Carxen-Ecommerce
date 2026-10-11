@@ -63,6 +63,26 @@
 - **Styling**: Curated Vanilla CSS with custom tokens and micro-interactions
 - **State Management**: React Context with LocalStorage persistence
 
+### UI component setup
+
+This project already has TypeScript and uses `src/components` plus
+`src/app/globals.css`. It does not currently use Tailwind CSS v4 or shadcn/ui;
+the Apple-style category carousel is integrated with the existing CSS system so
+the rest of the site does not need to be migrated.
+
+If future components should use the shadcn/ui defaults, install the missing
+pieces from the project root:
+
+```bash
+npm install tailwindcss @tailwindcss/postcss postcss
+npx shadcn@latest init
+```
+
+Keep generated primitives in `src/components/ui` (the equivalent of the
+default `/components/ui` path for this `src`-based project), shared helpers in
+`src/lib`, and hooks in `src/hooks`. The folder matters because shadcn
+components and their import aliases conventionally resolve from this location.
+
 ---
 
 ## 🚀 Getting Started

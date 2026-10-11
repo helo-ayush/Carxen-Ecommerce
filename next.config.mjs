@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,4 +19,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default (phase) => ({
+  ...nextConfig,
+  // Prevent production builds from overwriting a running dev server's chunks.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
+});
