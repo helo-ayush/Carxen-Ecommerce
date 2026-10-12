@@ -15,6 +15,15 @@ import {
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
+import AccordionGallery from '@/components/ui/AccordionGallery';
+
+const WHY_GALLERY_ITEMS = [
+  { image: '/sports-bucket.jpg', label: 'Sport support', alt: 'Sport bucket seat interior' },
+  { image: '/head-rest.jpg', label: 'Quilted comfort', alt: 'Quilted seat cover interior' },
+  { image: '/steering.jpg', label: 'Driver control', alt: 'Steering wheel and dashboard interior' },
+  { image: '/floor-mat.jpg', label: 'All-weather guard', alt: 'All-weather floor mat detail' },
+  { image: '/hand-rest.jpg', label: 'Long-drive ease', alt: 'Car centre armrest detail' },
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -724,6 +733,12 @@ export default function HomePage() {
               <span />
             </div>
           </div>
+
+          <div className="hero-video-bottom-curve" aria-hidden="true">
+            <svg viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
+              <path d="M0 18C18 18 20 54 56 54H392C444 54 464 5 500 0C536 5 556 54 608 54H944C980 54 982 18 1000 18V120H0Z" />
+            </svg>
+          </div>
         </div>
       </section>
 
@@ -762,40 +777,51 @@ export default function HomePage() {
       {/* CRAFT & MATERIALS */}
       <section className="sec craft" id="craft">
         <div className="wrap">
-          <div className="sec-head rv in">
+          <div className="sec-head craft-head rv in">
             <span className="no">03</span>
             <span className="t">Materials &amp; craftsmanship</span>
             <span className="rule" />
             <span className="note">Anatomy of a CarXen panel</span>
           </div>
           <div className="craft-g">
-            <div>
-              <p className="mono red rv in">Details that drive difference</p>
-              <h2 className="disp rv in" style={{ ['--d' as any]: '.1s' }}>
+            <div className="craft-copy">
+              <p className="craft-eyebrow mono red rv">Details that drive difference</p>
+              <h2 className="craft-title disp rv" style={{ ['--d' as any]: '.1s' }}>
                 Built in
                 <br />
-                four layers<span className="red">.</span>
+                four
+                <br />
+                layers<span className="red">.</span>
               </h2>
-              <p className="cp rv in" style={{ ['--d' as any]: '.2s' }}>
+              <p className="craft-lede cp rv" style={{ ['--d' as any]: '.2s' }}>
                 Premium materials. Precise craftsmanship. A more refined drive.
                 Wear surface, comfort core, climate layer and grip backing — pressed and stitched to one tolerance.
               </p>
-              <a href="#shop" className="btn mag rv in" style={{ ['--d' as any]: '.3s' }}>
+              <a href="#shop" className="btn mag craft-cta rv" style={{ ['--d' as any]: '.3s' }}>
                 Explore collection{' '}
                 <svg viewBox="0 0 24 24">
                   <path d="M4 12h16M13 5l7 7-7 7" />
                 </svg>
               </a>
+              <div className="craft-copy-meta rv" style={{ ['--d' as any]: '.4s' }}>
+                <span className="craft-meta-line" />
+                <span>Engineered for the long haul</span>
+              </div>
             </div>
 
-            <div className="stack-w">
+            <div className="stack-w craft-stage">
+              <div className="craft-stage-top">
+                <span>Material stack / cross-section</span>
+                <span>Scroll to separate</span>
+              </div>
+              <div className="craft-stage-glow" aria-hidden="true" />
               <svg
-                className="stack in"
+                className="stack"
                 id="stack"
-                viewBox="0 0 540 430"
+                viewBox="0 0 700 430"
                 aria-label="Exploded view of four material layers"
               >
-                <g className="lyr" style={{ ['--d' as any]: '.1s', ['--c' as any]: '70px' }}>
+                <g className="lyr" style={{ ['--d' as any]: '.1s', ['--rest' as any]: '72px' }}>
                   <path d="M70 40 L330 40 L420 88 L160 88 Z" fill="url(#g2)" />
                   <path d="M70 40 L330 40 L420 88 L160 88 Z" fill="url(#quiltB)" opacity=".5" />
                   <path d="M70 40v12l90 48V88z" fill="#08080a" />
@@ -809,7 +835,7 @@ export default function HomePage() {
                   Leatherette
                 </text>
 
-                <g className="lyr" style={{ ['--d' as any]: '.25s', ['--c' as any]: '40px' }}>
+                <g className="lyr" style={{ ['--d' as any]: '.25s', ['--rest' as any]: '42px' }}>
                   <path d="M70 140 L330 140 L420 188 L160 188 Z" fill="#3c3c44" />
                   <path d="M70 140v14l90 48v-14z" fill="#26262b" />
                   <path d="M160 188v14h260v-14z" fill="#303037" />
@@ -822,7 +848,7 @@ export default function HomePage() {
                   8mm comfort
                 </text>
 
-                <g className="lyr" style={{ ['--d' as any]: '.4s', ['--c' as any]: '14px' }}>
+                <g className="lyr" style={{ ['--d' as any]: '.4s', ['--rest' as any]: '15px' }}>
                   <path d="M70 240 L330 240 L420 288 L160 288 Z" fill="#c9c9cf" />
                   <path d="M70 240 L330 240 L420 288 L160 288 Z" fill="url(#weave)" opacity=".7" />
                   <path d="M70 240v10l90 48v-10z" fill="#9b9ba2" />
@@ -836,7 +862,7 @@ export default function HomePage() {
                   3D-knit fabric
                 </text>
 
-                <g className="lyr" style={{ ['--d' as any]: '.55s', ['--c' as any]: '-14px' }}>
+                <g className="lyr" style={{ ['--d' as any]: '.55s', ['--rest' as any]: '-16px' }}>
                   <path d="M70 340 L330 340 L420 388 L160 388 Z" fill="#101013" />
                   <path d="M70 340 L330 340 L420 388 L160 388 Z" fill="url(#grip)" />
                   <path d="M70 340v10l90 48v-10z" fill="#08080a" />
@@ -853,7 +879,11 @@ export default function HomePage() {
             </div>
 
             <div className="feats">
-              <div className="ft-i rv in">
+              <div className="feats-head">
+                <span>Why it holds</span>
+                <span>03 / 03</span>
+              </div>
+              <div className="ft-i rv">
                 <span className="ft-ic">
                   <svg viewBox="0 0 24 24">
                     <path d="M12 3c3.5 4.2 6 7.3 6 10a6 6 0 0 1-12 0c0-2.7 2.5-5.8 6-10z" />
@@ -864,7 +894,7 @@ export default function HomePage() {
                   <p>Easy to clean. Spills wipe away.</p>
                 </div>
               </div>
-              <div className="ft-i rv in" style={{ ['--d' as any]: '.1s' }}>
+              <div className="ft-i rv" style={{ ['--d' as any]: '.1s' }}>
                 <span className="ft-ic">
                   <svg viewBox="0 0 24 24">
                     <path d="M4 20L20 4M4 20h5M4 20v-5M20 4h-5M20 4v5" />
@@ -875,7 +905,7 @@ export default function HomePage() {
                   <p>Double-locked seams hold for years.</p>
                 </div>
               </div>
-              <div className="ft-i rv in" style={{ ['--d' as any]: '.2s' }}>
+              <div className="ft-i rv" style={{ ['--d' as any]: '.2s' }}>
                 <span className="ft-ic">
                   <svg viewBox="0 0 24 24">
                     <path d="M12 3l9 5-9 5-9-5 9-5z" />
@@ -890,25 +920,21 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="specs rv in">
-            <div>
-              <b>
-                <span>40,000</span>
-                <em>+</em>
-              </b>
-              <span>Double stitches / set</span>
+          <div className="specs rv">
+            <div className="spec-card">
+              <span className="spec-index">01 / Seam integrity</span>
+              <b className="spec-value"><span>40,000</span><em>+</em></b>
+              <span className="spec-label">Double stitches <i>/ set</i></span>
             </div>
-            <div>
-              <b>
-                <span>120,000</span>
-              </b>
-              <span>Abrasion cycles rated</span>
+            <div className="spec-card">
+              <span className="spec-index">02 / Wear resistance</span>
+              <b className="spec-value"><span>120,000</span></b>
+              <span className="spec-label">Abrasion cycles rated</span>
             </div>
-            <div>
-              <b>
-                −30°<em>/</em>80°
-              </b>
-              <span>Operating range °C</span>
+            <div className="spec-card">
+              <span className="spec-index">03 / Climate ready</span>
+              <b className="spec-value"><span>−30°</span><em>/</em><span>80°</span></b>
+              <span className="spec-label">Operating range <i>°C</i></span>
             </div>
           </div>
         </div>
@@ -1219,7 +1245,7 @@ export default function HomePage() {
       </section>
 
       {/* FITMENT FINDER */}
-      <section className="sec" id="fitment" style={{ paddingTop: 0 }}>
+      <section className="sec" id="fitment" aria-labelledby="fit-title" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="sec-head rv in">
             <span className="no">05</span>
@@ -1228,207 +1254,176 @@ export default function HomePage() {
             <span className="note">Accessories designed for your vehicle</span>
           </div>
           <div className="fit-g">
-            <div className="fit-p rv-l in">
-              <p className="mono red">Fitment finder</p>
-              <h2 className="disp">
-                Made for
-                <br />
-                your drive<span className="red">.</span>
+            <div className="fit-p">
+              <p className="fit-kicker">A little more you.</p>
+              <h2 className="fit-title" id="fit-title">
+                <span>Made for</span>
+                <em>your drive.</em>
               </h2>
-              <p>
-                Precise fitment for a seamless experience. Three taps and we&apos;ll narrow the collection to your car.
+              <p className="fit-intro">
+                Start with your car. Find the details that make it feel like yours.
               </p>
-              <div className="step">
-                <i>1</i>Select your vehicle
-              </div>
-              <div className="sel">
-                <select
-                  id="fB"
-                  aria-label="Brand"
-                  value={selectedBrand}
-                  onChange={(e) => {
-                    setSelectedBrand(e.target.value);
-                    setSelectedModel('');
-                    setSelectedYear('');
-                    setFitmentResult(null);
-                  }}
-                >
-                  <option value="">Select brand</option>
-                  {Object.keys(VEHICLES).map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sel">
-                <select
-                  id="fM"
-                  aria-label="Model"
-                  disabled={!selectedBrand}
-                  value={selectedModel}
-                  onChange={(e) => {
-                    setSelectedModel(e.target.value);
-                    setSelectedYear('');
-                    setFitmentResult(null);
-                  }}
-                >
-                  <option value="">Select model</option>
-                  {availableModels.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sel">
-                <select
-                  id="fY"
-                  aria-label="Year"
-                  disabled={!selectedModel}
-                  value={selectedYear}
-                  onChange={(e) => {
-                    setSelectedYear(e.target.value);
-                    setFitmentResult(null);
-                  }}
-                >
-                  <option value="">Select year</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                className="btn mag"
-                id="fGo"
-                disabled={!(selectedBrand && selectedModel && selectedYear)}
-                onClick={handleCheckFitment}
+              <form
+                className="fit-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleCheckFitment();
+                }}
               >
-                Check fitment{' '}
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 12h16M13 5l7 7-7 7" />
-                </svg>
-              </button>
+                <div className="fit-field fit-field-brand">
+                  <label htmlFor="fB">Brand</label>
+                  <div className="fit-select">
+                    <select
+                      id="fB"
+                      required
+                      value={selectedBrand}
+                      onChange={(e) => {
+                        setSelectedBrand(e.target.value);
+                        setSelectedModel('');
+                        setSelectedYear('');
+                        setFitmentResult(null);
+                      }}
+                    >
+                      <option value="">Choose your brand</option>
+                      {Object.keys(VEHICLES).map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="fit-field">
+                  <label htmlFor="fM">Model</label>
+                  <div className="fit-select">
+                    <select
+                      id="fM"
+                      required
+                      disabled={!selectedBrand}
+                      value={selectedModel}
+                      onChange={(e) => {
+                        setSelectedModel(e.target.value);
+                        setSelectedYear('');
+                        setFitmentResult(null);
+                      }}
+                    >
+                      <option value="">Choose model</option>
+                      {availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="fit-field">
+                  <label htmlFor="fY">Year</label>
+                  <div className="fit-select">
+                    <select
+                      id="fY"
+                      required
+                      disabled={!selectedModel}
+                      value={selectedYear}
+                      onChange={(e) => {
+                        setSelectedYear(e.target.value);
+                        setFitmentResult(null);
+                      }}
+                    >
+                      <option value="">Choose year</option>
+                      {years.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="fit-submit"
+                  id="fGo"
+                  disabled={!(selectedBrand && selectedModel && selectedYear)}
+                >
+                  Find my fit
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12h16M13 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </form>
+              <p className="fit-footnote">Your vehicle. A more considered collection.</p>
 
               {fitmentResult && (
-                <div className="fres on" id="fRes">
+                <div className="fit-result" id="fRes" role="status">
                   <b id="fT">
                     <em>{fitmentResult.count}</em> products fit your car
                   </b>
                   <p id="fS">{fitmentResult.text}</p>
-                  <p style={{ marginTop: '10px' }}>
+                  <p className="fit-result-link">
                     <NextLink href="/shop">Browse matching products →</NextLink>
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="fit-v rv in" id="fitV">
-              <div className="scan" />
-              <div className="cap mono">
-                <span>Fig. 05 — Reference platform</span>
-                <span>Scale 1:32</span>
-              </div>
-              <svg viewBox="0 0 840 320">
-                <line x1="40" y1="262" x2="800" y2="262" className="wd" />
-                <path
-                  className="wire"
-                  d="M78 262V224Q80 202 108 196L176 184Q214 132 292 122L486 112Q560 112 616 148L676 168Q756 176 766 208L768 262"
-                />
-                <path className="wire" d="M196 262Q196 200 258 200T320 262" />
-                <path className="wire" d="M560 262Q560 200 622 200T684 262" />
-                <circle className="wire" cx="258" cy="240" r="34" />
-                <circle className="wire" cx="258" cy="240" r="13" />
-                <circle className="wire" cx="622" cy="240" r="34" />
-                <circle className="wire" cx="622" cy="240" r="13" />
-                <path
-                  className="wire"
-                  d="M236 178Q268 140 320 134L470 126Q530 128 578 158L596 172L470 176V262M320 134L326 176L236 178M326 176L320 262"
-                />
-                <line x1="258" y1="70" x2="622" y2="70" className="wr" />
-                <line x1="258" y1="62" x2="258" y2="78" className="wr" />
-                <line x1="622" y1="62" x2="622" y2="78" className="wr" />
-                <line x1="258" y1="78" x2="258" y2="200" className="wd" />
-                <line x1="622" y1="78" x2="622" y2="200" className="wd" />
-                <text
-                  x="440"
-                  y="56"
-                  textAnchor="middle"
-                  fill="#e2231a"
-                  fontFamily="IBM Plex Mono"
-                  fontSize="13"
-                  letterSpacing="2"
-                >
-                  WHEELBASE 2,851 MM
-                </text>
-              </svg>
-            </div>
+            <figure className="fit-visual" id="fitV">
+              <img
+                className="fit-visual-photo"
+                src="/steering.jpg"
+                alt="Leather-wrapped steering wheel in a carefully finished car interior"
+                width={1280}
+                height={720}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="fit-visual-shade" aria-hidden="true" />
+              <figcaption className="fit-caption">
+                <span className="fit-caption-kicker">The everyday, elevated.</span>
+                <p>Good things<br /><em>fit right in.</em></p>
+                <div className="fit-vehicle">
+                  <span className="fit-vehicle-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="m5 10 2-5h10l2 5M4 10h16v8H4zM7 14h1m8 0h1M6 18v2m12-2v2" />
+                    </svg>
+                  </span>
+                  <div className="fit-vehicle-copy">
+                    <span>{fitmentResult ? 'Added to your garage' : 'Your next chapter'}</span>
+                    <strong>{[selectedBrand, selectedModel, selectedYear].filter(Boolean).join(' · ') || 'Starts with your car'}</strong>
+                  </div>
+                </div>
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
 
       {/* WHY CARXEN */}
-      <section className="sec why" id="why">
+      <section className="sec why" id="why" aria-labelledby="why-title">
         <div className="wrap">
+          <div className="sec-head rv in">
+            <span className="no">06</span>
+            <span className="t">Why CarXen</span>
+            <span className="rule" />
+            <span className="note">Protection / Craft</span>
+          </div>
+          <h2 className="why-heading disp rv in" id="why-title">
+            <span>Protection you feel.</span>{' '}
+            <em>Craft you see.</em>
+          </h2>
           <div className="why-g">
-            <div className="why-m rv-l in">
-              <div
-                className="ph"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=70&w=1200&auto=format&fit=crop')",
-                }}
+            <div className="why-gallery-wrap rv in">
+              <div className="why-gallery-head">
+                <span>Interior systems / 06</span>
+                <span>Hover to explore</span>
+              </div>
+              <AccordionGallery
+                items={WHY_GALLERY_ITEMS}
+                defaultIndex={1}
+                accentColor="#e2231a"
+                overlayColor="#08090d"
+                height={470}
+                expandRatio={0.52}
+                trigger="hover"
+                grayscale
+                showLabels
               />
-              <span className="big">4.9★</span>
-              <span className="st">Cabin study — night protocol</span>
-            </div>
-            <div>
-              <p className="mono red rv in" style={{ marginBottom: '14px' }}>
-                06 — Why CarXen
-              </p>
-              <h2 className="disp rv in" style={{ ['--d' as any]: '.1s' }}>
-                Protection you feel. Craft you see<span className="red">.</span>
-              </h2>
-              <ul className="ben">
-                <li className="rv in">
-                  <span className="n">01</span>
-                  <div>
-                    <h3>All-weather protection</h3>
-                    <p>
-                      Sealed surfaces and raised-edge mats keep mud, rain and spills off your factory interior.
-                    </p>
-                  </div>
-                </li>
-                <li className="rv in" style={{ ['--d' as any]: '.08s' }}>
-                  <span className="n">02</span>
-                  <div>
-                    <h3>Precision fitment</h3>
-                    <p>
-                      Patterns measured against real vehicle data — nothing slides, nothing bunches.
-                    </p>
-                  </div>
-                </li>
-                <li className="rv in" style={{ ['--d' as any]: '.16s' }}>
-                  <span className="n">03</span>
-                  <div>
-                    <h3>Easy maintenance</h3>
-                    <p>
-                      Wipe down in seconds, hose off when needed, keep the cabin looking new.
-                    </p>
-                  </div>
-                </li>
-                <li className="rv in" style={{ ['--d' as any]: '.24s' }}>
-                  <span className="n">04</span>
-                  <div>
-                    <h3>Refined comfort</h3>
-                    <p>
-                      Layered foam and breathable panels turn daily driving into a lounge.
-                    </p>
-                  </div>
-                </li>
-              </ul>
+              <div className="why-gallery-foot">
+                <span>Designed around real drives</span>
+                <span>06 / 100% considered</span>
+              </div>
             </div>
           </div>
         </div>
