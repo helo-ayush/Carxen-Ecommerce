@@ -2,6 +2,25 @@
    Interface Crafts Cards Component & CTA Grid Styles
    ========================================================================== */
 
+/* Ensure generous breathing room inside the red CTA box across all screens */
+.cta {
+  border-radius: clamp(26px, 3.8vw, 44px) !important;
+}
+
+.cta-in {
+  padding-top: clamp(44px, 6.5vw, 96px) !important;
+  padding-bottom: clamp(44px, 6.5vw, 96px) !important;
+  padding-left: clamp(16px, 3.5vw, 48px) !important;
+  padding-right: clamp(16px, 3.5vw, 48px) !important;
+  box-sizing: border-box;
+}
+
+.cta-in h2 {
+  font-size: clamp(2.3rem, 7.2vw, 5.8rem) !important;
+  line-height: 0.94 !important;
+  margin-bottom: 20px !important;
+}
+
 /* CTA Grid Layout */
 .cta-grid {
   display: grid;
@@ -20,7 +39,7 @@
   }
 
   .cta-in h2 {
-    font-size: clamp(3rem, 5.8vw, 6.2rem) !important;
+    font-size: clamp(2.8rem, 5.2vw, 5.8rem) !important;
     margin-bottom: 24px !important;
   }
 
@@ -30,6 +49,8 @@
     justify-content: space-between;
     height: 100%;
     min-height: 480px;
+    padding-left: clamp(36px, 4.5vw, 76px) !important;
+    padding-right: 24px !important;
   }
 }
 
@@ -37,6 +58,15 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  padding-left: clamp(20px, 4vw, 56px) !important;
+  padding-right: clamp(8px, 1.5vw, 24px) !important;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .cta-left-col {
+    padding-left: clamp(32px, 5.5vw, 68px) !important;
+  }
 }
 
 .cta-left-col .perks {
