@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "extract:hero-frames": "python scripts/extract-hero-frames.py",
     "build": "next build",
     "start": "next start"
   },
