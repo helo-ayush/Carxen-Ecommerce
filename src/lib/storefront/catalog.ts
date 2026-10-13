@@ -139,25 +139,41 @@ function asSeries(value: unknown): ProductSeries | null {
     : null;
 }
 
-function asArtKey(value: unknown): ProductArtKey | null {
-  return typeof value === 'string' && ART_KEYS.includes(value as ProductArtKey)
-    ? (value as ProductArtKey)
-    : null;
+function asArtKey(value: unknown, category?: ProductCategory | null): ProductArtKey {
+  if (typeof value === 'string' && ART_KEYS.includes(value as ProductArtKey)) {
+    return value as ProductArtKey;
+  }
+  if (category === 'seats') return 'seat';
+  if (category === 'mats') return 'mats';
+  if (category === 'steering') return 'wheel';
+  if (category === 'comfort') return 'pillow';
+  return 'seat';
 }
 
-function asSpecifications(value: unknown): [string, string][] | null {
-  if (!Array.isArray(value)) return null;
-
-  const specifications: [string, string][] = [];
-  for (const item of value) {
-    if (!Array.isArray(item) || item.length < 2) return null;
-    const key = asNonEmptyString(item[0]);
-    const label = asNonEmptyString(item[1]);
-    if (!key || !label) return null;
-    specifications.push([key, label]);
+function asSpecifications(value: unknown): [string, string][] {
+  if (Array.isArray(value)) {
+    const specifications: [string, string][] = [];
+    for (const item of value) {
+      if (Array.isArray(item) && item.length >= 2) {
+        const key = asNonEmptyString(item[0]);
+        const label = asNonEmptyString(item[1]);
+        if (key && label) specifications.push([key, label]);
+      }
+    }
+    return specifications;
   }
 
-  return specifications;
+  if (value && typeof value === 'object') {
+    const specifications: [string, string][] = [];
+    for (const [k, v] of Object.entries(value)) {
+      const key = asNonEmptyString(k);
+      const label = asNonEmptyString(v);
+      if (key && label) specifications.push([key, label]);
+    }
+    return specifications;
+  }
+
+  return [];
 }
 
 function asTintOptions(value: unknown): ProductTintOption[] | undefined {
@@ -191,10 +207,10 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
   const category = asCategory(row.categoryKey);
   const series = asSeries(row.series);
   const price = asFiniteNumber(row.price);
-  const rating = asFiniteNumber(row.rating);
-  const reviewCount = asFiniteNumber(row.reviewCount);
-  const artKey = asArtKey(row.artKey);
-  const description = asNonEmptyString(row.description);
+  const rating = asFiniteNumber(row.rating) ?? 4.5;
+  const reviewCount = asFiniteNumber(row.reviewCount) ?? 0;
+  const artKey = asArtKey(row.artKey, category);
+  const description = asNonEmptyString(row.description) ?? '';
   const specifications = asSpecifications(row.specifications);
 
   if (
@@ -202,12 +218,7 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     !name ||
     !category ||
     !series ||
-    price === null ||
-    rating === null ||
-    reviewCount === null ||
-    !artKey ||
-    !description ||
-    !specifications
+    price === null
   ) {
     return null;
   }
@@ -287,13 +298,12 @@ export async function getStorefrontProducts(): Promise<StorefrontProductsRespons
   }
 
   const rows = (productRows || []) as unknown as EcommerceProductRow[];
-  const products = rows.map(mapProductRow);
-  if (products.some((product) => product === null)) {
-    throw new CatalogDatabaseError('The ecommerce product data is not valid for the storefront.');
-  }
+  const products = rows
+    .map(mapProductRow)
+    .filter((product): product is Product => product !== null);
 
   return {
     store: { slug: store.slug },
-    products: products as Product[],
+    products,
   };
 }
