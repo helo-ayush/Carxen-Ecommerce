@@ -1,0 +1,222 @@
+/* ==========================================================================
+   Interface Crafts Cards Component & CTA Grid Styles
+   ========================================================================== */
+
+/* CTA 2-Column Grid Layout */
+.cta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 36px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+@media (min-width: 1024px) {
+  .cta-grid {
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 44px;
+    align-items: center;
+  }
+
+  .cta-in h2 {
+    font-size: clamp(3rem, 5.8vw, 6.2rem) !important;
+    margin-bottom: 24px !important;
+  }
+}
+
+.cta-left-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.cta-left-col .perks {
+  margin-top: 28px;
+}
+
+.cta-right-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+  width: 100%;
+}
+
+.cta-right-col .craft-cards-hint {
+  width: min(480px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: .18em;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+}
+
+.cta-right-col .news {
+  width: min(480px, 100%);
+}
+
+/* Interface Crafts Cards Component */
+.craft-cards-wrapper {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 520px;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  padding: 8px 0 16px 0;
+  perspective: 1000px;
+}
+
+.craft-cards-inner {
+  position: relative;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 310px;
+  --height: 270px;
+  --width: 195px;
+}
+
+@media (min-width: 768px) {
+  .craft-cards-inner {
+    height: 340px;
+    --height: 295px;
+    --width: 215px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .craft-cards-inner {
+    height: 360px;
+    --height: 310px;
+    --width: 228px;
+  }
+}
+
+.craft-card-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 10px;
+  cursor: pointer;
+  background: #141417;
+  color: #fff;
+  text-align: left;
+  user-select: none;
+  box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
+}
+
+.craft-card-btn:hover {
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.7), 0 0 0 1.5px rgba(255, 255, 255, 0.3);
+}
+
+.craft-card-btn.is-active {
+  box-shadow: 0 32px 70px -12px rgba(0, 0, 0, 0.85), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+
+.craft-card-dark {
+  background: linear-gradient(165deg, #1c1d22 0%, #101114 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.craft-card-skeleton {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #191a1f;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .craft-card-skeleton {
+    height: 156px;
+  }
+}
+
+.craft-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.craft-card-btn:hover .craft-card-img {
+  transform: scale(1.05);
+}
+
+.craft-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.65) 100%);
+  pointer-events: none;
+}
+
+.craft-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(14, 14, 16, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 2;
+}
+
+.craft-card-body {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.craft-card-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.craft-card-tag {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+}
+
+.craft-card-desc {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--sans);
+  overflow: hidden;
+}

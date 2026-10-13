@@ -16,6 +16,7 @@ import { Footer } from '@/components/Footer';
 import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
 import AccordionGallery from '@/components/ui/AccordionGallery';
 import { HeroFrameSection } from '@/components/HeroFrameSection';
+import { Cards } from '@/components/ui/interface-crafts-cards';
 
 const WHY_GALLERY_ITEMS = [
   { image: '/sports-bucket.jpg', label: 'Sport support', alt: 'Sport bucket seat interior' },
@@ -1038,43 +1039,52 @@ export default function HomePage() {
       {/* CTA SECTION */}
       <section className="cta">
         <div className="wrap cta-in">
-          <p className="mono rv in" style={{ marginBottom: '16px' }}>
-            08 — Ready when you are
-          </p>
-          <h2 className="disp">
-            <span className="mask rv in">
-              <span>Don&apos;t just</span>
-            </span>
-            <span className="mask rv in" style={{ ['--d' as any]: '.1s' }}>
-              <span className="o">drive.</span>
-            </span>
-            <span className="mask rv in" style={{ ['--d' as any]: '.2s' }}>
-              <span>Elevate it.</span>
-            </span>
-          </h2>
-          <div className="cta-r">
-            <div className="perks rv in">
-              <span>✦ Early access to drops</span>
-              <span>✦ Member pricing up to 20% off</span>
-              <span>✦ Fitment alerts for your garage</span>
-            </div>
-            <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
-              <label htmlFor="ne">Join the X-List — 10% off first order</label>
-              <div className="nf">
-                <input
-                  id="ne"
-                  type="email"
-                  placeholder="your@email.com"
-                  required
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                />
-                <button type="submit">Join</button>
-              </div>
-              <p className="msg" id="nm">
-                {newsletterMsg}
+          <div className="cta-grid">
+            <div className="cta-left-col">
+              <p className="mono rv in" style={{ marginBottom: '16px' }}>
+                08 — Ready when you are
               </p>
-            </form>
+              <h2 className="disp">
+                <span className="mask rv in">
+                  <span>Don&apos;t just</span>
+                </span>
+                <span className="mask rv in" style={{ ['--d' as any]: '.1s' }}>
+                  <span className="o">drive.</span>
+                </span>
+                <span className="mask rv in" style={{ ['--d' as any]: '.2s' }}>
+                  <span>Elevate it.</span>
+                </span>
+              </h2>
+              <div className="perks rv in">
+                <span>✦ Early access to drops</span>
+                <span>✦ Member pricing up to 20% off</span>
+                <span>✦ Fitment alerts for your garage</span>
+              </div>
+            </div>
+
+            <div className="cta-right-col">
+              <div className="craft-cards-hint mono rv in">
+                <span>✦ Click card to explore cabin craft</span>
+              </div>
+              <Cards />
+              <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
+                <label htmlFor="ne">Join the X-List — 10% off first order</label>
+                <div className="nf">
+                  <input
+                    id="ne"
+                    type="email"
+                    placeholder="your@email.com"
+                    required
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                  />
+                  <button type="submit">Join</button>
+                </div>
+                <p className="msg" id="nm">
+                  {newsletterMsg}
+                </p>
+              </form>
+            </div>
           </div>
         </div>
       </section>
