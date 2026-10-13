@@ -1,7 +1,17 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { Product, PRODUCTS } from '@/data/products';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type { Product } from '@/data/products';
+import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
+
+export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export interface User {
   name: string;
@@ -14,23 +24,17 @@ export interface Vehicle {
   f: string; // fuel
 }
 
-export interface Order {
-  id: number;
-  items: [number, number][]; // [productId, qty][]
-  total: number;
-  pay: string;
-  date: string;
-  eta: string;
-}
-
 interface AppContextType {
+  products: Product[];
+  catalogStatus: CatalogStatus;
+  catalogError: string | null;
+  retryCatalog: () => void;
   user: User | null;
   car: Vehicle | null;
   cart: Record<number, number>;
   cartCount: number;
   cartSubtotal: number;
   fav: number[];
-  orders: Order[];
   isCartOpen: boolean;
   isMobileMenuOpen: boolean;
   quickViewProduct: Product | null;
@@ -51,22 +55,53 @@ interface AppContextType {
   openQuickView: (p: Product) => void;
   closeQuickView: () => void;
   showToast: (msg: string) => void;
-  placeOrder: (order: Order) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>('loading');
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [car, setCar] = useState<Vehicle | null>(null);
+  // Pending backend step: the cart remains browser-local until cart sync is added.
   const [cart, setCart] = useState<Record<number, number>>({});
   const [fav, setFav] = useState<number[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const requestCatalog = useCallback(async (signal?: AbortSignal) => {
+    setCatalogStatus('loading');
+    setCatalogError(null);
+
+    try {
+      const response = await loadCatalogProducts(signal);
+      if (signal?.aborted) return;
+
+      setProducts(response.products);
+      setCatalogStatus(response.products.length > 0 ? 'ready' : 'empty');
+    } catch (error) {
+      if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
+
+      setProducts([]);
+      setCatalogStatus('error');
+      setCatalogError(error instanceof Error ? error.message : 'The catalog could not be loaded.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void requestCatalog(controller.signal);
+    return () => controller.abort();
+  }, [requestCatalog]);
+
+  const retryCatalog = useCallback(() => {
+    void requestCatalog();
+  }, [requestCatalog]);
 
   // Initialize from localStorage
   useEffect(() => {
@@ -83,8 +118,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedFav = localStorage.getItem('cx_fav');
       if (savedFav) setFav(JSON.parse(savedFav));
 
-      const savedOrders = localStorage.getItem('cx_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
     } catch (e) {
       console.error('Storage access error', e);
     }
@@ -122,13 +155,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   }, [fav, isLoaded]);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem('cx_orders', JSON.stringify(orders));
-    } catch (e) {}
-  }, [orders, isLoaded]);
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
   };
@@ -163,7 +189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const current = prev[productId] || 0;
       return { ...prev, [productId]: current + qty };
     });
-    const p = PRODUCTS.find((x) => x.id === productId);
+    const p = products.find((x) => x.id === productId);
     if (p) showToast(`Added to cart — ${p.n}`);
   };
 
@@ -186,7 +212,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       delete copy[productId];
       return copy;
     });
-    const p = PRODUCTS.find((x) => x.id === productId);
+    const p = products.find((x) => x.id === productId);
     if (p) showToast(`Removed from cart — ${p.n}`);
   };
 
@@ -197,7 +223,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleFav = (productId: number) => {
     setFav((prev) => {
       const exists = prev.includes(productId);
-      const p = PRODUCTS.find((x) => x.id === productId);
+      const p = products.find((x) => x.id === productId);
       if (exists) {
         if (p) showToast(`Removed from favourites — ${p.n}`);
         return prev.filter((id) => id !== productId);
@@ -246,32 +272,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const placeOrder = (order: Order) => {
-    setOrders((prev) => [...prev, order]);
-    clearCart();
-  };
-
   const cartCount = useMemo(() => {
     return Object.values(cart).reduce((a, b) => a + b, 0);
-  }, [cart]);
+  }, [cart, products]);
 
   const cartSubtotal = useMemo(() => {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
-      const p = PRODUCTS.find((x) => x.id === Number(idStr));
+      const p = products.find((x) => x.id === Number(idStr));
       return total + (p ? p.p * qty : 0);
     }, 0);
-  }, [cart]);
+  }, [cart, products]);
 
   return (
     <AppContext.Provider
       value={{
+        products,
+        catalogStatus,
+        catalogError,
+        retryCatalog,
         user,
         car,
         cart,
         cartCount,
         cartSubtotal,
         fav,
-        orders,
         isCartOpen,
         isMobileMenuOpen,
         quickViewProduct,
@@ -292,7 +316,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         openQuickView,
         closeQuickView,
         showToast,
-        placeOrder,
       }}
     >
       {children}

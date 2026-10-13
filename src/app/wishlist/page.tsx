@@ -4,16 +4,20 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { PRODUCTS, formatINR, isCustomFit } from '@/data/products';
+import { formatINR, isCustomFit } from '@/data/products';
+import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 
 export default function WishlistPage() {
   const router = useRouter();
-  const { fav, toggleFav, isFav, addToCart, openCart, car } = useApp();
+  const {
+    fav, toggleFav, isFav, addToCart, openCart, car,
+    products, catalogStatus, catalogError, retryCatalog,
+  } = useApp();
 
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
-  const favProducts = PRODUCTS.filter((p) => fav.includes(p.id));
+  const favProducts = products.filter((p) => fav.includes(p.id));
 
   return (
     <div className="in-shop">
@@ -21,7 +25,13 @@ export default function WishlistPage() {
         <div className="wrap" id="pgIn">
           <h1 className="disp pg-t">Your favourites</h1>
 
-          {favProducts.length > 0 ? (
+          {catalogStatus !== 'ready' ? (
+            <CatalogState
+              status={catalogStatus}
+              error={catalogError}
+              onRetry={retryCatalog}
+            />
+          ) : favProducts.length > 0 ? (
             <div className="grid">
               {favProducts.map((p) => {
                 const custom = isCustomFit(p);

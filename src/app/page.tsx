@@ -6,12 +6,11 @@ import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
-  PRODUCTS,
   VEHICLES,
   SERIES_LIST,
-  Product,
   formatINR,
 } from '@/data/products';
+import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
@@ -35,6 +34,10 @@ export default function HomePage() {
     openQuickView,
     showToast,
     setVehicle,
+    products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
   } = useApp();
 
   // Reveal observer
@@ -508,7 +511,7 @@ export default function HomePage() {
   const bmax = 7000;
   const histogramCounts = useMemo(() => {
     const counts = Array(bins).fill(0);
-    PRODUCTS.forEach((p) => {
+    products.forEach((p) => {
       const index = Math.min(bins - 1, Math.floor(p.p / (bmax / bins)));
       counts[index]++;
     });
@@ -520,7 +523,7 @@ export default function HomePage() {
       const height = 8 + (count / maxVal) * 92;
       return { height, isIn };
     });
-  }, [priceMin, priceMax]);
+  }, [priceMin, priceMax, products]);
 
   const handleSeriesToggle = (seriesName: string) => {
     setSelectedSeries((prev) => {
@@ -552,7 +555,7 @@ export default function HomePage() {
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
-    let list = PRODUCTS.filter((p) => {
+    let list = products.filter((p) => {
       const matchCat =
         filterCat === 'all' ||
         (filterCat === 'deals' ? !!p.o : p.c === filterCat);
@@ -587,6 +590,7 @@ export default function HomePage() {
     selectedSeries,
     deliveryType,
     sortBy,
+    products,
   ]);
 
   // Fitment Finder State
@@ -940,7 +944,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* POPULAR PRODUCTS */}
+      {/* POPULAR CATALOG ITEMS */}
       <section className="sec shop" id="shop">
         <div className="wrap">
           <div className="sec-head rv in">
@@ -1129,7 +1133,11 @@ export default function HomePage() {
                   Filters
                 </button>
                 <span className="res" id="res">
-                  Showing <b>{filteredProducts.length}</b> of {PRODUCTS.length} products
+                  {catalogStatus === 'ready' ? (
+                    <>Showing <b>{filteredProducts.length}</b> of {products.length} products</>
+                  ) : (
+                    'Catalog status unavailable'
+                  )}
                 </span>
                 <select
                   className="sort"
@@ -1145,99 +1153,109 @@ export default function HomePage() {
                 </select>
               </div>
 
-              <div className="grid" id="grid">
-                {filteredProducts.map((p) => {
-                  const isSpot = !!p.spot;
-                  return (
-                    <article
-                      key={p.id}
-                      className={`pc ${isSpot ? 'spot' : ''}`}
-                      data-id={p.id}
-                    >
-                      <div
-                        className="pm"
-                        onClick={() => router.push(`/product/${p.id}`)}
-                      >
-                        {isSpot && (
-                          <>
-                            <span className="bub" style={{ top: '14px', left: '14px' }}>
-                              <i style={{ background: '#e2231a' }}>AR</i>4.9/5 <u>★</u>
-                            </span>
-                            <span
-                              className="bub"
-                              style={{ top: '48%', right: '12px', animationDelay: '-2s' }}
-                            >
-                              <i style={{ background: '#1b1b1e' }}>PK</i>4.8/5 <u>★</u>
-                            </span>
-                            <span
-                              className="bub"
-                              style={{ top: '38%', left: '12px', animationDelay: '-3.4s' }}
-                            >
-                              <i style={{ background: '#5d5d64' }}>VM</i>5/5 <u>★</u>
-                            </span>
-                          </>
-                        )}
-                        <ProductArt product={p} />
-                        {!isSpot && <span className="qv">View details</span>}
-                        {p.top && <span className="top-b">Top item</span>}
-                        {p.nw && <span className="top-b new-b">New</span>}
-                      </div>
-
-                      <button
-                        className={`hrt ${isFav(p.id) ? 'on' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFav(p.id);
-                        }}
-                        aria-label="Favourite"
-                      >
-                        <svg viewBox="0 0 24 24">
-                          <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                        </svg>
-                      </button>
-
-                      <div className="pi">
-                        <h3 onClick={() => router.push(`/product/${p.id}`)}>
-                          {p.n}
-                        </h3>
-                        {!isSpot && (
-                          <div className="rt">
-                            <b>★</b> {p.r} · {p.rv} reviews
+              {catalogStatus !== 'ready' ? (
+                <CatalogState
+                  status={catalogStatus}
+                  error={catalogError}
+                  onRetry={retryCatalog}
+                />
+              ) : (
+                <>
+                  <div className="grid" id="grid">
+                    {filteredProducts.map((p) => {
+                      const isSpot = !!p.spot;
+                      return (
+                        <article
+                          key={p.id}
+                          className={`pc ${isSpot ? 'spot' : ''}`}
+                          data-id={p.id}
+                        >
+                          <div
+                            className="pm"
+                            onClick={() => router.push(`/product/${p.id}`)}
+                          >
+                            {isSpot && (
+                              <>
+                                <span className="bub" style={{ top: '14px', left: '14px' }}>
+                                  <i style={{ background: '#e2231a' }}>AR</i>4.9/5 <u>★</u>
+                                </span>
+                                <span
+                                  className="bub"
+                                  style={{ top: '48%', right: '12px', animationDelay: '-2s' }}
+                                >
+                                  <i style={{ background: '#1b1b1e' }}>PK</i>4.8/5 <u>★</u>
+                                </span>
+                                <span
+                                  className="bub"
+                                  style={{ top: '38%', left: '12px', animationDelay: '-3.4s' }}
+                                >
+                                  <i style={{ background: '#5d5d64' }}>VM</i>5/5 <u>★</u>
+                                </span>
+                              </>
+                            )}
+                            <ProductArt product={p} />
+                            {!isSpot && <span className="qv">View details</span>}
+                            {p.top && <span className="top-b">Top item</span>}
+                            {p.nw && <span className="top-b new-b">New</span>}
                           </div>
-                        )}
-                        <div className="pr">
-                          {p.o && <s>{formatINR(p.o)}</s>}
+
                           <button
-                            className="buy"
+                            className={`hrt ${isFav(p.id) ? 'on' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              addToCart(p.id, 1);
-                              openCart();
+                              toggleFav(p.id);
                             }}
+                            aria-label="Favourite"
                           >
                             <svg viewBox="0 0 24 24">
-                              <path d="M6 8h12l1 12H5L6 8z" />
-                              <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                              <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
                             </svg>
-                            {formatINR(p.p)}
                           </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
 
-              {filteredProducts.length === 0 && (
-                <div className="empty on" id="empty">
-                  <b>No matches</b>
-                  Try widening your filters or clearing the search.
-                  <br />
-                  <br />
-                  <button className="btn dark" id="clr" onClick={handleClearFilters}>
-                    Clear filters
-                  </button>
-                </div>
+                          <div className="pi">
+                            <h3 onClick={() => router.push(`/product/${p.id}`)}>
+                              {p.n}
+                            </h3>
+                            {!isSpot && (
+                              <div className="rt">
+                                <b>★</b> {p.r} · {p.rv} reviews
+                              </div>
+                            )}
+                            <div className="pr">
+                              {p.o && <s>{formatINR(p.o)}</s>}
+                              <button
+                                className="buy"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(p.id, 1);
+                                  openCart();
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 8h12l1 12H5L6 8z" />
+                                  <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                                </svg>
+                                {formatINR(p.p)}
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {filteredProducts.length === 0 && (
+                    <div className="empty on" id="empty">
+                      <b>No matches</b>
+                      Try widening your filters or clearing the search.
+                      <br />
+                      <br />
+                      <button className="btn dark" id="clr" onClick={handleClearFilters}>
+                        Clear filters
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

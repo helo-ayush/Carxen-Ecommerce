@@ -1,12 +1,19 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useApp, Order } from '@/context/AppContext';
-import { PRODUCTS, formatINR } from '@/data/products';
+import { useApp } from '@/context/AppContext';
+import { formatINR } from '@/data/products';
+import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
+import { createStorefrontOrder } from '@/lib/storefront/order-client';
+import type {
+  StorefrontCheckoutRequest,
+  StorefrontPaymentMethod,
+  StorefrontShippingAddressSnapshot,
+} from '@/lib/storefront/order-types';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -14,17 +21,31 @@ export default function CheckoutPage() {
     user,
     cart,
     cartSubtotal,
+    products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
     updateCartQty,
-    placeOrder,
+    clearCart,
     showToast,
   } = useApp();
 
+  const userName = user?.name && user.name !== 'Driver' && user.name !== 'Guest' ? user.name : 'Aarav Mehta';
   const [addressIndex, setAddressIndex] = useState(0);
   const [shippingSpeed, setShippingSpeed] = useState<'std' | 'exp'>('std');
-  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Card' | 'Net banking' | 'Cash on delivery'>('UPI');
+  const [paymentMethod, setPaymentMethod] = useState<StorefrontPaymentMethod>('UPI');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
+  const [newAddress, setNewAddress] = useState({
+    name: '',
+    phone: '',
+    postalCode: '',
+    city: '',
+    addressLine1: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Interactive Card Form State
   const [cardNumber, setCardNumber] = useState('');
@@ -33,7 +54,7 @@ export default function CheckoutPage() {
 
   const cartEntries = Object.entries(cart)
     .map(([idStr, qty]) => ({
-      product: PRODUCTS.find((p) => p.id === Number(idStr))!,
+      product: products.find((p) => p.id === Number(idStr))!,
       qty,
     }))
     .filter((x) => !!x.product);
@@ -76,28 +97,83 @@ export default function CheckoutPage() {
     }
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
+
     if (cartEntries.length === 0) {
       showToast('Your cart is empty');
       return;
     }
 
-    const orderId = 10000 + Math.floor(Math.random() * 89999);
-    const newOrder: Order = {
-      id: orderId,
-      items: cartEntries.map(({ product, qty }) => [product.id, qty]),
-      total: finalTotal,
-      pay: paymentMethod,
-      date: new Date().toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
-      eta: formatDateOffset(shippingSpeed === 'exp' ? 2 : 4),
+    const selectedAddress: StorefrontShippingAddressSnapshot =
+      addressIndex === 0
+        ? {
+            name: userName,
+            addressLine1: '12, Lake View Road, Koregaon Park',
+            city: 'Pune',
+            state: 'Maharashtra',
+            postalCode: '411001',
+            country: 'IN',
+          }
+        : addressIndex === 1
+        ? {
+            name: userName,
+            addressLine1: 'Tower B, Hinjewadi Phase 2',
+            city: 'Pune',
+            state: 'Maharashtra',
+            postalCode: '411057',
+            country: 'IN',
+          }
+        : {
+            ...newAddress,
+            country: 'IN',
+          };
+
+    if (
+      addressIndex === 2 &&
+      (!newAddress.name.trim() ||
+        !newAddress.phone.trim() ||
+        !newAddress.postalCode.trim() ||
+        !newAddress.city.trim() ||
+        !newAddress.addressLine1.trim())
+    ) {
+      const message = 'Complete the new delivery address before placing your order.';
+      setSubmitError(message);
+      showToast(message);
+      return;
+    }
+
+    const checkout: StorefrontCheckoutRequest = {
+      customer: {
+        name: selectedAddress.name || userName,
+        ...(selectedAddress.phone ? { phone: selectedAddress.phone } : {}),
+      },
+      shippingAddress: selectedAddress,
+      items: cartEntries.map(({ product, qty }) => ({
+        productId: product.id,
+        quantity: qty,
+      })),
+      shippingSpeed,
+      paymentMethod,
+      couponCode: appliedCoupon || null,
     };
 
-    placeOrder(newOrder);
-    router.push(`/order/${orderId}`);
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // The server/RPC result owns the order number and all final amounts.
+      const order = await createStorefrontOrder(checkout);
+      clearCart();
+      showToast('Order placed — payment remains pending');
+      router.push(`/order/${encodeURIComponent(order.orderNumber)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The order could not be placed.';
+      setSubmitError(message);
+      showToast(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCardNumberChange = (val: string) => {
@@ -112,8 +188,6 @@ export default function CheckoutPage() {
       digits.length > 2 ? digits.slice(0, 2) + '/' + digits.slice(2) : digits;
     setCardExpiry(formatted);
   };
-
-  const userName = user?.name && user.name !== 'Driver' && user.name !== 'Guest' ? user.name : 'Aarav Mehta';
 
   return (
     <div className="in-shop">
@@ -136,7 +210,13 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {cartEntries.length === 0 ? (
+          {catalogStatus !== 'ready' ? (
+            <CatalogState
+              status={catalogStatus}
+              error={catalogError}
+              onRetry={retryCatalog}
+            />
+          ) : cartEntries.length === 0 ? (
             <div className="empty on">
               <b>Your cart is empty</b>
               Add a few parts first.
@@ -187,14 +267,41 @@ export default function CheckoutPage() {
 
                     {addressIndex === 2 && (
                       <div className="ck-2 ck-fm" style={{ marginTop: '10px' }}>
-                        <input className="lg-in" placeholder="Full name" defaultValue={userName} />
-                        <input className="lg-in" placeholder="Phone number" />
-                        <input className="lg-in" placeholder="Pincode" />
-                        <input className="lg-in" placeholder="City" />
+                        <input
+                          className="lg-in"
+                          placeholder="Full name"
+                          value={newAddress.name}
+                          onChange={(e) => setNewAddress((current) => ({ ...current, name: e.target.value }))}
+                        />
+                        <input
+                          className="lg-in"
+                          placeholder="Phone number"
+                          value={newAddress.phone}
+                          onChange={(e) => setNewAddress((current) => ({ ...current, phone: e.target.value }))}
+                        />
+                        <input
+                          className="lg-in"
+                          placeholder="Pincode"
+                          inputMode="numeric"
+                          value={newAddress.postalCode}
+                          onChange={(e) =>
+                            setNewAddress((current) => ({ ...current, postalCode: e.target.value }))
+                          }
+                        />
+                        <input
+                          className="lg-in"
+                          placeholder="City"
+                          value={newAddress.city}
+                          onChange={(e) => setNewAddress((current) => ({ ...current, city: e.target.value }))}
+                        />
                         <input
                           className="lg-in"
                           style={{ gridColumn: '1/-1' }}
                           placeholder="House no., street, area"
+                          value={newAddress.addressLine1}
+                          onChange={(e) =>
+                            setNewAddress((current) => ({ ...current, addressLine1: e.target.value }))
+                          }
                         />
                       </div>
                     )}
@@ -240,13 +347,16 @@ export default function CheckoutPage() {
                 {/* 3. Payment */}
                 <div className="ck-b">
                   <h3>
-                    <b className="ck-n">3</b>Payment
+                    <b className="ck-n">3</b>Payment · demo / pending
                   </h3>
+                  <p className="gr-s" style={{ margin: '0 0 12px' }}>
+                    Demo payment selection — no card or UPI is captured. Payment remains pending until a gateway is connected.
+                  </p>
                   <div className="ck-opts ck-pms" style={{ marginTop: '14px' }}>
                     {[
                       {
                         key: 'UPI',
-                        label: 'UPI',
+                        label: 'UPI (demo)',
                         icon: (
                           <svg viewBox="0 0 24 24">
                             <rect x="7" y="3" width="10" height="18" rx="2" />
@@ -256,7 +366,7 @@ export default function CheckoutPage() {
                       },
                       {
                         key: 'Card',
-                        label: 'Card',
+                        label: 'Card (demo)',
                         icon: (
                           <svg viewBox="0 0 24 24">
                             <rect x="3" y="6" width="18" height="13" rx="2" />
@@ -266,7 +376,7 @@ export default function CheckoutPage() {
                       },
                       {
                         key: 'Net banking',
-                        label: 'Net banking',
+                        label: 'Net banking (demo)',
                         icon: (
                           <svg viewBox="0 0 24 24">
                             <path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18" />
@@ -275,7 +385,7 @@ export default function CheckoutPage() {
                       },
                       {
                         key: 'Cash on delivery',
-                        label: 'Cash on delivery',
+                        label: 'Cash on delivery (pending)',
                         icon: (
                           <svg viewBox="0 0 24 24">
                             <rect x="3" y="7" width="18" height="11" rx="2" />
@@ -287,7 +397,7 @@ export default function CheckoutPage() {
                       <button
                         key={key}
                         className={`ck-op ${paymentMethod === key ? 'on' : ''}`}
-                        onClick={() => setPaymentMethod(key as any)}
+                        onClick={() => setPaymentMethod(key as StorefrontPaymentMethod)}
                       >
                         <span className="ck-ic">{icon}</span>
                         <b>{label}</b>
@@ -333,7 +443,7 @@ export default function CheckoutPage() {
                           <input
                             className="lg-in"
                             inputMode="numeric"
-                            placeholder="Card number"
+                            placeholder="Card number (demo only)"
                             style={{ gridColumn: '1/-1' }}
                             value={cardNumber}
                             onChange={(e) => handleCardNumberChange(e.target.value)}
@@ -454,8 +564,24 @@ export default function CheckoutPage() {
                   </p>
                 )}
 
-                <button className="ck-pl" onClick={handlePlaceOrder}>
-                  Place order · {formatINR(finalTotal)}
+                {submitError && (
+                  <p className="ck-sv" role="alert" style={{ background: '#e2231a22', color: '#ff8d86' }}>
+                    {submitError}
+                  </p>
+                )}
+
+                <p className="gr-s" style={{ color: '#8d8d93', fontSize: '11px', margin: '4px 0 10px', textAlign: 'center' }}>
+                  Final total is calculated by the storefront server. Payment is still pending in this demo checkout.
+                </p>
+
+                <button
+                  className="ck-pl"
+                  onClick={handlePlaceOrder}
+                  disabled={isSubmitting}
+                  aria-busy={isSubmitting}
+                  style={isSubmitting ? { opacity: 0.7, cursor: 'wait' } : undefined}
+                >
+                  {isSubmitting ? 'Saving order…' : `Place order · ${formatINR(finalTotal)}`}
                 </button>
 
                 <div className="ck-tr">
@@ -469,19 +595,28 @@ export default function CheckoutPage() {
                   <span>2-year warranty</span>
                   <span>30-day returns</span>
                 </div>
+                <p className="gr-s" style={{ color: '#8d8d93', fontSize: '11px', margin: '10px 0 0', textAlign: 'center' }}>
+                  Cart sync is a pending backend step; the saved order is server-backed.
+                </p>
               </div>
             </div>
           )}
 
           {/* Sticky Mobile Bar */}
-          {cartEntries.length > 0 && (
+          {catalogStatus === 'ready' && cartEntries.length > 0 && (
             <div className="ck-bar">
               <div>
                 <small>Total</small>
                 <b>{formatINR(finalTotal)}</b>
               </div>
-              <button className="ck-pl" onClick={handlePlaceOrder}>
-                Place order
+              <button
+                className="ck-pl"
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+                style={isSubmitting ? { opacity: 0.7, cursor: 'wait' } : undefined}
+              >
+                {isSubmitting ? 'Saving…' : 'Place order'}
               </button>
             </div>
           )}

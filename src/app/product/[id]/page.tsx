@@ -5,22 +5,58 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import {
-  PRODUCTS,
   TINT_OPTIONS,
   SAMPLE_REVIEWS,
   CATEGORIES_LIST,
   formatINR,
   isCustomFit,
-  Product,
 } from '@/data/products';
+import type { Product, ProductTintOption } from '@/data/products';
+import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = Number(params?.id);
+  const { products, catalogStatus, catalogError, retryCatalog } = useApp();
 
+  const product = useMemo(() => products.find((p) => p.id === id), [id, products]);
+
+  if (!product) {
+    return (
+      <div className="in-shop">
+        <section className="pp on" id="v-prod">
+          <div className="wrap">
+            {catalogStatus === 'ready' ? (
+              <div className="empty on">
+                <b>Product unavailable</b>
+                This product is not part of the current storefront catalog.
+                <br />
+                <br />
+                <Link className="btn dark" href="/shop">
+                  Browse products
+                </Link>
+              </div>
+            ) : (
+              <CatalogState
+                status={catalogStatus}
+                error={catalogError}
+                onRetry={retryCatalog}
+              />
+            )}
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
+
+  return <ProductDetailContent key={product.id} product={product} />;
+}
+
+function ProductDetailContent({ product }: { product: Product }) {
+  const router = useRouter();
   const {
     car,
     addToCart,
@@ -28,18 +64,16 @@ export default function ProductDetailPage() {
     toggleFav,
     isFav,
     showToast,
+    products,
   } = useApp();
-
-  const product = useMemo(() => {
-    return PRODUCTS.find((p) => p.id === id) || PRODUCTS[0];
-  }, [id]);
 
   const activeCar = useMemo(() => {
     return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
   }, [car]);
 
   const [activeView, setActiveView] = useState(0);
-  const [activeTint, setActiveTint] = useState(TINT_OPTIONS[0]);
+  const tintOptions = product.tintOptions?.length ? product.tintOptions : TINT_OPTIONS;
+  const [activeTint, setActiveTint] = useState<ProductTintOption>(tintOptions[0]);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('');
@@ -51,24 +85,24 @@ export default function ProductDetailPage() {
     : 0;
 
   const categoryLabel =
-    CATEGORIES_LIST.find((c) => c[0] === product.c)?.[1] || 'Accessories';
+    product.categoryLabel || CATEGORIES_LIST.find((c) => c[0] === product.c)?.[1] || 'Accessories';
 
   // Bought together bundle items
   const bundleItems = useMemo(() => {
-    const others = PRODUCTS.filter((x) => x.id !== product.id && x.c !== product.c)
+    const others = products.filter((x) => x.id !== product.id && x.c !== product.c)
       .sort((a, b) => b.rv - a.rv)
       .slice(0, 2);
     return [product, ...others];
-  }, [product]);
+  }, [product, products]);
 
   const bundleTotal = bundleItems.reduce((acc, curr) => acc + curr.p, 0);
 
   // Related products
   const relatedProducts = useMemo(() => {
-    return PRODUCTS.filter((x) => x.id !== product.id && x.c === product.c)
-      .concat(PRODUCTS.filter((x) => x.id !== product.id && x.c !== product.c))
+    return products.filter((x) => x.id !== product.id && x.c === product.c)
+      .concat(products.filter((x) => x.id !== product.id && x.c !== product.c))
       .slice(0, 4);
-  }, [product]);
+  }, [product, products]);
 
   // Rating distribution
   const p5 = Math.max(50, Math.min(92, Math.round(60 + (product.r - 4.3) * 50)));
@@ -242,7 +276,7 @@ export default function ProductDetailPage() {
                 Stitch colour: <span>{activeTint[0]}</span>
               </p>
               <div className="pp-sw">
-                {TINT_OPTIONS.map((t, i) => (
+                {tintOptions.map((t, i) => (
                   <button
                     key={i}
                     title={t[0]}

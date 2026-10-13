@@ -3,7 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { PRODUCTS, formatINR } from '@/data/products';
+import { formatINR } from '@/data/products';
+import { CatalogState } from './CatalogState';
 import { ProductArt } from './ProductArt';
 
 export function CartDrawer() {
@@ -11,7 +12,12 @@ export function CartDrawer() {
     isCartOpen,
     closeCart,
     cart,
+    cartCount,
     cartSubtotal,
+    products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
     updateCartQty,
     removeFromCart,
     showToast,
@@ -19,7 +25,7 @@ export function CartDrawer() {
   const router = useRouter();
 
   const cartEntries = Object.entries(cart).map(([idStr, qty]) => ({
-    product: PRODUCTS.find((p) => p.id === Number(idStr))!,
+    product: products.find((p) => p.id === Number(idStr))!,
     qty,
   })).filter((item) => !!item.product);
 
@@ -28,6 +34,10 @@ export function CartDrawer() {
   const shippingPercent = Math.min(100, (cartSubtotal / freeShippingThreshold) * 100);
 
   const handleCheckout = () => {
+    if (cartCount > 0 && catalogStatus !== 'ready') {
+      showToast('Waiting for the catalog to load');
+      return;
+    }
     if (cartEntries.length === 0) {
       showToast('Your cart is empty');
       return;
@@ -69,7 +79,15 @@ export function CartDrawer() {
         </div>
 
         <div className="dl" id="dl">
-          {cartEntries.length > 0 ? (
+          {cartCount > 0 && catalogStatus !== 'ready' ? (
+            <CatalogState
+              status={catalogStatus}
+              error={catalogError}
+              onRetry={retryCatalog}
+              title="Cart items unavailable"
+              message="Your saved cart items need the storefront catalog to load."
+            />
+          ) : cartEntries.length > 0 ? (
             cartEntries.map(({ product, qty }) => (
               <div className="bi" key={product.id}>
                 <div className="th">

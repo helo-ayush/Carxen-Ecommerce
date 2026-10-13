@@ -4,12 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { PRODUCTS, formatINR } from '@/data/products';
 import { Footer } from '@/components/Footer';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, car, orders, logout } = useApp();
+  const { user, car, logout } = useApp();
 
   const name = user?.name || 'Driver';
 
@@ -17,8 +16,6 @@ export default function AccountPage() {
     logout();
     router.push('/');
   };
-
-  const reversedOrders = [...orders].reverse();
 
   return (
     <div className="in-shop">
@@ -63,37 +60,15 @@ export default function AccountPage() {
               <h2 className="disp" style={{ fontSize: '2rem', marginBottom: '14px' }}>
                 Orders
               </h2>
-              {reversedOrders.length > 0 ? (
-                reversedOrders.map((o) => (
-                  <div className="pp-rc" key={o.id}>
-                    <div className="pp-rh">
-                      <b>#{o.id}</b>
-                      <span>Confirmed</span>
-                    </div>
-                    <p className="gr-s" style={{ margin: '6px 0' }}>
-                      {o.date} ·{' '}
-                      {o.items
-                        .map(([id, q]) => {
-                          const p = PRODUCTS.find((x) => x.id === id);
-                          return p ? `${p.n} × ${q}` : '';
-                        })
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                    <b>{formatINR(o.total)}</b>
-                  </div>
-                ))
-              ) : (
-                <div className="empty on">
-                  <b>No orders yet</b>
-                  Your orders will show up here once placed.
-                  <br />
-                  <br />
-                  <Link className="btn dark" href="/shop">
-                    Explore collection
-                  </Link>
-                </div>
-              )}
+              <div className="empty on">
+                <b>No orders yet</b>
+                Order history will appear here when authenticated customer order listing is connected.
+                <br />
+                <br />
+                <Link className="btn dark" href="/shop">
+                  Explore collection
+                </Link>
+              </div>
             </div>
           </div>
         </div>
