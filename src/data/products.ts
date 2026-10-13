@@ -24,6 +24,7 @@ export interface Product {
   tintOptions?: ProductTintOption[];
   fitment?: unknown;
   customFit?: boolean;
+  image?: string;
 }
 
 // Product records are loaded from the storefront API. The remaining values are
