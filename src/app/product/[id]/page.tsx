@@ -138,7 +138,7 @@ function ProductDetailContent({ product }: { product: Product }) {
   const renderTabContent = () => {
     switch (activeTab) {
       case 's':
-        return (
+        return product.sp && product.sp.length > 0 ? (
           <ul>
             {product.sp.map(([key, val], idx) => (
               <li key={idx}>
@@ -147,6 +147,8 @@ function ProductDetailContent({ product }: { product: Product }) {
               </li>
             ))}
           </ul>
+        ) : (
+          <p>Model-specific technical specifications available with included certificate.</p>
         );
       case 'f':
         return custom ? (

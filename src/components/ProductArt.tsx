@@ -8,6 +8,18 @@ interface ProductArtProps {
 }
 
 export function ProductArt({ product, className, style }: ProductArtProps) {
+  if (product.image) {
+    return (
+      <img
+        src={product.image}
+        alt={product.n}
+        className={className}
+        style={{ objectFit: 'cover', width: '100%', height: '100%', borderRadius: 'inherit', ...style }}
+        loading="lazy"
+      />
+    );
+  }
+
   const getViewBox = () => {
     switch (product.a) {
       case 'seat':
@@ -27,7 +39,7 @@ export function ProductArt({ product, className, style }: ProductArtProps) {
 
   return (
     <svg viewBox={getViewBox()} className={className} style={style} aria-label={product.n}>
-      <use href={`#a-${product.a}`} />
+      <use href={`#a-${product.a || 'seat'}`} />
     </svg>
   );
 }

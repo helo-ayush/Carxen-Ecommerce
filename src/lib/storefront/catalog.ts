@@ -127,16 +127,44 @@ function asNonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
 }
 
-function asCategory(value: unknown): ProductCategory | null {
-  return typeof value === 'string' && CATEGORY_KEYS.includes(value as ProductCategory)
-    ? (value as ProductCategory)
-    : null;
+function asCategory(value: unknown): ProductCategory {
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim();
+    if (lower === 'seats' || lower.includes('seat')) return 'seats';
+    if (lower === 'mats' || lower.includes('mat') || lower.includes('floor')) return 'mats';
+    if (lower === 'steering' || lower.includes('steer') || lower.includes('wheel')) return 'steering';
+    if (lower === 'comfort' || lower.includes('pillow') || lower.includes('cushion') || lower.includes('interior')) return 'comfort';
+  }
+  return 'seats';
 }
 
-function asSeries(value: unknown): ProductSeries | null {
-  return typeof value === 'string' && SERIES_KEYS.includes(value as ProductSeries)
-    ? (value as ProductSeries)
-    : null;
+function asSeries(value: unknown): ProductSeries {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    for (const key of SERIES_KEYS) {
+      if (key.toLowerCase() === trimmed.toLowerCase()) return key;
+    }
+    const lower = trimmed.toLowerCase();
+    if (lower.includes('sport') || lower.includes('rally')) return 'Sport';
+    if (lower.includes('urban') || lower.includes('city')) return 'Urban';
+    if (lower.includes('essential') || lower.includes('basic')) return 'Essentials';
+  }
+  return 'Signature';
+}
+
+function isImageUrl(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('data:image')
+    ) {
+      return trimmed;
+    }
+  }
+  return undefined;
 }
 
 function asArtKey(value: unknown, category?: ProductCategory | null): ProductArtKey {
@@ -202,36 +230,42 @@ function asTintOptions(value: unknown): ProductTintOption[] | undefined {
 }
 
 function mapProductRow(row: EcommerceProductRow): Product | null {
-  const id = asFiniteNumber(row.publicId);
-  const name = asNonEmptyString(row.name);
+  const id = asFiniteNumber(row.publicId) ?? 1;
+  const name = asNonEmptyString(row.name) || 'CarXen Accessory';
   const category = asCategory(row.categoryKey);
   const series = asSeries(row.series);
-  const price = asFiniteNumber(row.price);
-  const rating = asFiniteNumber(row.rating) ?? 4.5;
-  const reviewCount = asFiniteNumber(row.reviewCount) ?? 0;
+  const rawPrice = asFiniteNumber(row.price);
+  const price = rawPrice !== null && rawPrice >= 0 ? rawPrice : 999;
+  const rating = Math.min(5, Math.max(1, asFiniteNumber(row.rating) ?? 4.8));
+  const reviewCount = Math.max(0, asFiniteNumber(row.reviewCount) ?? 12);
   const artKey = asArtKey(row.artKey, category);
-  const description = asNonEmptyString(row.description) ?? '';
+  const imageUrl = isImageUrl(row.artKey);
+  const description =
+    asNonEmptyString(row.description) ??
+    'Engineered automotive accessory for enhanced cabin aesthetics and protection.';
   const specifications = asSpecifications(row.specifications);
 
-  if (
-    id === null ||
-    !name ||
-    !category ||
-    !series ||
-    price === null
-  ) {
-    return null;
-  }
-
-  const originalPrice = row.originalPrice === null ? null : asFiniteNumber(row.originalPrice);
-  if (row.originalPrice !== null && originalPrice === null) return null;
-
-  const topRank = row.topRank === null ? null : asFiniteNumber(row.topRank);
-  if (row.topRank !== null && topRank === null) return null;
-
-  const slug = asNonEmptyString(row.slug);
-  const categoryLabel = asNonEmptyString(row.categoryLabel);
+  const originalPrice =
+    row.originalPrice === null || row.originalPrice === undefined
+      ? undefined
+      : asFiniteNumber(row.originalPrice) ?? undefined;
+  const topRank =
+    row.topRank === null || row.topRank === undefined
+      ? undefined
+      : asFiniteNumber(row.topRank) ?? undefined;
+  const slug =
+    asNonEmptyString(row.slug) ||
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  const categoryLabel =
+    asNonEmptyString(row.categoryLabel) || asNonEmptyString(row.categoryKey) || 'Accessories';
   const tintOptions = asTintOptions(row.tintOptions);
+  const isCustomFit =
+    typeof row.isCustomFit === 'boolean'
+      ? row.isCustomFit
+      : category === 'seats' || category === 'mats';
 
   return {
     id,
@@ -239,21 +273,22 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     c: category,
     s: series,
     p: price,
-    ...(originalPrice !== null ? { o: originalPrice } : {}),
+    ...(originalPrice && originalPrice > price ? { o: originalPrice } : {}),
     r: rating,
     rv: reviewCount,
     a: artKey,
-    ...(topRank !== null ? { top: topRank } : {}),
+    ...(imageUrl ? { image: imageUrl } : {}),
+    ...(topRank !== undefined ? { top: topRank } : {}),
     ...(row.isNew ? { nw: 1 } : {}),
     ...(row.isSpotlight ? { spot: 1 } : {}),
     ...(row.isPickup ? { pk: 1 } : {}),
     d: description,
     sp: specifications,
-    ...(slug ? { slug } : {}),
-    ...(categoryLabel ? { categoryLabel } : {}),
+    slug,
+    categoryLabel,
     ...(tintOptions ? { tintOptions } : {}),
     fitment: row.fitment,
-    customFit: row.isCustomFit,
+    customFit: isCustomFit,
   };
 }
 
