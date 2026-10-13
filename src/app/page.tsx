@@ -19,11 +19,36 @@ import { HeroFrameSection } from '@/components/HeroFrameSection';
 import { Cards } from '@/components/ui/interface-crafts-cards';
 
 const WHY_GALLERY_ITEMS = [
-  { image: '/sports-bucket.jpg', label: 'Sport support', alt: 'Sport bucket seat interior' },
-  { image: '/head-rest.jpg', label: 'Quilted comfort', alt: 'Quilted seat cover interior' },
-  { image: '/steering.jpg', label: 'Driver control', alt: 'Steering wheel and dashboard interior' },
-  { image: '/floor-mat.jpg', label: 'All-weather guard', alt: 'All-weather floor mat detail' },
-  { image: '/hand-rest.jpg', label: 'Long-drive ease', alt: 'Car centre armrest detail' },
+  {
+    image:
+      'https://images.unsplash.com/photo-1769676501432-589faf8a8a8d?auto=format&fit=crop&w=1200&q=85',
+    label: 'Sport support',
+    alt: 'Sport bucket seat interior',
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1640705049944-de916f415bb4?auto=format&fit=crop&w=1200&q=85',
+    label: 'Quilted comfort',
+    alt: 'Quilted seat cover interior',
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1625690180114-5530b1304127?auto=format&fit=crop&w=1200&q=85',
+    label: 'Driver control',
+    alt: 'Steering wheel and dashboard interior',
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1626966473515-71dc32f2aedd?auto=format&fit=crop&w=1200&q=85',
+    label: 'All-weather guard',
+    alt: 'All-weather floor mat detail',
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1629280878139-038999084e23?auto=format&fit=crop&w=1200&q=85',
+    label: 'Long-drive ease',
+    alt: 'Car centre armrest detail',
+  },
 ];
 
 export default function HomePage() {
