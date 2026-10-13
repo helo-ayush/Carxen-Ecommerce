@@ -266,12 +266,14 @@ export function parseCheckoutPayload(value: unknown): StorefrontCheckoutRequest 
 
 function getOrderConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
   const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim();
 
   const missing = [
     !supabaseUrl && 'NEXT_PUBLIC_SUPABASE_URL',
-    !supabaseAnonKey && 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    !supabaseAnonKey && 'NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     !storeSlug && 'NEXT_PUBLIC_ECOMMERCE_STORE_SLUG',
   ].filter((name): name is string => Boolean(name));
 
@@ -285,7 +287,7 @@ function getOrderConfig() {
 
   return {
     supabaseUrl: supabaseUrl!,
-    // Orders intentionally use the public anon key. A service-role key is never
+    // Orders intentionally use the public anon/publishable key. A service-role key is never
     // read by this storefront route or sent to the browser.
     supabaseAnonKey: supabaseAnonKey!,
     storeSlug: storeSlug!,
