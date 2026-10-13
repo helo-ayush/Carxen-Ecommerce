@@ -10,11 +10,14 @@ import React, {
 } from 'react';
 import type { Product } from '@/data/products';
 import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
+import { supabase } from '@/lib/supabase/client';
 
 export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export interface User {
+  id?: string;
   name: string;
+  email?: string;
 }
 
 export interface Vehicle {
@@ -40,7 +43,10 @@ interface AppContextType {
   quickViewProduct: Product | null;
   toastMessage: string | null;
   login: (name?: string) => void;
-  logout: () => void;
+  loginWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: string | null; requiresEmailConfirmation?: boolean }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
+  logout: () => Promise<void>;
   setVehicle: (v: Vehicle) => void;
   addToCart: (productId: number, qty?: number) => void;
   updateCartQty: (productId: number, delta: number) => void;
@@ -102,6 +108,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const retryCatalog = useCallback(() => {
     void requestCatalog();
   }, [requestCatalog]);
+
+  // Supabase Auth Listener
+  useEffect(() => {
+    let mounted = true;
+
+    const initAuth = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('Supabase getSession warning:', error.message);
+          return;
+        }
+        if (mounted && data.session?.user) {
+          const u = data.session.user;
+          const fullName =
+            u.user_metadata?.full_name ||
+            u.user_metadata?.name ||
+            u.email?.split('@')[0] ||
+            'Driver';
+          setUser({
+            id: u.id,
+            name: fullName,
+            email: u.email,
+          });
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+      }
+    };
+
+    void initAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          const u = session.user;
+          const fullName =
+            u.user_metadata?.full_name ||
+            u.user_metadata?.name ||
+            u.email?.split('@')[0] ||
+            'Driver';
+          setUser({
+            id: u.id,
+            name: fullName,
+            email: u.email,
+          });
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
 
   // Initialize from localStorage
   useEffect(() => {
@@ -168,16 +232,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toastMessage]);
 
+  
   const login = (name?: string) => {
     const newUser = { name: name || 'Driver' };
     setUser(newUser);
     showToast('Signed in — demo account');
   };
 
-  const logout = () => {
+  const loginWithEmail = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        return { error: error.message };
+      }
+      if (data.user) {
+        const fullName =
+          data.user.user_metadata?.full_name ||
+          data.user.user_metadata?.name ||
+          data.user.email?.split('@')[0] ||
+          'Driver';
+        setUser({
+          id: data.user.id,
+          name: fullName,
+          email: data.user.email,
+        });
+        showToast(`Welcome back, ${fullName}!`);
+      }
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Login failed' };
+    }
+  };
+
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    fullName?: string
+  ) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName?.trim() || 'Driver',
+          },
+        },
+      });
+      if (error) {
+        return { error: error.message };
+      }
+      if (data.session && data.user) {
+        const name =
+          fullName?.trim() || data.user.email?.split('@')[0] || 'Driver';
+        setUser({
+          id: data.user.id,
+          name,
+          email: data.user.email,
+        });
+        showToast(`Account created — Welcome, ${name}!`);
+        return { error: null, requiresEmailConfirmation: false };
+      }
+      return { error: null, requiresEmailConfirmation: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Sign up failed' };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      const origin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_SITE_URL || '';
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        return { error: error.message };
+      }
+      return { error: null };
+    } catch (err) {
+      return {
+        error: err instanceof Error ? err.message : 'Google sign-in failed',
+      };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Supabase sign out error:', e);
+    }
     setUser(null);
     showToast('Signed out');
   };
+
 
   const setVehicle = (v: Vehicle) => {
     setCar(v);
@@ -301,7 +458,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         quickViewProduct,
         toastMessage,
         login,
-        logout,
+      loginWithEmail,
+      signUpWithEmail,
+      signInWithGoogle,
+      logout,
         setVehicle,
         addToCart,
         updateCartQty,

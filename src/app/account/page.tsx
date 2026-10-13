@@ -11,9 +11,10 @@ export default function AccountPage() {
   const { user, car, logout } = useApp();
 
   const name = user?.name || 'Driver';
+  const email = user?.email;
 
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async () => {
+    await logout();
     router.push('/');
   };
 
@@ -26,16 +27,33 @@ export default function AccountPage() {
             {/* Left side: Profile & Garage */}
             <div>
               <div className="ck-b">
-                <div className="ac-av">{name[0].toUpperCase()}</div>
+                <div className="ac-av">{(name[0] || 'D').toUpperCase()}</div>
                 <h3 style={{ marginTop: '14px' }}>{name}</h3>
-                <p className="gr-s">CARXEN Member</p>
-                <button
-                  className="btn dark"
-                  onClick={handleSignOut}
-                  style={{ marginTop: '14px' }}
-                >
-                  Sign out
-                </button>
+                {email && (
+                  <p className="gr-s" style={{ wordBreak: 'break-all', marginTop: '4px' }}>
+                    {email}
+                  </p>
+                )}
+                <p className="gr-s" style={{ marginTop: '4px' }}>
+                  {user ? 'CARXEN Member' : 'Guest'}
+                </p>
+                {user ? (
+                  <button
+                    className="btn dark"
+                    onClick={handleSignOut}
+                    style={{ marginTop: '14px' }}
+                  >
+                    Sign out
+                  </button>
+                ) : (
+                  <Link
+                    className="btn dark"
+                    href="/login"
+                    style={{ marginTop: '14px' }}
+                  >
+                    Log in / Sign up
+                  </Link>
+                )}
               </div>
 
               <div className="ck-b">
