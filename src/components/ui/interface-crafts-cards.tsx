@@ -209,14 +209,16 @@ export const Cards = ({
   useEffect(() => {
     const updateSpacing = () => {
       const w = window.innerWidth;
-      if (w >= 1200) {
+      if (w >= 1280) {
         setSpacing(cardSpacing);
-      } else if (w >= 900) {
-        setSpacing(Math.round(cardSpacing * 0.84));
-      } else if (w >= 640) {
-        setSpacing(Math.round(cardSpacing * 0.7));
+      } else if (w >= 1024) {
+        setSpacing(Math.round(cardSpacing * 0.85));
+      } else if (w >= 768) {
+        setSpacing(Math.round(cardSpacing * 0.65));
+      } else if (w >= 540) {
+        setSpacing(Math.round(cardSpacing * 0.48));
       } else {
-        setSpacing(Math.round(cardSpacing * 0.52));
+        setSpacing(Math.round(cardSpacing * 0.32));
       }
     };
     updateSpacing();
@@ -225,6 +227,8 @@ export const Cards = ({
   }, [cardSpacing]);
 
   const middle = (cards.length - 1) / 2;
+  const isMobile = spacing <= 35;
+  const currentActiveScale = isMobile ? 1.08 : activeScale;
 
   const isAnyCardActive = () => {
     return !!active?.title;
@@ -248,6 +252,9 @@ export const Cards = ({
           const offsetX = (index - middle) * spacing;
           const isActive = isCurrentActive(card);
           const hasAnyActive = isAnyCardActive();
+          const cardRotate = isMobile
+            ? Math.round(card.config.rotate * 0.6)
+            : card.config.rotate;
 
           return (
             <motion.div key={card.title}>
@@ -265,7 +272,7 @@ export const Cards = ({
                   y: isActive
                     ? 0
                     : hasAnyActive
-                      ? 360
+                      ? (isMobile ? 240 : 360)
                       : card.config.y,
                   x: isActive
                     ? 0
@@ -275,10 +282,10 @@ export const Cards = ({
                   rotate: isActive
                     ? 0
                     : hasAnyActive
-                      ? 0.18 * card.config.rotate
-                      : card.config.rotate,
+                      ? 0
+                      : cardRotate,
                   scale: isActive
-                    ? activeScale
+                    ? currentActiveScale
                     : hasAnyActive
                       ? 0.7
                       : 1,
@@ -290,7 +297,7 @@ export const Cards = ({
                 }}
                 whileHover={{
                   scale: isActive
-                    ? activeScale
+                    ? currentActiveScale
                     : hasAnyActive
                       ? 0.7
                       : 1.05,
