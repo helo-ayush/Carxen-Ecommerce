@@ -1,0 +1,565 @@
+﻿/* ==========================================================================
+   CARXEN LUXURY STOREFRONT PROMOTIONAL ADD-ONS (BESPOKE AUTOMOTIVE SUITE)
+   ========================================================================== */
+
+.addon-sec-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: clamp(24px, 3.5vw, 48px);
+  margin-bottom: clamp(16px, 2.5vw, 32px);
+}
+
+.addon-card-shell {
+  position: relative;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(226, 35, 26, 0.12), transparent 40%),
+    radial-gradient(circle at 15% 85%, rgba(255, 255, 255, 0.03), transparent 35%),
+    linear-gradient(135deg, #0d0d10 0%, #141418 52%, #0b0b0e 100%);
+  color: #f5f5f2;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 70px -24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(226, 35, 26, 0.08);
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+
+.addon-card-shell:hover {
+  border-color: rgba(226, 35, 26, 0.28);
+  box-shadow: 0 32px 80px -20px rgba(0, 0, 0, 0.65), 0 0 30px rgba(226, 35, 26, 0.12);
+}
+
+.addon-card-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, #000 40%, transparent 85%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.addon-card-content {
+  position: relative;
+  z-index: 1;
+  padding: clamp(32px, 4.5vw, 56px) clamp(24px, 4vw, 52px);
+}
+
+/* ==========================================================================
+   1. SPECIAL OFFER / FESTIVE FLASH SALE
+   ========================================================================== */
+.addon-offer-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.25fr) minmax(280px, 0.95fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+}
+
+.addon-top-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  background: rgba(226, 35, 26, 0.12);
+  border: 1px solid rgba(226, 35, 26, 0.3);
+  color: #ff5449;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.addon-pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e2231a;
+  box-shadow: 0 0 10px #e2231a;
+}
+
+.addon-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid #e2231a;
+  animation: addonPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes addonPing {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.addon-offer-title {
+  font-family: var(--disp);
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: #ffffff;
+  margin-bottom: 14px;
+}
+
+.addon-offer-subtitle {
+  color: #a5a5ad;
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 52ch;
+  margin-bottom: 28px;
+}
+
+.addon-voucher-box {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1.5px dashed rgba(226, 35, 26, 0.45);
+  margin-bottom: 28px;
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+.addon-voucher-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addon-voucher-label span:first-child {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8b8b94;
+}
+
+.addon-voucher-discount {
+  font-family: var(--disp);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.addon-coupon-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #111114;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff6054;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.25s var(--ease);
+}
+
+.addon-coupon-code-pill:hover {
+  background: #1b1b22;
+  border-color: rgba(226, 35, 26, 0.6);
+  color: #fff;
+}
+
+.addon-coupon-copy-btn {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b5b5be;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.addon-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.addon-offer-img-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #101013;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.6);
+}
+
+.addon-offer-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s var(--ease);
+}
+
+.addon-offer-img-frame:hover .addon-offer-img {
+  transform: scale(1.04);
+}
+
+.addon-img-floating-tag {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 10px 16px;
+  background: rgba(14, 14, 16, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e5e5ea;
+}
+
+/* ==========================================================================
+   2. NEWLY LAUNCHED PRODUCT DROP
+   ========================================================================== */
+.addon-launch-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.25fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+}
+
+.addon-launch-img-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at center, rgba(226, 35, 26, 0.12), transparent 60%),
+    linear-gradient(180deg, #16161c 0%, #0d0d10 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.addon-launch-img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.7));
+  transition: transform 0.6s var(--ease);
+}
+
+.addon-launch-img-stage:hover .addon-launch-img {
+  transform: scale(1.05) rotate(-1deg);
+}
+
+.addon-price-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 14px;
+  margin-bottom: 22px;
+}
+
+.addon-active-price {
+  font-family: var(--mono);
+  font-size: clamp(24px, 3.2vw, 36px);
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.addon-original-price {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: #6d6d75;
+  text-decoration: line-through;
+}
+
+.addon-launch-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.addon-spec-pill {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.3s;
+}
+
+.addon-spec-pill:hover {
+  border-color: rgba(226, 35, 26, 0.4);
+}
+
+.addon-spec-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7d7d86;
+  margin-bottom: 4px;
+}
+
+.addon-spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f2f2ef;
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   3. COCKPIT SUITE BUNDLE DEAL
+   ========================================================================== */
+.addon-bundle-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.addon-bundle-chain {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1.25fr;
+  align-items: center;
+  gap: clamp(12px, 1.8vw, 24px);
+  margin-bottom: 28px;
+}
+
+.addon-bundle-item-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.35s var(--ease), border-color 0.35s;
+}
+
+.addon-bundle-item-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(226, 35, 26, 0.4);
+}
+
+.addon-bundle-item-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #141418;
+  margin-bottom: 12px;
+}
+
+.addon-bundle-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.addon-bundle-item-cat {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff5449;
+  margin-bottom: 4px;
+}
+
+.addon-bundle-item-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f0f0ed;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.addon-bundle-node {
+  font-family: var(--disp);
+  font-size: 22px;
+  font-weight: 700;
+  color: #ff5449;
+  text-align: center;
+}
+
+.addon-bundle-total-card {
+  background:
+    radial-gradient(circle at center, rgba(226, 35, 26, 0.15), transparent 70%),
+    linear-gradient(145deg, #1c1c24 0%, #111115 100%);
+  border: 1px solid rgba(226, 35, 26, 0.45);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 16px 40px -12px rgba(226, 35, 26, 0.25);
+}
+
+.addon-bundle-price-box {
+  margin-bottom: 16px;
+}
+
+.addon-bundle-total-price {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.addon-bundle-old-price {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: #7b7b85;
+  text-decoration: line-through;
+  margin-left: 8px;
+}
+
+/* ==========================================================================
+   4. ENGINEERING BILLBOARD STRIP
+   ========================================================================== */
+.addon-billboard-shell {
+  position: relative;
+  border-radius: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #0d0d10;
+  box-shadow: 0 28px 70px -24px rgba(0, 0, 0, 0.6);
+}
+
+.addon-billboard-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.22;
+  filter: saturate(0.8) contrast(1.15);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.addon-billboard-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(226, 35, 26, 0.12), transparent 60%),
+    linear-gradient(to right, rgba(13, 13, 16, 0.95) 0%, rgba(13, 13, 16, 0.75) 50%, rgba(13, 13, 16, 0.95) 100%);
+  z-index: 1;
+}
+
+.addon-billboard-inner {
+  position: relative;
+  z-index: 2;
+  padding: clamp(38px, 5.5vw, 68px) clamp(24px, 4.5vw, 60px);
+}
+
+.addon-stats-matrix {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-top: 36px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.addon-stat-box {
+  border-left: 2px solid rgba(226, 35, 26, 0.7);
+  padding-left: 16px;
+}
+
+.addon-stat-num {
+  font-family: var(--mono);
+  font-size: clamp(24px, 3.2vw, 36px);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.addon-stat-text {
+  font-size: 12.5px;
+  color: #9898a2;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   RESPONSIVE ADAPTATIONS
+   ========================================================================== */
+@media (max-width: 980px) {
+  .addon-offer-grid,
+  .addon-launch-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .addon-bundle-chain {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .addon-bundle-node {
+    display: none;
+  }
+
+  .addon-bundle-total-card {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+  }
+
+  .addon-stats-matrix {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .addon-card-content,
+  .addon-billboard-inner {
+    padding: 24px 18px;
+    border-radius: 24px;
+  }
+
+  .addon-voucher-box {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .addon-bundle-chain {
+    grid-template-columns: 1fr;
+  }
+
+  .addon-stats-matrix {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}

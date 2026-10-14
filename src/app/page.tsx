@@ -18,6 +18,7 @@ import AccordionGallery from '@/components/ui/AccordionGallery';
 import { HeroFrameSection } from '@/components/HeroFrameSection';
 import { Cards } from '@/components/ui/interface-crafts-cards';
 import { Badge } from '@/components/ui/badge';
+import { AddonSections } from '@/components/storefront/AddonSections';
 
 const WHY_GALLERY_ITEMS = [
   {
@@ -77,6 +78,7 @@ export default function HomePage() {
   const craftConfig = storefrontConfig?.craftCards;
   const ctaConfig = storefrontConfig?.cta;
   const announcementConfig = storefrontConfig?.announcement;
+  const addonsConfig = storefrontConfig?.addons;
 
   // Reveal observer
   useEffect(() => {
@@ -310,6 +312,9 @@ export default function HomePage() {
           <span>30-day returns</span>
         </div>
       </div>
+
+      {/* PROMOTIONAL ADD-ONS (HIGH PREFERENCE — DIRECTLY BELOW HERO) */}
+      <AddonSections addons={addonsConfig} />
 
       {/* CATEGORIES */}
       {categoriesConfig?.enabled !== false && (
