@@ -344,7 +344,9 @@ export function HeroFrameSection() {
         <div className="hv-finale" ref={finaleRef}>
           <div className="hv-finale-inner">
             <p className="hv-finale-pre mono">The complete car accessories brand</p>
-            <h1 className="hv-finale-logo disp">CAR<span className="hv-finale-x">X</span>EN</h1>
+            <h1 className="hv-finale-logo disp">
+              <img src="/logo.png" alt="CARXEN Car Accessories" className="hv-finale-logo-img" />
+            </h1>
             <p className="hv-finale-slogan">Engineered for every drive<span className="hv-finale-dot">.</span></p>
             <div className="hv-finale-line" />
             <p className="hv-finale-sub mono">100+ Vehicle Models &nbsp;·&nbsp; 2-Year Warranty &nbsp;·&nbsp; Free Shipping</p>

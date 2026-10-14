@@ -6,16 +6,16 @@ import Link from 'next/link';
 export function Footer() {
   return (
     <footer>
-      <div className="fw in" id="fw">
-        <span>
-          CAR<b>X</b>EN
-        </span>
+      <div className="fw in" id="fw" aria-hidden="true">
+        <div className="fw-logo-wrap">
+          <img src="/logo.png" alt="CARXEN" className="fw-logo-img" />
+        </div>
       </div>
       <div className="wrap">
         <div className="ft-g">
           <div>
-            <Link href="/" className="logo" style={{ fontSize: '34px' }}>
-              CAR<b>X</b>EN
+            <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+              <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '44px', width: 'auto' }} />
             </Link>
             <p>Built for drivers. Designed for what&apos;s next.</p>
             <div className="soc">

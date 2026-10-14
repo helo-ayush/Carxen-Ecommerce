@@ -539,7 +539,7 @@ export default function CheckoutPage() {
                     {paymentMethod === 'Card' && (
                       <div>
                         <div className="ck-cd" style={{ marginBottom: '14px' }}>
-                          <span>CARXEN</span>
+                          <img src="/logo.png" alt="CARXEN" style={{ height: '26px', width: 'auto', alignSelf: 'flex-start' }} />
                           <b>
                             {cardNumber || '•••• •••• •••• ••••'}
                           </b>

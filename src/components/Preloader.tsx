@@ -47,9 +47,7 @@ export function Preloader() {
     <div className={`pre ${isDone ? 'done' : ''}`} id="pre">
       <small className="mono">CarXen — Precision interiors</small>
       <div className="pre-logo">
-        <span>
-          CAR<b>X</b>EN
-        </span>
+        <img src="/logo.png" alt="CARXEN" className="pre-logo-img" />
       </div>
       <div className="pre-row">
         <div className="pre-n" id="preN">

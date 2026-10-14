@@ -444,6 +444,63 @@ header.sc {
   transform: rotate(180deg);
 }
 
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 40px;
+  width: auto;
+  max-width: 175px;
+  object-fit: contain;
+  display: block;
+  transition: transform .3s var(--ease), opacity .3s var(--ease);
+}
+
+.logo:hover .logo-img,
+.logo-link:hover .logo-img {
+  transform: scale(1.03);
+}
+
+.pre-logo-img {
+  display: inline-block;
+  height: clamp(54px, 11vw, 110px);
+  width: auto;
+  max-width: min(80vw, 420px);
+  object-fit: contain;
+  transform: translateY(110%);
+  animation: up 1s var(--mech) .15s forwards;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.4));
+}
+
+.hv-finale-logo-img {
+  height: clamp(75px, 16vw, 190px);
+  width: auto;
+  max-width: 90vw;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 16px 42px rgba(0, 0, 0, 0.6));
+}
+
+.fw-logo-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(20px, 4vw, 40px) 0;
+}
+
+.fw-logo-img {
+  width: min(85vw, 920px);
+  height: auto;
+  max-height: clamp(140px, 20vw, 320px);
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 20px 48px rgba(0, 0, 0, 0.45));
+}
+
 nav.main {
   display: flex;
   gap: 30px;

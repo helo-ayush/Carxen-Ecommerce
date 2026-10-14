@@ -66,7 +66,7 @@ export function SvgDefs() {
               <rect x="82" y="80" width="164" height="104" rx="8" fill="url(#ridge)" opacity=".8" />
               <rect x="92" y="152" width="82" height="76" rx="9" fill="#101014" stroke="#3b3b43" />
               <rect x="188" y="196" width="66" height="19" rx="4" fill="#0c0c0e" stroke="#55555e" />
-              <text x="221" y="209" textAnchor="middle" fontFamily="IBM Plex Mono" fontSize="9" letterSpacing="2" fill="#d0d0d5">CARXEN</text>
+              <image href="/logo.png" x="190" y="197" width="62" height="17" preserveAspectRatio="xMidYMid meet" />
             </g>
           </symbol>
           <symbol id="a-wheel" viewBox="0 0 320 320">
@@ -79,7 +79,7 @@ export function SvgDefs() {
             <rect x="198" y="138" width="72" height="25" rx="11" fill="url(#g2)" />
             <rect x="146" y="196" width="28" height="68" rx="12" fill="url(#g2)" />
             <circle cx="160" cy="150" r="45" fill="url(#g1)" />
-            <text x="160" y="155" textAnchor="middle" fontFamily="IBM Plex Mono" fontSize="11" letterSpacing="3" fill="#d6d6db">CARXEN</text>
+            <image href="/logo.png" x="130" y="139" width="60" height="22" preserveAspectRatio="xMidYMid meet" />
           </symbol>
           <symbol id="a-pillow" viewBox="0 0 320 200">
             <ellipse cx="160" cy="178" rx="118" ry="10" fill="#000" opacity=".22" />

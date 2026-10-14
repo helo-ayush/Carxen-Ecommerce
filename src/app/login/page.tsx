@@ -104,8 +104,8 @@ function LoginForm() {
     <div className="ov on" id="v-login" role="dialog" aria-label="Log in">
       <div className="lg-w">
         <div className="lg-l">
-          <Link href="/" className="logo">
-            CAR<b>X</b>EN
+          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+            <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '42px', width: 'auto' }} />
           </Link>
           <div className="lg-ghost">X</div>
           <div className="lg-sw">

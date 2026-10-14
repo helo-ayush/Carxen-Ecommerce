@@ -10,9 +10,9 @@ export function MobileMenu() {
   return (
     <div className={`menu ${isMobileMenuOpen ? 'on' : ''}`} id="menu">
       <div className="wrap menu-top" style={{ width: '100%', display: 'flex' }}>
-        <span className="logo">
-          CAR<b>X</b>EN
-        </span>
+        <Link href="/" onClick={closeMobileMenu} className="logo logo-link" aria-label="CARXEN Homepage">
+          <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '36px', width: 'auto' }} />
+        </Link>
         <button className="xb" id="menuX" onClick={closeMobileMenu} aria-label="Close">
           <svg viewBox="0 0 24 24" style={{ stroke: '#fff' }}>
             <path d="M6 6l12 12M18 6L6 18" />

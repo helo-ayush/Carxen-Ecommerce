@@ -1911,7 +1911,7 @@ export default function AccountPage() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e4e4e7', paddingBottom: '14px' }}>
               <div>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#09090b' }}>CARXEN</h3>
+                <img src="/logo.png" alt="CARXEN" style={{ height: '34px', width: 'auto', display: 'block', marginBottom: '6px' }} />
                 <div style={{ fontSize: '11px', color: '#71717a', lineHeight: '1.4' }}>
                   GSTIN: 27AABCC8920D1ZE<br />
                   Baner, Pune, MH 411045

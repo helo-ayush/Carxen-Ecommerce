@@ -44,8 +44,8 @@ export function Header() {
       </div>
       <header id="hdr" className={isScrolled ? 'sc' : ''}>
         <div className="wrap hd">
-          <Link href="/" className="logo">
-            CAR<b>X</b>EN
+          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+            <img src="/logo.png" alt="CARXEN" className="logo-img" />
           </Link>
           <nav className="main">
             <Link href="/#categories">Product</Link>
