@@ -230,31 +230,3 @@ export const DEFAULT_GST_INFO: GstBillingInfo = {
   companyName: '',
   gstin: '',
 };
-
-export const AVATAR_PRESETS = [
-  {
-    id: 'trackday',
-    label: 'Trackday Pro',
-    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
-  },
-  {
-    id: 'gt_racer',
-    label: 'GT Pilot',
-    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-  },
-  {
-    id: 'speedster',
-    label: 'Apex Master',
-    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces',
-  },
-  {
-    id: 'aero_eng',
-    label: 'Aero Specialist',
-    url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces',
-  },
-  {
-    id: 'carbon',
-    label: 'Midnight Stig',
-    url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces',
-  },
-];
