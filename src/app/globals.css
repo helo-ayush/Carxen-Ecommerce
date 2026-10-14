@@ -1520,9 +1520,13 @@ nav.main a:hover::after {
     radial-gradient(circle at 52% 44%, rgba(226, 35, 26, .1), transparent 24%),
     linear-gradient(135deg, #0d0d10 0%, #111115 48%, #0b0b0d 100%);
   color: #f3f3ef;
-  border-radius: 44px;
-  margin: 0 clamp(8px, 1.6vw, 24px);
+  border-radius: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: clamp(36px, 5vw, 68px) clamp(22px, 4vw, 54px);
+  margin: 0;
   overflow: hidden;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
+  z-index: 1;
 }
 
 .craft::before {
@@ -1535,11 +1539,6 @@ nav.main a:hover::after {
   background-size: 72px 72px;
   mask-image: linear-gradient(to bottom, #000, transparent 78%);
   pointer-events: none;
-}
-
-.craft > .wrap {
-  position: relative;
-  z-index: 1;
 }
 
 .craft-head {
@@ -3978,8 +3977,7 @@ footer {
   display: grid;
   grid-template-columns: 1.4fr repeat(3, 1fr);
   gap: 36px;
-  padding: clamp(36px, 5vw, 64px) 0;
-  border-top: 1px solid var(--dline);
+  padding: clamp(44px, 6vw, 72px) 0 clamp(36px, 5vw, 60px);
 }
 
 .ft-g p {

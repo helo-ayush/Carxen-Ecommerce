@@ -328,8 +328,9 @@ export default function HomePage() {
       )}
 
       {/* CRAFT & MATERIALS */}
-      <section className="sec craft" id="craft">
+      <section className="sec" id="craft">
         <div className="wrap">
+          <div className="craft">
           <div className="sec-head craft-head rv in">
             <span className="no">03</span>
             <span className="t">Materials &amp; craftsmanship</span>
@@ -491,6 +492,7 @@ export default function HomePage() {
               <b className="spec-value"><span>−30°</span><em>/</em><span>80°</span></b>
               <span className="spec-label">Operating range <i>°C</i></span>
             </div>
+          </div>
           </div>
         </div>
       </section>
@@ -938,7 +940,7 @@ export default function HomePage() {
             <figure className="fit-visual" id="fitV">
               <img
                 className="fit-visual-photo"
-                src={fitmentConfig?.image || '/steering.jpg'}
+                src={fitmentConfig?.image || 'https://images.unsplash.com/photo-1625690180114-5530b1304127?auto=format&fit=crop&w=1200&q=85'}
                 alt={fitmentConfig?.alt || 'Leather-wrapped steering wheel in a carefully finished car interior'}
                 width={1280}
                 height={720}

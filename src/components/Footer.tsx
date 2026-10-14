@@ -6,11 +6,6 @@ import Link from 'next/link';
 export function Footer() {
   return (
     <footer>
-      <div className="fw in" id="fw" aria-hidden="true">
-        <div className="fw-logo-wrap">
-          <img src="/logo.png" alt="CARXEN" className="fw-logo-img" />
-        </div>
-      </div>
       <div className="wrap">
         <div className="ft-g">
           <div>

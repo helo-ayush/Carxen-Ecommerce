@@ -35,7 +35,7 @@ const defaultCategories = [
     description: 'Custom fit. Premium finish.',
     detail: 'Diamond-stitched comfort, tailored for the way you drive.',
     filter: 'seats',
-    src: '/head-rest.jpg',
+    src: 'https://images.unsplash.com/photo-1640705049944-de916f415bb4?auto=format&fit=crop&w=1200&q=85',
     alt: 'Quilted car seat covers',
   },
   {
@@ -45,7 +45,7 @@ const defaultCategories = [
     description: 'Built for real-world roads.',
     detail: 'Deep channels and a precision fit keep every drive cleaner.',
     filter: 'mats',
-    src: '/floor-mat.jpg',
+    src: 'https://images.unsplash.com/photo-1626966473515-71dc32f2aedd?auto=format&fit=crop&w=1200&q=85',
     alt: 'All-weather car floor mat',
   },
   {
@@ -55,7 +55,7 @@ const defaultCategories = [
     description: 'Control meets comfort.',
     detail: 'A better grip, a sharper feel, and a more considered cockpit.',
     filter: 'steering',
-    src: '/steering.jpg',
+    src: 'https://images.unsplash.com/photo-1625690180114-5530b1304127?auto=format&fit=crop&w=1200&q=85',
     alt: 'Car steering wheel and dashboard',
   },
   {
@@ -65,7 +65,7 @@ const defaultCategories = [
     description: 'Soft touch. Long-drive ease.',
     detail: 'Refined cushioning that makes every kilometre feel more relaxed.',
     filter: 'comfort',
-    src: '/hand-rest.jpg',
+    src: 'https://images.unsplash.com/photo-1629280878139-038999084e23?auto=format&fit=crop&w=1200&q=85',
     alt: 'Car centre armrest',
   },
   {
@@ -75,7 +75,7 @@ const defaultCategories = [
     description: 'Hold the line in style.',
     detail: 'Sport-inspired support and finish for a more confident cabin.',
     filter: 'seats',
-    src: '/sports-bucket.jpg',
+    src: 'https://images.unsplash.com/photo-1769676501432-589faf8a8a8d?auto=format&fit=crop&w=1200&q=85',
     alt: 'Sport bucket car seat',
   },
 ] as const;
@@ -105,7 +105,7 @@ export default function AppleCardsCarouselDemo({
     categoriesList && categoriesList.length > 0
       ? categoriesList.map((item) => ({
           ...item,
-          src: item.image || item.src || '/head-rest.jpg',
+          src: item.image || item.src || 'https://images.unsplash.com/photo-1640705049944-de916f415bb4?auto=format&fit=crop&w=1200&q=85',
         }))
       : defaultCategories;
 
