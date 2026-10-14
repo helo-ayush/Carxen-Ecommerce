@@ -1,4 +1,4 @@
-/* CARXEN Customer Account Portal - Refined & Subtle Styling */
+/* CARXEN Customer Account Portal - Refined, Subtle & Motorsport Red Accents */
 
 /* Main Container & Layout */
 .ac-portal-wrap {
@@ -7,7 +7,7 @@
   padding: 28px 20px 80px;
 }
 
-/* Profile Overview Card (Subtle & Clean) */
+/* Profile Overview Card (Subtle & Clean with tasteful accents) */
 .ac-profile-card {
   background: #ffffff;
   border: 1px solid #e4e4e7;
@@ -31,16 +31,23 @@
   gap: 18px;
 }
 
-/* Avatar with Initials by default */
+/* Avatar with Initials by default and sleek red accent ring */
 .ac-avatar-ring {
   position: relative;
-  width: 68px;
-  height: 68px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   flex-shrink: 0;
   cursor: pointer;
   background: #18181b;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e2231a;
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ac-avatar-ring:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 0 4px rgba(226, 35, 26, 0.2), 0 4px 12px rgba(226, 35, 26, 0.15);
 }
 
 .ac-avatar-photo {
@@ -72,20 +79,20 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 1.5px solid #d4d4d8;
-  color: #18181b;
+  background: #e2231a;
+  border: 2px solid #ffffff;
+  color: #ffffff;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, background 0.15s;
 }
 
 .ac-avatar-upload-btn:hover {
-  transform: scale(1.1);
-  border-color: #18181b;
+  transform: scale(1.15);
+  background: #b91a12;
 }
 
 .ac-user-heading {
@@ -106,12 +113,15 @@
 .ac-member-pill {
   font-size: 11px;
   font-weight: 600;
-  color: #71717a;
-  background: #f4f4f5;
-  border: 1px solid #e4e4e7;
-  padding: 3px 8px;
-  border-radius: 6px;
+  color: #b91a12;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 3px 9px;
+  border-radius: 999px;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .ac-user-subtext {
@@ -145,11 +155,12 @@
   border: 1px solid #f4f4f5;
   border-radius: 10px;
   padding: 10px 14px;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
 .ac-stat-box:hover {
   background: #f4f4f5;
+  border-color: #e4e4e7;
 }
 
 .ac-stat-number {
@@ -166,9 +177,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* Segmented Tabs Bar */
+/* Segmented Tabs Bar (Shadcn aesthetic) */
 .ac-tab-track {
   display: inline-flex;
   align-items: center;
@@ -194,7 +208,7 @@
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .ac-tab-item:hover {
@@ -219,7 +233,7 @@
 }
 
 .ac-tab-item.active .ac-tab-badge {
-  background: #18181b;
+  background: #e2231a;
   color: #ffffff;
 }
 
@@ -243,6 +257,29 @@
 .ac-btn-dark:hover {
   background: #27272a !important;
   border-color: #27272a !important;
+}
+
+/* Signature CARXEN Red CTA Button */
+.ac-btn-red {
+  background: #e2231a !important;
+  color: #ffffff !important;
+  border: 1px solid #b91a12 !important;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(226, 35, 26, 0.2);
+}
+
+.ac-btn-red:hover {
+  background: #cc1f17 !important;
+  box-shadow: 0 4px 12px rgba(226, 35, 26, 0.3);
 }
 
 .ac-btn-outline {
@@ -276,6 +313,9 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .ac-btn-danger:hover {
@@ -284,7 +324,7 @@
 
 .ac-btn-subtle-red {
   background: #ffffff !important;
-  color: #b91c1c !important;
+  color: #dc2626 !important;
   border: 1px solid #fca5a5 !important;
   padding: 6px 12px;
   border-radius: 8px;
@@ -292,10 +332,14 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .ac-btn-subtle-red:hover {
   background: #fef2f2 !important;
+  border-color: #dc2626 !important;
 }
 
 /* Order Cards (Subtle & Concise) */
@@ -306,6 +350,7 @@
   padding: 20px;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s;
 }
 
 .ac-order-tile:hover {
@@ -327,6 +372,11 @@
   font-size: 13.5px;
   font-weight: 600;
   color: #09090b;
+  transition: color 0.15s;
+}
+
+.ac-order-num:hover {
+  color: #e2231a;
 }
 
 .ac-status-pill {
@@ -346,21 +396,35 @@
 }
 
 .ac-status-pill.out_for_delivery {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: #fef2f2;
+  color: #b91a12;
+  border: 1px solid #fecaca;
 }
 
 .ac-status-pill.shipped {
-  background: #f5f3ff;
-  color: #6b21a8;
-  border: 1px solid #e9d5ff;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
 .ac-status-pill.processing, .ac-status-pill.confirmed {
   background: #fffbeb;
   color: #92400e;
   border: 1px solid #fef08a;
+}
+
+.ac-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e2231a;
+  animation: acPulse 1.6s infinite;
+}
+
+@keyframes acPulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(226, 35, 26, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(226, 35, 26, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(226, 35, 26, 0); }
 }
 
 /* Subtle Progress Line */
@@ -385,7 +449,7 @@
 }
 
 .ac-tracker-node.filled .ac-node-bar {
-  background: #18181b;
+  background: #e2231a;
 }
 
 .ac-node-lbl {
@@ -430,15 +494,19 @@
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .ac-address-box:hover {
   border-color: #d4d4d8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
 .ac-address-box.is-default {
-  border: 1.5px solid #18181b;
+  border-left: 3.5px solid #e2231a;
+  border-top: 1px solid #e4e4e7;
+  border-right: 1px solid #e4e4e7;
+  border-bottom: 1px solid #e4e4e7;
 }
 
 /* Modals */
@@ -488,11 +556,12 @@
   font-size: 13.5px;
   color: #09090b;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .ac-field input:focus, .ac-field select:focus {
-  border-color: #18181b;
+  border-color: #e2231a;
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.1);
 }
 
 @media (max-width: 640px) {

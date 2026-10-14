@@ -7,6 +7,31 @@ import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/customer';
 import { Footer } from '@/components/Footer';
+import {
+  Package,
+  MapPin,
+  CarFront,
+  CreditCard,
+  Settings2,
+  Camera,
+  Check,
+  Truck,
+  FileText,
+  RotateCcw,
+  Plus,
+  Trash2,
+  Pencil,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+  Phone,
+  Mail,
+  Calendar,
+  Lock,
+  Printer,
+  X,
+} from 'lucide-react';
 import './account.css';
 
 type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
@@ -51,6 +76,7 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<AccountTab>('orders');
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('ALL');
   const [orderSearch, setOrderSearch] = useState('');
+  const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
 
   // Modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -105,7 +131,7 @@ export default function AccountPage() {
   const email = user?.email || 'driver@carxen.io';
   const phone = user?.phone || '+91 98201 44829';
   const avatarUrl = user?.avatarUrl;
-  const tier = user?.tier || 'Apex Member';
+  const tier = user?.tier || 'Apex Gold Member';
   const points = user?.rewardPoints ?? 1450;
   const initials = getInitials(name);
 
@@ -158,11 +184,10 @@ export default function AccountPage() {
     reader.onload = async () => {
       if (typeof reader.result === 'string') {
         await updateUserProfile({ avatarUrl: reader.result });
-        showToast('Profile picture updated');
+        showToast('Profile photo updated successfully');
       }
     };
     reader.readAsDataURL(file);
-    // Reset file input so user can re-upload same file if desired
     e.target.value = '';
   };
 
@@ -188,6 +213,16 @@ export default function AccountPage() {
       phone: editPhone.trim(),
     });
     setIsProfileModalOpen(false);
+  };
+
+  // Copy tracking number with animated feedback
+  const handleCopyTracking = (awb: string) => {
+    navigator.clipboard.writeText(awb);
+    setCopiedTracking(awb);
+    showToast(`Copied tracking number: ${awb}`);
+    setTimeout(() => {
+      setCopiedTracking(null);
+    }, 2000);
   };
 
   // Address Handlers
@@ -374,16 +409,16 @@ export default function AccountPage() {
                   width: '52px',
                   height: '52px',
                   borderRadius: '50%',
-                  background: '#f4f4f5',
-                  color: '#18181b',
+                  background: '#fef2f2',
+                  color: '#e2231a',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px',
                   margin: '0 auto 16px',
-                  border: '1px solid #e4e4e7',
+                  border: '1px solid #fecaca',
                 }}
               >
-                🔒
+                <Lock size={22} />
               </div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '8px', color: '#09090b' }}>
                 Account Access
@@ -419,11 +454,11 @@ export default function AccountPage() {
           ) : (
             /* Authenticated Customer Profile */
             <>
-              {/* Profile Overview Card (Clean, subtle, high contrast) */}
+              {/* Profile Overview Card (Clean, subtle with tasteful motorsport red accents) */}
               <div className="ac-profile-card">
                 <div className="ac-profile-header">
                   <div className="ac-user-cluster">
-                    {/* Avatar Ring */}
+                    {/* Avatar Ring with subtle CARXEN Red Accent */}
                     <div
                       className="ac-avatar-ring"
                       onClick={() => fileInputRef.current?.click()}
@@ -436,27 +471,34 @@ export default function AccountPage() {
                         <div className="ac-avatar-initials">{initials}</div>
                       )}
                       <div className="ac-avatar-upload-btn" title="Upload new photo">
-                        📷
+                        <Camera size={13} />
                       </div>
                     </div>
 
                     <div>
                       <div className="ac-user-heading">
                         <span className="ac-user-name">{name}</span>
-                        <span className="ac-member-pill">{tier}</span>
+                        <span className="ac-member-pill">
+                          <Sparkles size={12} color="#e2231a" />
+                          {tier}
+                        </span>
                       </div>
                       <div className="ac-user-subtext">
-                        <span>{email}</span>
+                        <span>
+                          <Mail size={13} style={{ color: '#71717a' }} />
+                          {email}
+                        </span>
                         <span>•</span>
                         <span>
+                          <Phone size={13} style={{ color: '#71717a' }} />
                           {phone}{' '}
                           <button
                             type="button"
                             onClick={openEditProfile}
                             style={{
-                              color: '#2563eb',
+                              color: '#e2231a',
                               fontSize: '12px',
-                              fontWeight: 500,
+                              fontWeight: 600,
                               cursor: 'pointer',
                               marginLeft: '2px',
                               textDecoration: 'underline',
@@ -467,7 +509,7 @@ export default function AccountPage() {
                         </span>
                       </div>
 
-                      {/* Photo management actions */}
+                      {/* Photo upload action triggers */}
                       <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <button
                           type="button"
@@ -477,12 +519,16 @@ export default function AccountPage() {
                             color: '#09090b',
                             cursor: 'pointer',
                             fontWeight: 500,
-                            padding: '2px 8px',
-                            borderRadius: '4px',
+                            padding: '3px 9px',
+                            borderRadius: '5px',
                             background: '#f4f4f5',
                             border: '1px solid #e4e4e7',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
                           }}
                         >
+                          <Camera size={12} color="#e2231a" />
                           Upload Photo
                         </button>
                         {avatarUrl && (
@@ -497,7 +543,7 @@ export default function AccountPage() {
                               background: 'transparent',
                             }}
                           >
-                            Remove photo
+                            Reset to initials
                           </button>
                         )}
                       </div>
@@ -511,6 +557,7 @@ export default function AccountPage() {
                       onClick={openEditProfile}
                       style={{ height: '36px', fontSize: '13px' }}
                     >
+                      <Pencil size={13} />
                       Edit Profile
                     </button>
                     <button
@@ -532,7 +579,10 @@ export default function AccountPage() {
                     style={{ cursor: 'pointer' }}
                   >
                     <div className="ac-stat-number">{orders.length}</div>
-                    <div className="ac-stat-tag">Total Orders</div>
+                    <div className="ac-stat-tag">
+                      <Package size={12} />
+                      Total Orders
+                    </div>
                   </div>
 
                   <div
@@ -540,8 +590,11 @@ export default function AccountPage() {
                     onClick={() => { setActiveTab('orders'); setOrderFilter('ACTIVE'); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="ac-stat-number" style={{ color: '#2563eb' }}>{activeOrdersCount}</div>
-                    <div className="ac-stat-tag">Active Shipments</div>
+                    <div className="ac-stat-number" style={{ color: '#e2231a' }}>{activeOrdersCount}</div>
+                    <div className="ac-stat-tag">
+                      <Truck size={12} color="#e2231a" />
+                      Active Shipments
+                    </div>
                   </div>
 
                   <div
@@ -550,7 +603,10 @@ export default function AccountPage() {
                     style={{ cursor: 'pointer' }}
                   >
                     <div className="ac-stat-number">{addresses.length}</div>
-                    <div className="ac-stat-tag">Saved Addresses</div>
+                    <div className="ac-stat-tag">
+                      <MapPin size={12} />
+                      Saved Addresses
+                    </div>
                   </div>
 
                   <div
@@ -564,18 +620,22 @@ export default function AccountPage() {
                     >
                       {car ? `${car.b} ${car.m}` : 'Porsche 911 GT3'}
                     </div>
-                    <div className="ac-stat-tag">Active Garage Car</div>
+                    <div className="ac-stat-tag">
+                      <CarFront size={12} />
+                      Active Garage Car
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Segmented Tabs Navigation */}
+              {/* Segmented Tabs Navigation (Shadcn aesthetic) */}
               <div className="ac-tab-track">
                 <button
                   type="button"
                   className={`ac-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
                   onClick={() => setActiveTab('orders')}
                 >
+                  <Package size={15} />
                   Orders
                   <span className="ac-tab-badge">{orders.length}</span>
                 </button>
@@ -584,6 +644,7 @@ export default function AccountPage() {
                   className={`ac-tab-item ${activeTab === 'addresses' ? 'active' : ''}`}
                   onClick={() => setActiveTab('addresses')}
                 >
+                  <MapPin size={15} />
                   Addresses
                   <span className="ac-tab-badge">{addresses.length}</span>
                 </button>
@@ -592,6 +653,7 @@ export default function AccountPage() {
                   className={`ac-tab-item ${activeTab === 'garage' ? 'active' : ''}`}
                   onClick={() => setActiveTab('garage')}
                 >
+                  <CarFront size={15} />
                   My Garage
                 </button>
                 <button
@@ -599,6 +661,7 @@ export default function AccountPage() {
                   className={`ac-tab-item ${activeTab === 'payments' ? 'active' : ''}`}
                   onClick={() => setActiveTab('payments')}
                 >
+                  <CreditCard size={15} />
                   Payment & Billing
                 </button>
                 <button
@@ -606,6 +669,7 @@ export default function AccountPage() {
                   className={`ac-tab-item ${activeTab === 'security' ? 'active' : ''}`}
                   onClick={() => setActiveTab('security')}
                 >
+                  <Settings2 size={15} />
                   Settings
                 </button>
               </div>
@@ -682,6 +746,7 @@ export default function AccountPage() {
                         textAlign: 'center',
                       }}
                     >
+                      <Package size={32} style={{ color: '#a1a1aa', margin: '0 auto 10px' }} />
                       <p style={{ color: '#09090b', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>
                         No orders found
                       </p>
@@ -716,12 +781,13 @@ export default function AccountPage() {
                                 </span>
                               </div>
                               <div style={{ color: '#71717a', fontSize: '12px', marginTop: '2px' }}>
-                                To: {order.shippingAddress.addressLine1}, {order.shippingAddress.city}
+                                Destination: {order.shippingAddress.addressLine1}, {order.shippingAddress.city}
                               </div>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <span className={`ac-status-pill ${order.status.toLowerCase()}`}>
+                                {(isOutForDelivery || isShipped) && <span className="ac-pulse-dot" />}
                                 {order.status.replace(/_/g, ' ')}
                               </span>
                               <span style={{ fontSize: '15px', fontWeight: 700, color: '#09090b' }}>
@@ -730,7 +796,7 @@ export default function AccountPage() {
                             </div>
                           </div>
 
-                          {/* Subtle Tracker Progress */}
+                          {/* Subtle Tracker Progress with red indicator */}
                           <div className="ac-tracker-line">
                             <div className={`ac-tracker-node ${stepIndex >= 1 ? 'filled' : ''}`}>
                               <div className="ac-node-bar" />
@@ -750,12 +816,29 @@ export default function AccountPage() {
                             </div>
                           </div>
 
-                          {/* Courier Mini Strip */}
+                          {/* Courier Mini Strip with Copy button */}
                           <div className="ac-courier-mini">
-                            <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <Truck size={14} color="#e2231a" />
                               <span style={{ fontWeight: 600, color: '#09090b' }}>{order.carrier}</span> · AWB:{' '}
-                              <span style={{ fontFamily: 'var(--mono, monospace)' }}>{order.trackingNumber}</span>
-                              <span style={{ color: '#71717a', marginLeft: '6px' }}>({order.estimatedDelivery})</span>
+                              <span style={{ fontFamily: 'var(--mono, monospace)', fontWeight: 600 }}>{order.trackingNumber}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyTracking(order.trackingNumber)}
+                                title="Copy tracking number"
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '2px',
+                                  color: copiedTracking === order.trackingNumber ? '#16a34a' : '#71717a',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                {copiedTracking === order.trackingNumber ? <Check size={13} /> : <Copy size={13} />}
+                              </button>
+                              <span style={{ color: '#71717a', marginLeft: '4px' }}>({order.estimatedDelivery})</span>
                             </div>
                             <button
                               type="button"
@@ -796,7 +879,7 @@ export default function AccountPage() {
                                       // eslint-disable-next-line @next/next/no-img-element
                                       <img src={it.image} alt={it.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                      <span style={{ fontSize: '16px' }}>🏎</span>
+                                      <CarFront size={18} style={{ color: '#71717a' }} />
                                     )}
                                   </div>
                                   <div>
@@ -815,7 +898,7 @@ export default function AccountPage() {
                             ))}
                           </div>
 
-                          {/* Card Footer Actions */}
+                          {/* Card Footer Actions (Re-order in Signature Red!) */}
                           <div
                             style={{
                               display: 'flex',
@@ -833,14 +916,16 @@ export default function AccountPage() {
                               onClick={() => setInvoiceModalOrder(order)}
                               style={{ height: '32px', fontSize: '12.5px', padding: '0 12px' }}
                             >
+                              <FileText size={13} />
                               Invoice
                             </button>
                             <button
                               type="button"
-                              className="ac-btn-dark"
+                              className="ac-btn-red"
                               onClick={() => handleReorder(order)}
                               style={{ height: '32px', fontSize: '12.5px', padding: '0 14px' }}
                             >
+                              <RotateCcw size={13} />
                               Re-order
                             </button>
                           </div>
@@ -875,28 +960,30 @@ export default function AccountPage() {
 
                     <button
                       type="button"
-                      className="ac-btn-dark"
+                      className="ac-btn-red"
                       onClick={handleOpenAddAddress}
                       style={{ height: '36px', fontSize: '13px' }}
                     >
-                      + Add Address
+                      <Plus size={14} />
+                      Add Address
                     </button>
                   </div>
 
                   {/* Primary Address */}
                   {primaryAddress && (
                     <div style={{ marginBottom: '20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#71717a', textTransform: 'uppercase', marginBottom: '8px' }}>
-                        Primary Address
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#e2231a', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={12} />
+                        Primary Delivery Address
                       </div>
                       <div className="ac-address-box is-default">
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#18181b', color: '#fff', padding: '2px 8px', borderRadius: '4px' }}>
-                              {primaryAddress.label} · Default
+                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef2f2', color: '#b91a12', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '4px' }}>
+                              ★ {primaryAddress.label} · Default
                             </span>
-                            <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 500 }}>
-                              ✓ Auto-selected
+                            <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Check size={12} /> Auto-selected
                             </span>
                           </div>
                           <div style={{ fontSize: '15px', fontWeight: 600, color: '#09090b', marginBottom: '2px' }}>
@@ -921,6 +1008,7 @@ export default function AccountPage() {
                             onClick={() => handleOpenEditAddress(primaryAddress)}
                             style={{ height: '30px', fontSize: '12px', padding: '0 10px' }}
                           >
+                            <Pencil size={12} />
                             Edit
                           </button>
                         </div>
@@ -944,6 +1032,7 @@ export default function AccountPage() {
                           textAlign: 'center',
                         }}
                       >
+                        <MapPin size={28} style={{ color: '#a1a1aa', margin: '0 auto 8px' }} />
                         <p style={{ fontSize: '13px', color: '#71717a', marginBottom: '12px' }}>
                           No secondary addresses added yet. Add your tuning workshop or office address.
                         </p>
@@ -953,7 +1042,8 @@ export default function AccountPage() {
                           onClick={handleOpenAddAddress}
                           style={{ height: '34px', fontSize: '13px' }}
                         >
-                          + Add Secondary Address
+                          <Plus size={13} />
+                          Add Secondary Address
                         </button>
                       </div>
                     ) : (
@@ -997,6 +1087,7 @@ export default function AccountPage() {
                                 className="ac-btn-subtle-red"
                                 onClick={() => setPrimaryAddress(addr.id)}
                               >
+                                <Check size={12} />
                                 Set as Default
                               </button>
                               <button
@@ -1005,6 +1096,7 @@ export default function AccountPage() {
                                 onClick={() => handleOpenEditAddress(addr)}
                                 style={{ height: '28px', fontSize: '12px', padding: '0 8px' }}
                               >
+                                <Pencil size={12} />
                                 Edit
                               </button>
                               <button
@@ -1012,6 +1104,7 @@ export default function AccountPage() {
                                 className="ac-btn-danger"
                                 onClick={() => deleteAddress(addr.id)}
                               >
+                                <Trash2 size={12} />
                                 Delete
                               </button>
                             </div>
@@ -1039,8 +1132,9 @@ export default function AccountPage() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#16a34a', textTransform: 'uppercase' }}>
-                          ✓ Active Vehicle
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <ShieldCheck size={13} color="#16a34a" />
+                          Active Vehicle & Fitment Guarantee
                         </div>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#09090b', margin: '2px 0' }}>
                           {car ? `${car.y} ${car.b} ${car.m}` : '2023 Porsche 911 GT3 (992)'}
@@ -1050,7 +1144,8 @@ export default function AccountPage() {
                         </div>
                       </div>
 
-                      <Link className="ac-btn-dark" href="/garage" style={{ height: '36px', fontSize: '13px' }}>
+                      <Link className="ac-btn-red" href="/garage" style={{ height: '36px', fontSize: '13px' }}>
+                        <CarFront size={14} />
                         Change Vehicle
                       </Link>
                     </div>
@@ -1123,7 +1218,8 @@ export default function AccountPage() {
                       onClick={() => setIsPaymentModalOpen(true)}
                       style={{ height: '36px', fontSize: '13px' }}
                     >
-                      + Add Method
+                      <Plus size={14} />
+                      Add Method
                     </button>
                   </div>
 
@@ -1143,7 +1239,7 @@ export default function AccountPage() {
                             {pm.type === 'upi' ? 'UPI' : pm.brand || 'Card'}
                           </span>
                           {pm.isDefault && (
-                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#f4f4f5', padding: '2px 6px', borderRadius: '4px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef2f2', color: '#b91a12', border: '1px solid #fecaca', padding: '2px 6px', borderRadius: '4px' }}>
                               Default
                             </span>
                           )}
@@ -1174,6 +1270,7 @@ export default function AccountPage() {
                             className="ac-btn-danger"
                             onClick={() => deleteSavedPayment(pm.id)}
                           >
+                            <Trash2 size={12} />
                             Remove
                           </button>
                         </div>
@@ -1203,7 +1300,7 @@ export default function AccountPage() {
                           type="checkbox"
                           checked={gstForm.enabled}
                           onChange={(e) => setGstForm({ ...gstForm, enabled: e.target.checked })}
-                          style={{ width: '16px', height: '16px', accentColor: '#18181b' }}
+                          style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
                         />
                         <span style={{ fontSize: '13.5px', fontWeight: 500 }}>
                           I require GST tax invoices for my business
@@ -1272,7 +1369,7 @@ export default function AccountPage() {
                           type="checkbox"
                           checked={communicationPrefs.whatsappUpdates}
                           onChange={(e) => updateCommunicationPrefs({ whatsappUpdates: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#18181b' }}
+                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
                         />
                       </label>
 
@@ -1285,7 +1382,7 @@ export default function AccountPage() {
                           type="checkbox"
                           checked={communicationPrefs.smsAlerts}
                           onChange={(e) => updateCommunicationPrefs({ smsAlerts: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#18181b' }}
+                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
                         />
                       </label>
 
@@ -1298,7 +1395,7 @@ export default function AccountPage() {
                           type="checkbox"
                           checked={communicationPrefs.garageFitmentAlerts}
                           onChange={(e) => updateCommunicationPrefs({ garageFitmentAlerts: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#18181b' }}
+                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
                         />
                       </label>
                     </div>
@@ -1383,9 +1480,9 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setIsProfileModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a' }}
+                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -1432,7 +1529,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="ac-btn-dark"
+                  className="ac-btn-red"
                   style={{ height: '36px', fontSize: '13px' }}
                 >
                   Save Changes
@@ -1456,9 +1553,9 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setIsAddressModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a' }}
+                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -1570,7 +1667,7 @@ export default function AccountPage() {
                     type="checkbox"
                     checked={addressForm.isPrimary}
                     onChange={(e) => setAddressForm({ ...addressForm, isPrimary: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: '#18181b' }}
+                    style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
                   />
                   <span style={{ fontSize: '13px', color: '#09090b' }}>Set as default primary delivery address</span>
                 </label>
@@ -1587,7 +1684,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="ac-btn-dark"
+                  className="ac-btn-red"
                   style={{ height: '36px', fontSize: '13px' }}
                 >
                   Save Address
@@ -1609,9 +1706,9 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setIsPaymentModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a' }}
+                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -1622,6 +1719,7 @@ export default function AccountPage() {
                 className={paymentType === 'card' ? 'ac-btn-dark' : 'ac-btn-outline'}
                 style={{ flex: 1, height: '34px', fontSize: '13px' }}
               >
+                <CreditCard size={13} />
                 Credit / Debit Card
               </button>
               <button
@@ -1630,7 +1728,7 @@ export default function AccountPage() {
                 className={paymentType === 'upi' ? 'ac-btn-dark' : 'ac-btn-outline'}
                 style={{ flex: 1, height: '34px', fontSize: '13px' }}
               >
-                UPI ID (VPA)
+                ⚡ UPI ID (VPA)
               </button>
             </div>
 
@@ -1718,7 +1816,8 @@ export default function AccountPage() {
           <div className="ac-dialog-card" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#09090b' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#09090b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Truck size={17} color="#e2231a" />
                   Tracking Details
                 </h3>
                 <span style={{ fontSize: '12px', color: '#71717a' }}>
@@ -1728,22 +1827,23 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setTrackingModalOrder(null)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a' }}
+                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ background: '#f4f4f5', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#09090b' }}>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#b91a12', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span className="ac-pulse-dot" />
                 {trackingModalOrder.statusMessage || 'In Transit'}
               </div>
-              <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '2px' }}>
-                {trackingModalOrder.estimatedDelivery}
+              <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>
+                Estimated Delivery: {trackingModalOrder.estimatedDelivery}
               </div>
             </div>
 
-            <div style={{ borderLeft: '2px solid #18181b', paddingLeft: '14px', marginLeft: '6px' }}>
+            <div style={{ borderLeft: '2px solid #e2231a', paddingLeft: '14px', marginLeft: '6px' }}>
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Out for Delivery with Courier Agent</div>
                 <div style={{ fontSize: '11.5px', color: '#71717a' }}>Baner Hub · Today, 08:30 AM</div>
@@ -1753,7 +1853,7 @@ export default function AccountPage() {
                 <div style={{ fontSize: '11.5px', color: '#71717a' }}>Pune Air Cargo Hub · Yesterday, 09:45 PM</div>
               </div>
               <div>
-                <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Dispatched from Fulfillment Center</div>
+                <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Dispatched from Central Warehouse</div>
                 <div style={{ fontSize: '11.5px', color: '#71717a' }}>CARXEN Hub 01, Mumbai · Oct 12, 02:15 PM</div>
               </div>
             </div>
@@ -1791,7 +1891,7 @@ export default function AccountPage() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#71717a', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#e2231a', textTransform: 'uppercase' }}>
                   TAX INVOICE
                 </div>
                 <div style={{ fontSize: '13.5px', fontWeight: 600 }}>
@@ -1864,6 +1964,7 @@ export default function AccountPage() {
                 onClick={() => window.print()}
                 style={{ height: '34px', fontSize: '12.5px' }}
               >
+                <Printer size={13} />
                 Print Invoice
               </button>
               <button
