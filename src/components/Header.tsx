@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 export function Header() {
-  const { user, fav, cartCount, openCart, openMobileMenu } = useApp();
+  const { user, fav, cartCount, openCart, openMobileMenu, storefrontConfig } = useApp();
+  const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchVal, setSearchVal] = useState('');

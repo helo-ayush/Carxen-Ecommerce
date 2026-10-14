@@ -289,7 +289,7 @@ export default function HomePage() {
   return (
     <main id="top">
       {/* HERO SECTION — Full-resolution frame sequence with scene text */}
-      <HeroFrameSection />
+      {heroConfig?.enabled !== false && <HeroFrameSection heroConfig={heroConfig} />}
 
       {/* TICKER */}
       <div className="tick" aria-hidden="true">
@@ -312,16 +312,20 @@ export default function HomePage() {
       </div>
 
       {/* CATEGORIES */}
-      <section className="sec" id="categories">
-        <div className="wrap">
-          <AppleCardsCarouselDemo
-            onCategorySelect={(filter) => {
-              setFilterCat(filter);
-              document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          />
-        </div>
-      </section>
+      {categoriesConfig?.enabled !== false && (
+        <section className="sec" id="categories">
+          <div className="wrap">
+            <AppleCardsCarouselDemo
+              categoriesList={categoriesConfig?.cards}
+              heading={categoriesConfig}
+              onCategorySelect={(filter) => {
+                setFilterCat(filter);
+                document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {/* CRAFT & MATERIALS */}
       <section className="sec craft" id="craft">
@@ -810,24 +814,31 @@ export default function HomePage() {
       </section>
 
       {/* FITMENT FINDER */}
-      <section className="sec" id="fitment" aria-labelledby="fit-title" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="sec-head rv in">
-            <span className="no">05</span>
-            <span className="t">Find your perfect fit</span>
-            <span className="rule" />
-            <span className="note">Accessories designed for your vehicle</span>
-          </div>
-          <div className="fit-g">
-            <div className="fit-p">
-              <p className="fit-kicker">A little more you.</p>
-              <h2 className="fit-title" id="fit-title">
-                <span>Made for</span>
-                <em>your drive.</em>
-              </h2>
-              <p className="fit-intro">
-                Start with your car. Find the details that make it feel like yours.
-              </p>
+      {fitmentConfig?.enabled !== false && (
+        <section className="sec" id="fitment" aria-labelledby="fit-title" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="sec-head rv in">
+              <span className="no">{fitmentConfig?.sectionNumber || '05'}</span>
+              <span className="t">{fitmentConfig?.eyebrow || 'Find your perfect fit'}</span>
+              <span className="rule" />
+              <span className="note">Accessories designed for your vehicle</span>
+            </div>
+            <div className="fit-g">
+              <div className="fit-p">
+                <p className="fit-kicker">{fitmentConfig?.kicker || 'A little more you.'}</p>
+                <h2 className="fit-title" id="fit-title">
+                  {fitmentConfig?.title ? (
+                    fitmentConfig.title
+                  ) : (
+                    <>
+                      <span>Made for</span>
+                      <em>your drive.</em>
+                    </>
+                  )}
+                </h2>
+                <p className="fit-intro">
+                  {fitmentConfig?.description || 'Start with your car. Find the details that make it feel like yours.'}
+                </p>
               <form
                 className="fit-form"
                 onSubmit={(event) => {
@@ -927,8 +938,8 @@ export default function HomePage() {
             <figure className="fit-visual" id="fitV">
               <img
                 className="fit-visual-photo"
-                src="/steering.jpg"
-                alt="Leather-wrapped steering wheel in a carefully finished car interior"
+                src={fitmentConfig?.image || '/steering.jpg'}
+                alt={fitmentConfig?.alt || 'Leather-wrapped steering wheel in a carefully finished car interior'}
                 width={1280}
                 height={720}
                 loading="lazy"
@@ -936,8 +947,17 @@ export default function HomePage() {
               />
               <div className="fit-visual-shade" aria-hidden="true" />
               <figcaption className="fit-caption">
-                <span className="fit-caption-kicker">The everyday, elevated.</span>
-                <p>Good things<br /><em>fit right in.</em></p>
+                <span className="fit-caption-kicker">{fitmentConfig?.kicker || 'The everyday, elevated.'}</span>
+                <p>
+                  {fitmentConfig?.quote ? (
+                    fitmentConfig.quote
+                  ) : (
+                    <>
+                      Good things<br />
+                      <em>fit right in.</em>
+                    </>
+                  )}
+                </p>
                 <div className="fit-vehicle">
                   <span className="fit-vehicle-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
@@ -954,66 +974,82 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* WHY CARXEN */}
-      <section className="sec why" id="why" aria-labelledby="why-title">
-        <div className="wrap">
-          <div className="sec-head rv in">
-            <span className="no">06</span>
-            <span className="t">Why CarXen</span>
-            <span className="rule" />
-            <span className="note">Protection / Craft</span>
-          </div>
-          <h2 className="why-heading disp rv in" id="why-title">
-            <span>Protection you feel.</span>{' '}
-            <em>Craft you see.</em>
-          </h2>
-          <div className="why-g">
-            <div className="why-gallery-wrap rv in">
-              <div className="why-gallery-head">
-                <span>Interior systems / 06</span>
-                <span>Hover to explore</span>
-              </div>
-              <AccordionGallery
-                items={(whyConfig?.items && whyConfig.items.length > 0) ? whyConfig.items : WHY_GALLERY_ITEMS}
-                defaultIndex={1}
-                accentColor="#e2231a"
-                overlayColor="#08090d"
-                height={470}
-                expandRatio={0.52}
-                trigger="hover"
-                grayscale
-                showLabels
-              />
-              <div className="why-gallery-foot">
-                <span>Designed around real drives</span>
-                <span>06 / 100% considered</span>
+      {whyConfig?.enabled !== false && (
+        <section className="sec why" id="why" aria-labelledby="why-title">
+          <div className="wrap">
+            <div className="sec-head rv in">
+              <span className="no">{whyConfig?.sectionNumber || '06'}</span>
+              <span className="t">{whyConfig?.eyebrow || 'Why CarXen'}</span>
+              <span className="rule" />
+              <span className="note">{whyConfig?.badge || 'Protection / Craft'}</span>
+            </div>
+            <h2 className="why-heading disp rv in" id="why-title">
+              {whyConfig?.title ? (
+                whyConfig.title
+              ) : (
+                <>
+                  <span>Protection you feel.</span>{' '}
+                  <em>Craft you see.</em>
+                </>
+              )}
+            </h2>
+            <div className="why-g">
+              <div className="why-gallery-wrap rv in">
+                <div className="why-gallery-head">
+                  <span>{whyConfig?.galleryHead || 'Interior systems / 06'}</span>
+                  <span>Hover to explore</span>
+                </div>
+                <AccordionGallery
+                  items={(whyConfig?.items && whyConfig.items.length > 0) ? whyConfig.items : WHY_GALLERY_ITEMS}
+                  defaultIndex={1}
+                  accentColor="#e2231a"
+                  overlayColor="#08090d"
+                  height={470}
+                  expandRatio={0.52}
+                  trigger="hover"
+                  grayscale
+                  showLabels
+                />
+                <div className="why-gallery-foot">
+                  <span>{whyConfig?.galleryFoot || 'Designed around real drives'}</span>
+                  <span>06 / 100% considered</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* REVIEWS */}
-      <section className="sec" id="reviews">
-        <div className="wrap">
-          <div className="sec-head rv in">
-            <span className="no">07</span>
-            <span className="t">Driver voices</span>
-            <span className="rule" />
-            <span className="note">12,000+ five-star reviews</span>
-          </div>
-          <div className="rev-g">
-            <div className="rv-l in">
-              <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
-                Verified Drivers
-              </Badge>
-              <span className="rev-q">“</span>
-              <h2 className="disp" style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.75rem)' }}>
-                Trusted by
-                <br />
-                drivers<span className="red">.</span>
-              </h2>
+      {reviewsConfig?.enabled !== false && (
+        <section className="sec" id="reviews">
+          <div className="wrap">
+            <div className="sec-head rv in">
+              <span className="no">{reviewsConfig?.sectionNumber || '07'}</span>
+              <span className="t">{reviewsConfig?.eyebrow || 'Driver voices'}</span>
+              <span className="rule" />
+              <span className="note">{reviewsConfig?.badge || '12,000+ five-star reviews'}</span>
+            </div>
+            <div className="rev-g">
+              <div className="rv-l in">
+                <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
+                  Verified Drivers
+                </Badge>
+                <span className="rev-q">“</span>
+                <h2 className="disp" style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.75rem)' }}>
+                  {reviewsConfig?.title ? (
+                    reviewsConfig.title
+                  ) : (
+                    <>
+                      Trusted by
+                      <br />
+                      drivers<span className="red">.</span>
+                    </>
+                  )}
+                </h2>
               <div className="rev-c">
                 <button
                   className="rb"
@@ -1077,61 +1113,78 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* CTA SECTION */}
-      <section className="cta">
-        <div className="wrap cta-in">
-          <div className="cta-grid">
-            <div className="cta-left-col">
-              <div style={{ marginBottom: '16px' }}>
-                <Badge variant="outline" className="rv in" style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}>
-                  08 — Ready when you are
-                </Badge>
-              </div>
-              <h2 className="disp">
-                <span className="mask rv in">
-                  <span>Don&apos;t just</span>
-                </span>
-                <span className="mask rv in" style={{ ['--d' as any]: '.1s' }}>
-                  <span className="o">drive.</span>
-                </span>
-                <span className="mask rv in" style={{ ['--d' as any]: '.2s' }}>
-                  <span>Elevate it.</span>
-                </span>
-              </h2>
-              <div className="perks rv in">
-                <span>✦ Early access to drops</span>
-                <span>✦ Member pricing up to 20% off</span>
-                <span>✦ Fitment alerts for your garage</span>
-              </div>
-            </div>
-
-            <div className="cta-right-col">
-              <div className="craft-cards-hint mono rv in">
-                <span>✦ Click card to explore cabin craft</span>
-              </div>
-              <Cards customCards={craftConfig?.cards} />
-              <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
-                <label htmlFor="ne">Join the X-List — 10% off first order</label>
-                <div className="nf">
-                  <input
-                    id="ne"
-                    type="email"
-                    placeholder="your@email.com"
-                    required
-                    value={newsletterEmail}
-                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                  />
-                  <button type="submit">Join</button>
+{ctaConfig?.enabled !== false && (
+        <section className="cta">
+          <div className="wrap cta-in">
+            <div className="cta-grid">
+              <div className="cta-left-col">
+                <div style={{ marginBottom: '16px' }}>
+                  <Badge variant="outline" className="rv in" style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}>
+                    {ctaConfig?.sectionNumber || '08'} — {ctaConfig?.eyebrow || 'Ready when you are'}
+                  </Badge>
                 </div>
-                <p className="msg" id="nm">
-                  {newsletterMsg}
-                </p>
-              </form>
+                <h2 className="disp">
+                  {ctaConfig?.title ? (
+                    ctaConfig.title
+                  ) : (
+                    <>
+                      <span className="mask rv in">
+                        <span>Don&apos;t just</span>
+                      </span>
+                      <span className="mask rv in" style={{ ['--d' as any]: '.1s' }}>
+                        <span className="o">drive.</span>
+                      </span>
+                      <span className="mask rv in" style={{ ['--d' as any]: '.2s' }}>
+                        <span>Elevate it.</span>
+                      </span>
+                    </>
+                  )}
+                </h2>
+                <div className="perks rv in">
+                  {ctaConfig?.perks && ctaConfig.perks.length > 0 ? (
+                    ctaConfig.perks.map((p: string, idx: number) => (
+                      <span key={idx}>✦ {p.replace(/^✦\s*/, '')}</span>
+                    ))
+                  ) : (
+                    <>
+                      <span>✦ Early access to drops</span>
+                      <span>✦ Member pricing up to 20% off</span>
+                      <span>✦ Fitment alerts for your garage</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="cta-right-col">
+                <div className="craft-cards-hint mono rv in">
+                  <span>{craftConfig?.hint || '✦ Click card to explore cabin craft'}</span>
+                </div>
+                <Cards customCards={craftConfig?.cards} />
+                <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
+                  <label htmlFor="ne">{ctaConfig?.newsletterLabel || 'Join the X-List — 10% off first order'}</label>
+                  <div className="nf">
+                    <input
+                      id="ne"
+                      type="email"
+                      placeholder="your@email.com"
+                      required
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
+                    />
+                    <button type="submit">{ctaConfig?.buttonLabel || 'Join'}</button>
+                  </div>
+                  <p className="msg" id="nm">
+                    {newsletterMsg}
+                  </p>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <Footer />
     </main>
