@@ -14,6 +14,7 @@ export interface EcommerceStoreRow {
   id: StoreId;
   slug: string;
   isPublic: boolean;
+  settings?: Record<string, unknown>;
 }
 
 export interface EcommerceProductRow {
@@ -328,7 +329,7 @@ export async function getStorefrontProducts(): Promise<StorefrontProductsRespons
 
   const { data: storeData, error: storeError } = await supabase
     .from('ecommerce_stores')
-    .select('id, slug, isPublic')
+    .select('id, slug, isPublic, settings')
     .eq('slug', storeSlug)
     .eq('isPublic', true)
     .eq('status', 'PUBLISHED')
@@ -362,7 +363,7 @@ export async function getStorefrontProducts(): Promise<StorefrontProductsRespons
     .filter((product): product is Product => product !== null);
 
   return {
-    store: { slug: store.slug },
+    store: { slug: store.slug, settings: (store as any).settings || {} },
     products,
   };
 }

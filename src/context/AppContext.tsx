@@ -48,6 +48,8 @@ export interface Vehicle {
 
 interface AppContextType {
   products: Product[];
+  storeSettings: Record<string, any> | null;
+  storefrontConfig: any | null;
   catalogStatus: CatalogStatus;
   catalogError: string | null;
   retryCatalog: () => void;
@@ -103,6 +105,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [storeSettings, setStoreSettings] = useState<Record<string, any> | null>(null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>('loading');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -132,6 +135,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (signal?.aborted) return;
 
       setProducts(response.products);
+      if (response.store && (response.store as any).settings) {
+        setStoreSettings((response.store as any).settings);
+      }
       setCatalogStatus(response.products.length > 0 ? 'ready' : 'empty');
     } catch (error) {
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
@@ -870,6 +876,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         products,
+        storeSettings,
+        storefrontConfig: storeSettings?.storefront || null,
         catalogStatus,
         catalogError,
         retryCatalog,

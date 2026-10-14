@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'motion/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './interface-crafts-cards.css';
 
 export type CraftCardItem = {
@@ -33,6 +33,13 @@ export interface CardsProps {
   activeScale?: number;
   cardSpacing?: number;
   className?: string;
+  customCards?: Array<{
+    title: string;
+    tag?: string;
+    badge?: string;
+    description: string;
+    image: string;
+  }>;
 }
 
 const defaultSpring: SpringConfig = {
@@ -185,8 +192,35 @@ export const Cards = ({
   activeScale = 1.15,
   cardSpacing = 74,
   className,
+  customCards,
 }: CardsProps = {}) => {
-  const cards = CAR_INTERIOR_CARDS;
+  const cards = useMemo(() => {
+    if (customCards && customCards.length > 0) {
+      return customCards.map((c, i) => {
+        const fallbackConfig = CAR_INTERIOR_CARDS[i]?.config || {
+          y: (i % 2 === 0 ? -1 : 1) * 15,
+          x: i * 180,
+          rotate: (i % 2 === 0 ? -1 : 1) * 6,
+          zIndex: i + 2,
+        };
+        return {
+          title: c.title,
+          tag: c.tag,
+          description: c.description,
+          className: 'craft-card-dark',
+          config: fallbackConfig,
+          skeleton: (
+            <div className="craft-card-skeleton">
+              <img src={c.image} alt={c.title} className="craft-card-img" loading="lazy" />
+              {c.badge && <span className="craft-card-badge">{c.badge}</span>}
+              <div className="craft-card-overlay" />
+            </div>
+          ),
+        };
+      });
+    }
+    return CAR_INTERIOR_CARDS;
+  }, [customCards]);
   const [active, setActive] = useState<CraftCardItem | null>(null);
   const [spacing, setSpacing] = useState(cardSpacing);
 

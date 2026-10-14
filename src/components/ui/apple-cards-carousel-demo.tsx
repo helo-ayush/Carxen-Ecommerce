@@ -3,11 +3,31 @@
 import React from 'react';
 import { Card, Carousel, type AppleCardData } from '@/components/ui/apple-cards-carousel';
 
-type AppleCardsCarouselDemoProps = {
-  onCategorySelect?: (filter: string) => void;
+export type CategoryItemData = {
+  number: string;
+  category: string;
+  title: string;
+  description: string;
+  detail: string;
+  filter: string;
+  image?: string;
+  src?: string;
+  alt: string;
 };
 
-const categories = [
+type AppleCardsCarouselDemoProps = {
+  onCategorySelect?: (filter: string) => void;
+  categoriesList?: CategoryItemData[];
+  heading?: {
+    sectionNumber?: string;
+    eyebrow?: string;
+    title?: string;
+    intro?: string;
+    note?: string;
+  };
+};
+
+const defaultCategories = [
   {
     number: '01',
     category: 'Comfort / Interior',
@@ -76,8 +96,20 @@ const CategoryContent = ({
   </button>
 );
 
-export default function AppleCardsCarouselDemo({ onCategorySelect }: AppleCardsCarouselDemoProps) {
-  const cards = categories.map((category, index) => {
+export default function AppleCardsCarouselDemo({
+  onCategorySelect,
+  categoriesList,
+  heading,
+}: AppleCardsCarouselDemoProps) {
+  const activeList =
+    categoriesList && categoriesList.length > 0
+      ? categoriesList.map((item) => ({
+          ...item,
+          src: item.image || item.src || '/head-rest.jpg',
+        }))
+      : defaultCategories;
+
+  const cards = activeList.map((category, index) => {
     const card: AppleCardData = {
       ...category,
       content: (
@@ -91,7 +123,7 @@ export default function AppleCardsCarouselDemo({ onCategorySelect }: AppleCardsC
       ),
     };
 
-    return <Card key={card.src} card={card} index={index} />;
+    return <Card key={`${card.src}-${index}`} card={card} index={index} />;
   });
 
   return (
@@ -99,16 +131,20 @@ export default function AppleCardsCarouselDemo({ onCategorySelect }: AppleCardsC
       <div className="featured-heading">
         <div className="featured-heading-copy">
           <div className="sec-head rv in">
-            <span className="no">02</span>
-            <span className="t">Featured categories</span>
+            <span className="no">{heading?.sectionNumber || '02'}</span>
+            <span className="t">{heading?.eyebrow || 'Featured categories'}</span>
           </div>
-          <h2 className="featured-title rv in">Find your <span>fit.</span></h2>
+          <h2 className="featured-title rv in">
+            {heading?.title || <>Find your <span>fit.</span></>}
+          </h2>
           <p className="featured-intro rv in">
-            Thoughtful upgrades for every seat, surface and drive.
+            {heading?.intro || 'Thoughtful upgrades for every seat, surface and drive.'}
           </p>
         </div>
         <div className="featured-controls">
-          <span className="featured-note">Explore our signature collection</span>
+          <span className="featured-note">
+            {heading?.note || 'Explore our signature collection'}
+          </span>
         </div>
       </div>
       <Carousel items={cards} />

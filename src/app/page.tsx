@@ -66,7 +66,17 @@ export default function HomePage() {
     catalogStatus,
     catalogError,
     retryCatalog,
+    storefrontConfig,
   } = useApp();
+
+  const heroConfig = storefrontConfig?.hero;
+  const categoriesConfig = storefrontConfig?.featuredCategories;
+  const fitmentConfig = storefrontConfig?.fitment;
+  const whyConfig = storefrontConfig?.whyCarxen;
+  const reviewsConfig = storefrontConfig?.reviews;
+  const craftConfig = storefrontConfig?.craftCards;
+  const ctaConfig = storefrontConfig?.cta;
+  const announcementConfig = storefrontConfig?.announcement;
 
   // Reveal observer
   useEffect(() => {
@@ -219,7 +229,7 @@ export default function HomePage() {
   };
 
   // Reviews Carousel
-  const reviews = [
+  const defaultReviews = [
     {
       text: (
         <>
@@ -256,14 +266,15 @@ export default function HomePage() {
       bg: '#5d5d64',
     },
   ];
+  const activeReviewsList: any[] = (reviewsConfig?.items && reviewsConfig.items.length > 0) ? reviewsConfig.items : defaultReviews;
   const [activeReview, setActiveReview] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveReview((prev) => (prev + 1) % reviews.length);
+      setActiveReview((prev) => (prev + 1) % activeReviewsList.length);
     }, 5600);
     return () => clearInterval(timer);
-  }, [reviews.length]);
+  }, [activeReviewsList.length]);
 
   // Newsletter State
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -964,7 +975,7 @@ export default function HomePage() {
                 <span>Hover to explore</span>
               </div>
               <AccordionGallery
-                items={WHY_GALLERY_ITEMS}
+                items={(whyConfig?.items && whyConfig.items.length > 0) ? whyConfig.items : WHY_GALLERY_ITEMS}
                 defaultIndex={1}
                 accentColor="#e2231a"
                 overlayColor="#08090d"
@@ -1009,7 +1020,7 @@ export default function HomePage() {
                   id="rPrev"
                   onClick={() =>
                     setActiveReview(
-                      (prev) => (prev - 1 + reviews.length) % reviews.length
+                      (prev) => (prev - 1 + activeReviewsList.length) % activeReviewsList.length
                     )
                   }
                   aria-label="Previous"
@@ -1022,7 +1033,7 @@ export default function HomePage() {
                   className="rb"
                   id="rNext"
                   onClick={() =>
-                    setActiveReview((prev) => (prev + 1) % reviews.length)
+                    setActiveReview((prev) => (prev + 1) % activeReviewsList.length)
                   }
                   aria-label="Next"
                 >
@@ -1031,7 +1042,7 @@ export default function HomePage() {
                   </svg>
                 </button>
                 <div className="dots" id="dots">
-                  {reviews.map((_, i) => (
+                  {activeReviewsList.map((_, i) => (
                     <i
                       key={i}
                       className={i === activeReview ? 'on' : ''}
@@ -1047,7 +1058,7 @@ export default function HomePage() {
                 id="revT"
                 style={{ transform: `translateX(-${activeReview * 100}%)` }}
               >
-                {reviews.map((rev, idx) => (
+                {activeReviewsList.map((rev, idx) => (
                   <div className="rev-s" key={idx}>
                     <blockquote>{rev.text}</blockquote>
                     <div className="rev-p">
@@ -1099,7 +1110,7 @@ export default function HomePage() {
               <div className="craft-cards-hint mono rv in">
                 <span>✦ Click card to explore cabin craft</span>
               </div>
-              <Cards />
+              <Cards customCards={craftConfig?.cards} />
               <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
                 <label htmlFor="ne">Join the X-List — 10% off first order</label>
                 <div className="nf">

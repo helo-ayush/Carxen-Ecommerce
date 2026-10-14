@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { HERO_FRAME_FPS, HERO_FRAMES } from '@/data/heroFrames';
 
-const SCENES = [
+const DEFAULT_SCENES = [
   {
     tag: '01 / Steering Grip',
     title: 'Grip Redefined',
@@ -51,7 +51,35 @@ const SCENES = [
   },
 ] as const;
 
-export function HeroFrameSection() {
+export type HeroSectionProps = {
+  heroConfig?: {
+    eyebrow?: string;
+    title?: string;
+    slogan?: string;
+    preTitle?: string;
+    sub?: string;
+    scrollHint?: string;
+    scenes?: Array<{
+      tag: string;
+      title: string;
+      desc?: string;
+      description?: string;
+    }>;
+  };
+};
+
+export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
+  const activeScenes = (heroConfig?.scenes && heroConfig.scenes.length > 0)
+    ? heroConfig.scenes.map((s, idx) => {
+        const fallback = DEFAULT_SCENES[idx] || DEFAULT_SCENES[DEFAULT_SCENES.length - 1];
+        return {
+          ...fallback,
+          tag: s.tag || fallback.tag,
+          title: s.title || fallback.title,
+          desc: s.desc || s.description || fallback.desc,
+        };
+      })
+    : DEFAULT_SCENES;
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -139,7 +167,7 @@ export function HeroFrameSection() {
     };
 
     const updateOverlays = (progress: number) => {
-      SCENES.forEach((scene, index) => {
+      activeScenes.forEach((scene, index) => {
         const element = sceneRefs.current[index];
         if (!element) return;
 
@@ -329,7 +357,7 @@ export function HeroFrameSection() {
         <canvas ref={canvasRef} className="hero-video-canvas" aria-hidden="true" />
         <div className="hero-video-vignette" />
 
-        {SCENES.map((scene, index) => (
+        {activeScenes.map((scene, index) => (
           <div
             key={scene.tag}
             className="hv-scene"
@@ -343,18 +371,18 @@ export function HeroFrameSection() {
 
         <div className="hv-finale" ref={finaleRef}>
           <div className="hv-finale-inner">
-            <p className="hv-finale-pre mono">The complete car accessories brand</p>
+            <p className="hv-finale-pre mono">{heroConfig?.preTitle || 'The complete car accessories brand'}</p>
             <h1 className="hv-finale-logo disp">
               <img src="/logo.png" alt="CARXEN Car Accessories" className="hv-finale-logo-img" />
             </h1>
-            <p className="hv-finale-slogan">Engineered for every drive<span className="hv-finale-dot">.</span></p>
+            <p className="hv-finale-slogan">{heroConfig?.slogan || 'Engineered for every drive.'}</p>
             <div className="hv-finale-line" />
-            <p className="hv-finale-sub mono">100+ Vehicle Models &nbsp;·&nbsp; 2-Year Warranty &nbsp;·&nbsp; Free Shipping</p>
+            <p className="hv-finale-sub mono">{heroConfig?.sub || '100+ Vehicle Models · 2-Year Warranty · Free Shipping'}</p>
           </div>
         </div>
 
         <div className="hero-video-scroll-hint-wrap" ref={scrollHintRef}>
-          <p className="hero-video-label mono">Scroll to explore</p>
+          <p className="hero-video-label mono">{heroConfig?.scrollHint || 'Scroll to explore'}</p>
           <div className="hero-video-scroll-hint"><span /></div>
         </div>
 
