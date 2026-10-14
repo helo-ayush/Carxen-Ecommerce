@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/customer';
 import { Footer } from '@/components/Footer';
+import { supabase } from '@/lib/supabase/client';
 import {
   Package,
   MapPin,
@@ -347,7 +348,7 @@ export default function AccountPage() {
   };
 
   // Password update
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 6) {
       showToast('New password must be at least 6 characters');
@@ -357,14 +358,40 @@ export default function AccountPage() {
       showToast('New passwords do not match');
       return;
     }
+
     setIsPasswordSubmitting(true);
-    setTimeout(() => {
-      setIsPasswordSubmitting(false);
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        const sessionRes = await supabase.auth.getSession();
+        const token = sessionRes.data?.session?.access_token;
+        const res = await fetch('/api/storefront/customer/password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ newPassword }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || error.message);
+        }
+      }
+
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       showToast('Password updated successfully');
-    }, 600);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update password');
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
   };
 
   // GST save

@@ -179,6 +179,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        headers['Authorization'] = `Bearer ${data.session.access_token}`;
+      }
+    } catch {}
+    if (user?.id) headers['x-demo-user-id'] = user.id;
+    if (user?.email) headers['x-demo-user-email'] = user.email;
+    return headers;
+  };
+
+  const fetchCustomerBackendProfile = async (sessionToken?: string, u?: any) => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      const activeId = u?.id || user?.id;
+      const activeEmail = u?.email || user?.email;
+      if (activeId) headers['x-demo-user-id'] = activeId;
+      if (activeEmail) headers['x-demo-user-email'] = activeEmail;
+
+      const res = await fetch('/api/storefront/customer/profile', {
+        headers,
+        cache: 'no-store',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.profile) {
+          setUser((prev) => ({
+            id: data.profile.authUserId || data.profile.id,
+            name: data.profile.name || prev?.name || 'Driver',
+            email: data.profile.email || prev?.email || '',
+            phone: data.profile.phone || prev?.phone || '+91 98201 44829',
+            avatarUrl: data.profile.avatarUrl ?? prev?.avatarUrl ?? '',
+            joinedDate: data.profile.joinedDate || prev?.joinedDate || 'Oct 2024',
+            tier: data.profile.tier || prev?.tier || 'Apex Gold Member',
+            rewardPoints: data.profile.rewardPoints ?? prev?.rewardPoints ?? 1450,
+          }));
+
+          if (data.profile.communicationPrefs) {
+            setCommunicationPrefs(data.profile.communicationPrefs);
+          }
+          if (data.profile.gstBilling) {
+            setGstBilling(data.profile.gstBilling);
+          }
+        }
+
+        if (Array.isArray(data.addresses) && data.addresses.length > 0) {
+          setAddresses(data.addresses);
+        }
+
+        if (Array.isArray(data.orders) && data.orders.length > 0) {
+          setOrders(data.orders);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load backend customer profile:', err);
+    }
+  };
+
   // Supabase Auth Listener
   useEffect(() => {
     let mounted = true;
@@ -193,7 +257,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             try {
               const cached = localStorage.getItem('cx_demo_user');
               if (cached) {
-                setUser(JSON.parse(cached));
+                const parsed = JSON.parse(cached);
+                setUser(parsed);
+                void fetchCustomerBackendProfile(undefined, parsed);
               } else {
                 setUser(null);
               }
@@ -207,11 +273,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           if (data.session?.user) {
             setUser(constructUserFromSession(data.session.user));
+            void fetchCustomerBackendProfile(data.session.access_token, data.session.user);
           } else {
             try {
               const cached = localStorage.getItem('cx_demo_user');
               if (cached) {
-                setUser(JSON.parse(cached));
+                const parsed = JSON.parse(cached);
+                setUser(parsed);
+                void fetchCustomerBackendProfile(undefined, parsed);
               } else {
                 setUser(null);
               }
@@ -236,6 +305,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       (event, session) => {
         if (session?.user) {
           setUser(constructUserFromSession(session.user));
+          void fetchCustomerBackendProfile(session.access_token, session.user);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           try {
@@ -480,6 +550,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(profileUpdates),
+      });
+    } catch (err) {
+      console.warn('Backend profile update error:', err);
+    }
+
     if (user?.id) {
       try {
         await supabase.auth.updateUser({
@@ -497,19 +578,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Address CRUD
-  const addAddress = (addr: Omit<CustomerAddress, 'id'>) => {
-    const newId = `addr_${Date.now()}`;
+  const addAddress = async (addr: Omit<CustomerAddress, 'id'>) => {
+    const tempId = `addr_${Date.now()}`;
+    const newAddressObj: CustomerAddress = {
+      id: tempId,
+      ...addr,
+      isPrimary: addr.isPrimary || addresses.length === 0,
+    };
+
     setAddresses((prev) => {
       let updated = prev;
       if (addr.isPrimary || prev.length === 0) {
         updated = prev.map((a) => ({ ...a, isPrimary: false }));
       }
-      return [{ id: newId, ...addr, isPrimary: addr.isPrimary || prev.length === 0 }, ...updated];
+      return [newAddressObj, ...updated];
     });
     showToast('Address added to your account');
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/storefront/customer/addresses', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(addr),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.address?.id) {
+          setAddresses((prev) =>
+            prev.map((a) => (a.id === tempId ? data.address : a))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Backend address save error:', err);
+    }
   };
 
-  const updateAddress = (id: string, updates: Partial<CustomerAddress>) => {
+  const updateAddress = async (id: string, updates: Partial<CustomerAddress>) => {
     setAddresses((prev) => {
       let updated = prev;
       if (updates.isPrimary) {
@@ -520,9 +626,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     showToast('Address updated');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`/api/storefront/customer/addresses/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(updates),
+      });
+    } catch (err) {
+      console.warn('Backend address update error:', err);
+    }
   };
 
-  const deleteAddress = (id: string) => {
+  const deleteAddress = async (id: string) => {
     setAddresses((prev) => {
       const target = prev.find((a) => a.id === id);
       const remaining = prev.filter((a) => a.id !== id);
@@ -532,9 +649,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return remaining;
     });
     showToast('Address removed');
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/storefront/customer/addresses/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.addresses)) {
+          setAddresses(data.addresses);
+        }
+      }
+    } catch (err) {
+      console.warn('Backend address delete error:', err);
+    }
   };
 
-  const setPrimaryAddress = (id: string) => {
+  const setPrimaryAddress = async (id: string) => {
     setAddresses((prev) =>
       prev.map((a) => ({
         ...a,
@@ -542,6 +675,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }))
     );
     showToast('Primary delivery address updated');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`/api/storefront/customer/addresses/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ isPrimary: true }),
+      });
+    } catch (err) {
+      console.warn('Backend primary address update error:', err);
+    }
   };
 
   // Orders
@@ -584,14 +728,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast('Default payment method set');
   };
 
-  const updateCommunicationPrefs = (prefs: Partial<CommunicationPreferences>) => {
-    setCommunicationPrefs((prev) => ({ ...prev, ...prefs }));
+  const updateCommunicationPrefs = async (prefs: Partial<CommunicationPreferences>) => {
+    const updated = { ...communicationPrefs, ...prefs };
+    setCommunicationPrefs(updated);
     showToast('Preferences updated');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ communicationPrefs: updated }),
+      });
+    } catch (err) {
+      console.warn('Backend communication prefs error:', err);
+    }
   };
 
-  const updateGstBilling = (info: Partial<GstBillingInfo>) => {
-    setGstBilling((prev) => ({ ...prev, ...info }));
+  const updateGstBilling = async (info: Partial<GstBillingInfo>) => {
+    const updated = { ...gstBilling, ...info };
+    setGstBilling(updated);
     showToast('GST billing preferences saved');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ gstBilling: updated }),
+      });
+    } catch (err) {
+      console.warn('Backend GST billing update error:', err);
+    }
   };
 
   const setVehicle = (v: Vehicle) => {
