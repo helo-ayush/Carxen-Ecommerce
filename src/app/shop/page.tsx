@@ -13,6 +13,7 @@ import {
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
+import { Badge } from '@/components/ui/badge';
 
 function ShopContent() {
   const router = useRouter();
@@ -292,8 +293,8 @@ function ShopContent() {
                               {custom ? `✓ Fits your ${activeCar.m}` : 'Universal fit'}
                             </span>
                             <span className="qv">View details</span>
-                            {p.top && <span className="top-b">Top item</span>}
-                            {p.nw && <span className="top-b new-b">New</span>}
+                            {p.top && <Badge variant="secondary" className="top-b">Top item</Badge>}
+                            {p.nw && <Badge variant="subtleRed" className="top-b new-b">New</Badge>}
                           </div>
 
                           <button

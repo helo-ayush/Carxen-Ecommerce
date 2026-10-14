@@ -17,6 +17,7 @@ import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
 import AccordionGallery from '@/components/ui/AccordionGallery';
 import { HeroFrameSection } from '@/components/HeroFrameSection';
 import { Cards } from '@/components/ui/interface-crafts-cards';
+import { Badge } from '@/components/ui/badge';
 
 const WHY_GALLERY_ITEMS = [
   {
@@ -322,7 +323,9 @@ export default function HomePage() {
           </div>
           <div className="craft-g">
             <div className="craft-copy">
-              <p className="craft-eyebrow mono red rv">Details that drive difference</p>
+              <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
+                Engineering Standard
+              </Badge>
               <h2 className="craft-title disp rv" style={{ ['--d' as any]: '.1s' }}>
                 Built in
                 <br />
@@ -728,8 +731,8 @@ export default function HomePage() {
                             )}
                             <ProductArt product={p} />
                             {!isSpot && <span className="qv">View details</span>}
-                            {p.top && <span className="top-b">Top item</span>}
-                            {p.nw && <span className="top-b new-b">New</span>}
+                            {p.top && <Badge variant="secondary" className="top-b">Top item</Badge>}
+                            {p.nw && <Badge variant="subtleRed" className="top-b new-b">New</Badge>}
                           </div>
 
                           <button
@@ -991,8 +994,11 @@ export default function HomePage() {
           </div>
           <div className="rev-g">
             <div className="rv-l in">
+              <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
+                Verified Drivers
+              </Badge>
               <span className="rev-q">“</span>
-              <h2 className="disp" style={{ fontSize: 'clamp(2.4rem, 4vw, 4rem)' }}>
+              <h2 className="disp" style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.75rem)' }}>
                 Trusted by
                 <br />
                 drivers<span className="red">.</span>
@@ -1066,9 +1072,11 @@ export default function HomePage() {
         <div className="wrap cta-in">
           <div className="cta-grid">
             <div className="cta-left-col">
-              <p className="mono rv in" style={{ marginBottom: '16px' }}>
-                08 — Ready when you are
-              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <Badge variant="outline" className="rv in" style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}>
+                  08 — Ready when you are
+                </Badge>
+              </div>
               <h2 className="disp">
                 <span className="mask rv in">
                   <span>Don&apos;t just</span>
