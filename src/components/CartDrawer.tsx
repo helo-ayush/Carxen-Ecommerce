@@ -9,6 +9,7 @@ import { ProductArt } from './ProductArt';
 
 export function CartDrawer() {
   const {
+    user,
     isCartOpen,
     closeCart,
     cart,
@@ -43,6 +44,11 @@ export function CartDrawer() {
       return;
     }
     closeCart();
+    if (!user) {
+      showToast('Please sign in to proceed to checkout');
+      router.push('/login?redirect=/checkout');
+      return;
+    }
     router.push('/checkout');
   };
 

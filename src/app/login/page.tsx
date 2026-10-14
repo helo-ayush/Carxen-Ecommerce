@@ -8,7 +8,7 @@ import { useApp } from '@/context/AppContext';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login, loginWithEmail, signUpWithEmail, signInWithGoogle, logout } = useApp();
+  const { user, loginWithEmail, signUpWithEmail, logout, showToast } = useApp();
 
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [fullName, setFullName] = useState('');
@@ -16,7 +16,6 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
@@ -29,22 +28,16 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  const handleGuestSignIn = () => {
-    login('Guest Driver');
-    router.push(redirectUrl);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setErrorMessage(null);
-    setInfoMessage(null);
-    setGoogleLoading(true);
-
-    const res = await signInWithGoogle();
-    if (res.error) {
-      setErrorMessage(res.error);
-      setGoogleLoading(false);
+  useEffect(() => {
+    if (user) {
+      router.push(redirectUrl);
     }
-    // If successful, Supabase handles redirection to OAuth provider
+  }, [user, redirectUrl, router]);
+
+  const handleGoogleSignIn = () => {
+    setErrorMessage(null);
+    setInfoMessage('Google Sign-In will be available soon. Please use your email to sign in or create an account.');
+    showToast('Google Sign-In will be available soon.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +148,13 @@ function LoginForm() {
         <div className="lg-r">
           <button
             className="xb lg-x"
-            onClick={() => router.push('/')}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/');
+              }
+            }}
             aria-label="Close"
           >
             <svg viewBox="0 0 24 24">
@@ -205,10 +204,10 @@ function LoginForm() {
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                   <button
                     className="btn dark"
-                    onClick={() => router.push('/account')}
+                    onClick={() => router.push(redirectUrl)}
                     style={{ flex: 1, height: '46px' }}
                   >
-                    Go to Account
+                    Continue to {redirectUrl.includes('checkout') ? 'Checkout' : 'Account'}
                   </button>
                   <button
                     className="btn"
@@ -221,6 +220,42 @@ function LoginForm() {
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
+                {redirectUrl.includes('checkout') && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      background: '#fee2e2',
+                      color: '#b91c1c',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <span>🔒 Sign in required to place order</span>
+                  </div>
+                )}
+                {redirectUrl.includes('ppRv') && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      background: '#fef3c7',
+                      color: '#92400e',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <span>✍️ Sign in required to write a review</span>
+                  </div>
+                )}
                 <h2 className="disp">
                   {mode === 'up' ? 'Join CARXEN' : 'Welcome back'}
                 </h2>
@@ -364,7 +399,7 @@ function LoginForm() {
                 <button
                   className="lg-go"
                   type="submit"
-                  disabled={loading || googleLoading}
+                  disabled={loading}
                   style={{
                     opacity: loading ? 0.75 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
@@ -402,10 +437,13 @@ function LoginForm() {
                   className="lg-alt"
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={googleLoading || loading}
+                  title="Google Sign-In will be available soon"
                   style={{
-                    opacity: googleLoading ? 0.75 : 1,
-                    cursor: googleLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    position: 'relative',
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24">
@@ -426,20 +464,27 @@ function LoginForm() {
                       d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.5 10c.8-2.4 2.9-4.1 5.5-4.1z"
                     />
                   </svg>
-                  {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+                  <span>Continue with Google</span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      background: 'rgba(0,0,0,0.06)',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Soon
+                  </span>
                 </button>
 
                 <p className="lg-note">
-                  Quick access —{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleGuestSignIn();
-                    }}
-                  >
-                    Continue as guest
-                  </a>
+                  Want to explore first?{' '}
+                  <Link href="/shop" style={{ textDecoration: 'underline' }}>
+                    Browse catalog without signing in
+                  </Link>
                 </p>
               </form>
             )}

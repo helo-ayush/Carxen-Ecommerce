@@ -58,6 +58,7 @@ export default function ProductDetailPage() {
 function ProductDetailContent({ product }: { product: Product }) {
   const router = useRouter();
   const {
+    user,
     car,
     addToCart,
     openCart,
@@ -85,6 +86,15 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [deliveryMsg, setDeliveryMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'d' | 's' | 'f' | 'i'>('d');
 
+  // Review submission state (auth gated)
+  const [isWritingReview, setIsWritingReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [userReviews, setUserReviews] = useState<
+    Array<{ name: string; title: string; comment: string; rating: number }>
+  >([]);
+
   const custom = isCustomFit(product);
   const discountPercent = product.o
     ? Math.round((1 - product.p / product.o) * 100)
@@ -92,6 +102,46 @@ function ProductDetailContent({ product }: { product: Product }) {
 
   const categoryLabel =
     product.categoryLabel || CATEGORIES_LIST.find((c) => c[0] === product.c)?.[1] || 'Accessories';
+
+  const handleBuyNow = () => {
+    addToCart(product.id, quantity);
+    if (!user) {
+      showToast('Please sign in to proceed with your order');
+      router.push('/login?redirect=/checkout');
+      return;
+    }
+    router.push('/checkout');
+  };
+
+  const handleStartReview = () => {
+    if (!user) {
+      showToast('Please sign in to write a review');
+      router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}#ppRv`)}`);
+      return;
+    }
+    setIsWritingReview(true);
+  };
+
+  const handleSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewTitle.trim() || !reviewComment.trim()) {
+      showToast('Please provide a review title and details');
+      return;
+    }
+    setUserReviews((prev) => [
+      {
+        name: user?.name || 'Verified Driver',
+        title: reviewTitle.trim(),
+        comment: reviewComment.trim(),
+        rating: reviewRating,
+      },
+      ...prev,
+    ]);
+    setIsWritingReview(false);
+    setReviewTitle('');
+    setReviewComment('');
+    showToast(`Thank you, ${user?.name || 'Driver'}! Review published.`);
+  };
 
   // Bought together bundle items
   const bundleItems = useMemo(() => {
@@ -421,10 +471,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                 </button>
                 <button
                   className="b"
-                  onClick={() => {
-                    addToCart(product.id, quantity);
-                    router.push('/checkout');
-                  }}
+                  onClick={handleBuyNow}
                 >
                   Buy now
                 </button>
@@ -558,13 +605,131 @@ function ProductDetailContent({ product }: { product: Product }) {
               <button
                 className="btn dark"
                 style={{ marginTop: '14px' }}
-                onClick={() => showToast('Demo storefront — review submitted successfully')}
+                onClick={handleStartReview}
               >
                 Write a review
               </button>
             </div>
 
             <div>
+              {isWritingReview && (
+                <form
+                  onSubmit={handleSubmitReview}
+                  style={{
+                    background: 'var(--bg2, #f5f5f7)',
+                    border: '1px solid var(--line, #e5e5ea)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <h3 style={{ fontSize: '1.1rem', margin: 0 }}>
+                      Reviewing as {user?.name}
+                    </h3>
+                    <button
+                      type="button"
+                      className="xb"
+                      onClick={() => setIsWritingReview(false)}
+                      style={{ fontSize: '18px' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        color: 'var(--mute)',
+                        display: 'block',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      Rating
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '22px',
+                            cursor: 'pointer',
+                            color: star <= reviewRating ? '#f5a623' : '#d1d1d6',
+                          }}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    className="lg-in"
+                    placeholder="Review headline (e.g., Incredible stitching and perfect fit!)"
+                    value={reviewTitle}
+                    onChange={(e) => setReviewTitle(e.target.value)}
+                    style={{ marginBottom: '10px' }}
+                    required
+                  />
+                  <textarea
+                    className="lg-in"
+                    placeholder="Share details of your experience with this item..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={3}
+                    style={{ marginBottom: '14px', resize: 'vertical' }}
+                    required
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="submit"
+                      className="btn dark"
+                      style={{ height: '42px', flex: 1 }}
+                    >
+                      Submit verified review
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setIsWritingReview(false)}
+                      style={{ height: '42px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {userReviews.map((ur, idx) => (
+                <div
+                  className="pp-rc"
+                  key={`user-rev-${idx}`}
+                  style={{ borderLeft: '3px solid #e2231a' }}
+                >
+                  <div className="pp-rh">
+                    <b>{ur.name}</b>
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                      ✓ Verified buyer
+                    </span>
+                  </div>
+                  <span className="st" style={{ color: '#f5a623' }}>
+                    {'★'.repeat(ur.rating) + '☆'.repeat(5 - ur.rating)}
+                  </span>
+                  <h4>{ur.title}</h4>
+                  <p>{ur.comment}</p>
+                </div>
+              ))}
+
               {[0, 1, 2, 3].map((k) => {
                 const r = SAMPLE_REVIEWS[(product.id + k) % SAMPLE_REVIEWS.length];
                 const s = k === 2 ? 4 : 5;

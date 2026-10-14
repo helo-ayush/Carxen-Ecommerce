@@ -19,6 +19,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const {
     user,
+    authLoading,
     cart,
     cartSubtotal,
     products,
@@ -30,7 +31,10 @@ export default function CheckoutPage() {
     showToast,
   } = useApp();
 
-  const userName = user?.name && user.name !== 'Driver' && user.name !== 'Guest' ? user.name : 'Aarav Mehta';
+  const userName =
+    user?.name && user.name !== 'Driver' && user.name !== 'Guest'
+      ? user.name
+      : user?.email?.split('@')[0] || '';
   const [addressIndex, setAddressIndex] = useState(0);
   const [shippingSpeed, setShippingSpeed] = useState<'std' | 'exp'>('std');
   const [paymentMethod, setPaymentMethod] = useState<StorefrontPaymentMethod>('UPI');
@@ -99,6 +103,14 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (isSubmitting) return;
+
+    if (!user) {
+      const message = 'Please sign in to complete and place your order.';
+      setSubmitError(message);
+      showToast(message);
+      router.push('/login?redirect=/checkout');
+      return;
+    }
 
     if (cartEntries.length === 0) {
       showToast('Your cart is empty');
@@ -210,6 +222,56 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {!authLoading && !user && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px',
+                padding: '16px 20px',
+                background: 'rgba(226, 35, 26, 0.08)',
+                border: '1px solid rgba(226, 35, 26, 0.25)',
+                borderRadius: '16px',
+                marginBottom: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: '#e2231a',
+                    color: '#fff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '18px',
+                    flexShrink: 0,
+                  }}
+                >
+                  🔒
+                </span>
+                <div>
+                  <b style={{ color: 'var(--ink, #111)', fontSize: '15px', display: 'block' }}>
+                    Sign in required to complete your order
+                  </b>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--mute, #666)' }}>
+                    You can review order details below, but signing in is required before placing your order.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/login?redirect=/checkout"
+                className="btn dark"
+                style={{ height: '40px', padding: '0 18px', fontSize: '13px' }}
+              >
+                Sign In / Sign Up
+              </Link>
+            </div>
+          )}
+
           {catalogStatus !== 'ready' ? (
             <CatalogState
               status={catalogStatus}
@@ -242,7 +304,7 @@ export default function CheckoutPage() {
                     >
                       <i />
                       <span className="tg">Home</span>
-                      <b>{userName}</b>
+                      <b>{userName || 'Personal Address'}</b>
                       <small>12, Lake View Road, Koregaon Park, Pune 411001</small>
                     </button>
 
@@ -252,7 +314,7 @@ export default function CheckoutPage() {
                     >
                       <i />
                       <span className="tg">Work</span>
-                      <b>{userName}</b>
+                      <b>{userName || 'Office Address'}</b>
                       <small>Tower B, Hinjewadi Phase 2, Pune 411057</small>
                     </button>
 
@@ -581,7 +643,11 @@ export default function CheckoutPage() {
                   aria-busy={isSubmitting}
                   style={isSubmitting ? { opacity: 0.7, cursor: 'wait' } : undefined}
                 >
-                  {isSubmitting ? 'Saving order…' : `Place order · ${formatINR(finalTotal)}`}
+                  {isSubmitting
+                    ? 'Saving order…'
+                    : !user
+                    ? `Sign in to place order · ${formatINR(finalTotal)}`
+                    : `Place order · ${formatINR(finalTotal)}`}
                 </button>
 
                 <div className="ck-tr">

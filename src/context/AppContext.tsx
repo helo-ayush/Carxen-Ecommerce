@@ -33,6 +33,7 @@ interface AppContextType {
   catalogError: string | null;
   retryCatalog: () => void;
   user: User | null;
+  authLoading: boolean;
   car: Vehicle | null;
   cart: Record<number, number>;
   cartCount: number;
@@ -70,6 +71,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>('loading');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [car, setCar] = useState<Vehicle | null>(null);
   // Pending backend step: the cart remains browser-local until cart sync is added.
   const [cart, setCart] = useState<Record<number, number>>({});
@@ -109,7 +111,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void requestCatalog();
   }, [requestCatalog]);
 
-  // Supabase Auth Listener
+  // Supabase Auth Listener - Sole source of truth for user authentication
   useEffect(() => {
     let mounted = true;
 
@@ -118,23 +120,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn('Supabase getSession warning:', error.message);
+          if (mounted) {
+            setUser(null);
+            setAuthLoading(false);
+          }
           return;
         }
-        if (mounted && data.session?.user) {
-          const u = data.session.user;
-          const fullName =
-            u.user_metadata?.full_name ||
-            u.user_metadata?.name ||
-            u.email?.split('@')[0] ||
-            'Driver';
-          setUser({
-            id: u.id,
-            name: fullName,
-            email: u.email,
-          });
+        if (mounted) {
+          if (data.session?.user) {
+            const u = data.session.user;
+            const fullName =
+              u.user_metadata?.full_name ||
+              u.user_metadata?.name ||
+              u.email?.split('@')[0] ||
+              'Driver';
+            setUser({
+              id: u.id,
+              name: fullName,
+              email: u.email,
+            });
+          } else {
+            setUser(null);
+          }
+          setAuthLoading(false);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
+        if (mounted) {
+          setUser(null);
+          setAuthLoading(false);
+        }
       }
     };
 
@@ -154,9 +169,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             name: fullName,
             email: u.email,
           });
-        } else if (event === 'SIGNED_OUT') {
+        } else if (event === 'SIGNED_OUT' || !session) {
           setUser(null);
         }
+        setAuthLoading(false);
       }
     );
 
@@ -166,12 +182,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-
-  // Initialize from localStorage
+  // Initialize browser-local preferences (car, cart, favourites) from localStorage
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem('cx_user');
-      if (savedUser) setUser(JSON.parse(savedUser));
+      // Clean up any legacy mock user key
+      localStorage.removeItem('cx_user');
 
       const savedCar = localStorage.getItem('cx_car');
       if (savedCar) setCar(JSON.parse(savedCar));
@@ -181,21 +196,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const savedFav = localStorage.getItem('cx_fav');
       if (savedFav) setFav(JSON.parse(savedFav));
-
     } catch (e) {
       console.error('Storage access error', e);
     }
     setIsLoaded(true);
   }, []);
 
-  // Sync to localStorage
-  useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      if (user) localStorage.setItem('cx_user', JSON.stringify(user));
-      else localStorage.removeItem('cx_user');
-    } catch (e) {}
-  }, [user, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -273,56 +279,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fullName?: string
   ) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName?.trim() || 'Driver',
-          },
-        },
+      const resp = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          fullName: fullName?.trim() || 'Driver',
+        }),
       });
-      if (error) {
-        return { error: error.message };
+
+      const result = await resp.json();
+      if (!resp.ok) {
+        return { error: result.error || 'Account creation failed' };
       }
-      if (data.session && data.user) {
-        const name =
-          fullName?.trim() || data.user.email?.split('@')[0] || 'Driver';
-        setUser({
-          id: data.user.id,
-          name,
-          email: data.user.email,
+
+      // Immediately sign in using Supabase client to establish session
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
         });
-        showToast(`Account created — Welcome, ${name}!`);
-        return { error: null, requiresEmailConfirmation: false };
+
+      if (signInError) {
+        return {
+          error: null,
+          requiresEmailConfirmation: false,
+        };
       }
-      return { error: null, requiresEmailConfirmation: true };
+
+      if (signInData.user) {
+        const name =
+          fullName?.trim() ||
+          signInData.user.user_metadata?.full_name ||
+          signInData.user.email?.split('@')[0] ||
+          'Driver';
+        setUser({
+          id: signInData.user.id,
+          name,
+          email: signInData.user.email,
+        });
+        showToast(`Welcome to CARXEN, ${name}!`);
+      }
+
+      return { error: null, requiresEmailConfirmation: false };
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Sign up failed' };
     }
   };
 
   const signInWithGoogle = async () => {
-    try {
-      const origin =
-        typeof window !== 'undefined'
-          ? window.location.origin
-          : process.env.NEXT_PUBLIC_SITE_URL || '';
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${origin}/auth/callback`,
-        },
-      });
-      if (error) {
-        return { error: error.message };
-      }
-      return { error: null };
-    } catch (err) {
-      return {
-        error: err instanceof Error ? err.message : 'Google sign-in failed',
-      };
-    }
+    showToast('Google Sign-In will be available soon.');
+    return {
+      error: 'Google Sign-In will be available soon. Please use email and password to sign in.',
+    };
   };
 
   const logout = async () => {
@@ -332,7 +342,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn('Supabase sign out error:', e);
     }
     setUser(null);
-    showToast('Signed out');
+    try {
+      localStorage.removeItem('cx_user');
+    } catch (e) {}
+    showToast('Signed out successfully');
   };
 
 
@@ -448,6 +461,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         catalogError,
         retryCatalog,
         user,
+        authLoading,
         car,
         cart,
         cartCount,
