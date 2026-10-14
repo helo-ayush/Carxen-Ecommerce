@@ -71,6 +71,12 @@ function ProductDetailContent({ product }: { product: Product }) {
     return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
   }, [car]);
 
+  const productImages = useMemo(() => {
+    if (Array.isArray(product.images) && product.images.length > 0) return product.images;
+    if (product.image) return [product.image];
+    return [];
+  }, [product]);
+
   const [activeView, setActiveView] = useState(0);
   const tintOptions = product.tintOptions?.length ? product.tintOptions : TINT_OPTIONS;
   const [activeTint, setActiveTint] = useState<ProductTintOption>(tintOptions[0]);
@@ -151,28 +157,67 @@ function ProductDetailContent({ product }: { product: Product }) {
           <p>Model-specific technical specifications available with included certificate.</p>
         );
       case 'f':
-        return custom ? (
-          <div>
-            <p>
-              Custom-cut for your <b>{activeCar.y} {activeCar.b} {activeCar.m}</b> ({activeCar.f}) from a laser-measured template.
-            </p>
-            <p>Changing vehicle updates fitment across the whole store.</p>
-          </div>
-        ) : (
-          <div>
-            <p>
-              <b>Universal fit.</b> Works with your {activeCar.m} and most other cars.
-            </p>
-          </div>
-        );
-      case 'i':
         return (
           <div>
-            <p>1. Unbox and lay the parts out on a clean surface.</p>
-            <p>2. Position the product and check alignment against your seats, floor or wheel.</p>
-            <p>3. Secure the straps or clips and give it a firm tug. No tools needed.</p>
+            {custom ? (
+              <p>
+                Custom-cut for your <b>{activeCar.y} {activeCar.b} {activeCar.m}</b> ({activeCar.f}) from a laser-measured template.
+              </p>
+            ) : (
+              <p>
+                <b>Universal fit.</b> Works with your {activeCar.m} and most other cars.
+              </p>
+            )}
+            {typeof product.fitment === 'object' && product.fitment !== null && 'summary' in (product.fitment as Record<string, unknown>) && (
+              <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                <b style={{ display: 'block', marginBottom: '4px', fontSize: '13px' }}>Compatibility Notes:</b>
+                <p style={{ margin: 0, fontSize: '13px', color: '#ccc' }}>{String((product.fitment as Record<string, unknown>).summary)}</p>
+              </div>
+            )}
+            <p style={{ marginTop: '12px', fontSize: '12px', color: '#888' }}>
+              Changing vehicle updates fitment across the whole store.
+            </p>
           </div>
         );
+      case 'i': {
+        const inst = product.installation;
+        const steps = inst?.steps && inst.steps.length > 0
+          ? inst.steps
+          : [
+              '1. Unbox and lay the parts out on a clean surface.',
+              '2. Position the product and check alignment against your seats, floor or wheel.',
+              '3. Secure the straps or clips and give it a firm tug. No tools needed.',
+            ];
+        return (
+          <div>
+            {inst && (
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', fontSize: '13px' }}>
+                <div><b>Difficulty:</b> <span style={{ color: '#aaa' }}>{inst.difficulty || 'Easy'}</span></div>
+                <div><b>Time:</b> <span style={{ color: '#aaa' }}>{inst.time || '15 mins'}</span></div>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {steps.map((st, i) => (
+                <p key={i} style={{ margin: 0 }}>
+                  {st.match(/^\d+\./) ? st : `${i + 1}. ${st}`}
+                </p>
+              ))}
+            </div>
+            {inst?.videoUrl && (
+              <div style={{ marginTop: '14px' }}>
+                <a
+                  href={inst.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#e2231a', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  ▶ Watch Video Installation Guide
+                </a>
+              </div>
+            )}
+          </div>
+        );
+      }
       case 'd':
       default:
         return (
@@ -219,28 +264,87 @@ function ProductDetailContent({ product }: { product: Product }) {
               style={{ ['--tint' as any]: activeTint[1] }}
             >
               <div className="pp-st" id="ppSt" data-v={activeView}>
-                <ProductArt product={product} />
+                {productImages.length > 0 ? (
+                  <img
+                    src={productImages[activeView] || productImages[0]}
+                    alt={product.n}
+                    className="w-full h-full object-cover rounded-2xl"
+                    style={{ filter: activeTint[1] && activeTint[1] !== 'none' ? activeTint[1] : undefined }}
+                  />
+                ) : (
+                  <ProductArt product={product} />
+                )}
               </div>
               <div className="pp-th">
-                {[0, 1, 2, 3].map((v) => (
-                  <button
-                    key={v}
-                    className={activeView === v ? 'on' : ''}
-                    onClick={() => setActiveView(v)}
-                    aria-label={`View ${v + 1}`}
-                  >
-                    <ProductArt product={product} />
-                  </button>
-                ))}
+                {productImages.length > 0
+                  ? productImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        className={activeView === idx ? 'on' : ''}
+                        onClick={() => setActiveView(idx)}
+                        aria-label={`View ${idx + 1}`}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))
+                  : [0, 1, 2, 3].map((v) => (
+                      <button
+                        key={v}
+                        className={activeView === v ? 'on' : ''}
+                        onClick={() => setActiveView(v)}
+                        aria-label={`View ${v + 1}`}
+                      >
+                        <ProductArt product={product} />
+                      </button>
+                    ))}
               </div>
             </div>
 
             {/* Right Product Details */}
             <div className="pp-i">
-              <span className="mono red">
-                {product.s} series · CX-{String(product.id).padStart(2, '0')}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span className="mono red">
+                  {product.s} series · CX-{String(product.id).padStart(2, '0')}
+                </span>
+                {product.isCombo && (
+                  <span
+                    className="mono"
+                    style={{
+                      background: '#7c3aed',
+                      color: '#fff',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    VALUE COMBO
+                  </span>
+                )}
+              </div>
               <h1 className="disp">{product.n}</h1>
+
+              {/* Tags */}
+              {product.tags && product.tags.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '6px 0 10px 0' }}>
+                  {product.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#bbb',
+                      }}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="pp-r">
                 <b>★★★★★</b> {product.r} ·{' '}
                 <a
@@ -361,6 +465,22 @@ function ProductDetailContent({ product }: { product: Product }) {
                   <b>Free shipping</b> on orders over ₹1,499
                 </span>
               </div>
+
+              {product.isCombo && product.comboItems && product.comboItems.length > 0 && (
+                <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', background: 'rgba(124, 58, 237, 0.08)', border: '1px solid rgba(124, 58, 237, 0.25)' }}>
+                  <b style={{ display: 'block', fontSize: '13px', color: '#c4b5fd', marginBottom: '8px' }}>
+                    Bundle Package Contents ({product.comboItems.length} Items Included)
+                  </b>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {product.comboItems.map((cItem, cIdx) => (
+                      <div key={cIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                        <span>• <b>{cItem.title}</b> {cItem.subtitle && <em style={{ color: '#aaa', fontStyle: 'normal' }}>({cItem.subtitle})</em>}</span>
+                        {cItem.discountPercent ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Save {cItem.discountPercent}%</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="pp-tr">
                 <div>2-year warranty</div>

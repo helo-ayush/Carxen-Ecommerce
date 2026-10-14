@@ -71,9 +71,21 @@ function ShopContent() {
       const matchPrice = p.p >= minP && p.p <= maxP;
       const matchRating = !ratingFilter || p.r >= 4.6;
       const matchSeries = seriesFilter === 'all' || p.s === seriesFilter;
+      const tagsStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
+      const colorsStr = Array.isArray(p.colors)
+        ? p.colors.map((c) => c.name).join(' ')
+        : (Array.isArray(p.tintOptions) ? p.tintOptions.map((t) => t[0]).join(' ') : '');
+      const searchHaystack = (
+        p.n + ' ' +
+        p.c + ' ' +
+        p.s + ' ' +
+        (p.categoryLabel || '') + ' ' +
+        (p.d || '') + ' ' +
+        tagsStr + ' ' +
+        colorsStr
+      ).toLowerCase();
       const matchQuery =
-        !searchQuery ||
-        (p.n + ' ' + p.c + ' ' + p.s).toLowerCase().includes(searchQuery.toLowerCase());
+        !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
       return (
         matchCat &&
         matchFit &&

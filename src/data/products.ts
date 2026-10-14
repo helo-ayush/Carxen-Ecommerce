@@ -3,6 +3,27 @@ export type ProductSeries = 'Signature' | 'Sport' | 'Urban' | 'Essentials';
 export type ProductArtKey = 'seat' | 'mats' | 'wheel' | 'pillow' | 'arm' | 'trunk';
 export type ProductTintOption = [string, string, string];
 
+export type ProductColor = {
+  name: string;
+  hex: string;
+  filter?: string;
+};
+
+export type ProductInstallation = {
+  difficulty?: string;
+  time?: string;
+  steps?: string[];
+  videoUrl?: string;
+  guide?: string;
+};
+
+export type ProductComboItem = {
+  title: string;
+  subtitle?: string;
+  productId?: string;
+  discountPercent?: number;
+};
+
 export interface Product {
   id: number;
   n: string;
@@ -25,6 +46,12 @@ export interface Product {
   fitment?: unknown;
   customFit?: boolean;
   image?: string;
+  images?: string[];
+  tags?: string[];
+  colors?: ProductColor[];
+  installation?: ProductInstallation;
+  isCombo?: boolean;
+  comboItems?: ProductComboItem[];
 }
 
 // Product records are loaded from the storefront API. The remaining values are

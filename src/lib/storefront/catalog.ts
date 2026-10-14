@@ -41,6 +41,12 @@ export interface EcommerceProductRow {
   status: string;
   publishedAt: string | null;
   updatedAt: string | null;
+  images?: unknown;
+  tags?: unknown;
+  colors?: unknown;
+  installation?: unknown;
+  isCombo?: boolean;
+  comboItems?: unknown;
 }
 
 export class CatalogConfigurationError extends Error {
@@ -89,6 +95,12 @@ const PRODUCT_COLUMNS = [
   'status',
   'publishedAt',
   'updatedAt',
+  'images',
+  'tags',
+  'colors',
+  'installation',
+  'isCombo',
+  'comboItems',
 ].join(', ');
 
 const CATEGORY_KEYS = ['seats', 'mats', 'steering', 'comfort'] as const;
@@ -239,7 +251,14 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
   const rating = Math.min(5, Math.max(1, asFiniteNumber(row.rating) ?? 4.8));
   const reviewCount = Math.max(0, asFiniteNumber(row.reviewCount) ?? 12);
   const artKey = asArtKey(row.artKey, category);
-  const imageUrl = isImageUrl(row.artKey);
+  const rawImages = Array.isArray(row.images)
+    ? (row.images as unknown[]).filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    : [];
+  const imageUrl = rawImages[0] || isImageUrl(row.artKey);
+  const images = rawImages.length > 0 ? rawImages : (imageUrl ? [imageUrl] : []);
+  const tags = Array.isArray(row.tags)
+    ? (row.tags as unknown[]).filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    : [];
   const description =
     asNonEmptyString(row.description) ??
     'Engineered automotive accessory for enhanced cabin aesthetics and protection.';
@@ -261,7 +280,7 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
       .replace(/(^-|-$)/g, '');
   const categoryLabel =
     asNonEmptyString(row.categoryLabel) || asNonEmptyString(row.categoryKey) || 'Accessories';
-  const tintOptions = asTintOptions(row.tintOptions);
+  const tintOptions = asTintOptions(row.colors) || asTintOptions(row.tintOptions);
   const isCustomFit =
     typeof row.isCustomFit === 'boolean'
       ? row.isCustomFit
@@ -278,6 +297,8 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     rv: reviewCount,
     a: artKey,
     ...(imageUrl ? { image: imageUrl } : {}),
+    ...(images.length > 0 ? { images } : {}),
+    ...(tags.length > 0 ? { tags } : {}),
     ...(topRank !== undefined ? { top: topRank } : {}),
     ...(row.isNew ? { nw: 1 } : {}),
     ...(row.isSpotlight ? { spot: 1 } : {}),
@@ -288,6 +309,9 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     categoryLabel,
     ...(tintOptions ? { tintOptions } : {}),
     fitment: row.fitment,
+    installation: row.installation as any,
+    isCombo: Boolean(row.isCombo),
+    comboItems: Array.isArray(row.comboItems) ? (row.comboItems as any) : undefined,
     customFit: isCustomFit,
   };
 }
