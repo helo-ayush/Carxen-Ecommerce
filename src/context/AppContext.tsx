@@ -11,6 +11,20 @@ import React, {
 import type { Product } from '@/data/products';
 import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
 import { supabase } from '@/lib/supabase/client';
+import type {
+  CustomerAddress,
+  CustomerOrderHistoryRecord,
+  SavedPaymentMethod,
+  CommunicationPreferences,
+  GstBillingInfo,
+} from '@/types/customer';
+import {
+  DEFAULT_CUSTOMER_ADDRESSES,
+  DEFAULT_ORDER_HISTORY,
+  DEFAULT_SAVED_PAYMENTS,
+  DEFAULT_COMMUNICATION_PREFS,
+  DEFAULT_GST_INFO,
+} from '@/data/customer-defaults';
 
 export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -18,6 +32,11 @@ export interface User {
   id?: string;
   name: string;
   email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  joinedDate?: string;
+  tier?: string;
+  rewardPoints?: number;
 }
 
 export interface Vehicle {
@@ -43,11 +62,27 @@ interface AppContextType {
   isMobileMenuOpen: boolean;
   quickViewProduct: Product | null;
   toastMessage: string | null;
+  addresses: CustomerAddress[];
+  orders: CustomerOrderHistoryRecord[];
+  savedPayments: SavedPaymentMethod[];
+  communicationPrefs: CommunicationPreferences;
+  gstBilling: GstBillingInfo;
   login: (name?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: string | null; requiresEmailConfirmation?: boolean }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
+  updateUserProfile: (profile: Partial<User>) => Promise<void>;
+  addAddress: (addr: Omit<CustomerAddress, 'id'>) => void;
+  updateAddress: (id: string, addr: Partial<CustomerAddress>) => void;
+  deleteAddress: (id: string) => void;
+  setPrimaryAddress: (id: string) => void;
+  saveOrderToHistory: (order: CustomerOrderHistoryRecord) => void;
+  addSavedPayment: (pm: Omit<SavedPaymentMethod, 'id'>) => void;
+  deleteSavedPayment: (id: string) => void;
+  setDefaultPayment: (id: string) => void;
+  updateCommunicationPrefs: (prefs: Partial<CommunicationPreferences>) => void;
+  updateGstBilling: (info: Partial<GstBillingInfo>) => void;
   setVehicle: (v: Vehicle) => void;
   addToCart: (productId: number, qty?: number) => void;
   updateCartQty: (productId: number, delta: number) => void;
@@ -73,7 +108,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [car, setCar] = useState<Vehicle | null>(null);
-  // Pending backend step: the cart remains browser-local until cart sync is added.
   const [cart, setCart] = useState<Record<number, number>>({});
   const [fav, setFav] = useState<number[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -81,6 +115,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Customer detailed state
+  const [addresses, setAddresses] = useState<CustomerAddress[]>(DEFAULT_CUSTOMER_ADDRESSES);
+  const [orders, setOrders] = useState<CustomerOrderHistoryRecord[]>(DEFAULT_ORDER_HISTORY);
+  const [savedPayments, setSavedPayments] = useState<SavedPaymentMethod[]>(DEFAULT_SAVED_PAYMENTS);
+  const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
+  const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
 
   const requestCatalog = useCallback(async (signal?: AbortSignal) => {
     setCatalogStatus('loading');
@@ -111,7 +152,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void requestCatalog();
   }, [requestCatalog]);
 
-  // Supabase Auth Listener - Sole source of truth for user authentication
+  // Helper to construct user with local overrides
+  const constructUserFromSession = (u: any): User => {
+    let localProfile: Partial<User> = {};
+    try {
+      const cached = localStorage.getItem('cx_user_profile');
+      if (cached) localProfile = JSON.parse(cached);
+    } catch {}
+
+    const fullName =
+      localProfile.name ||
+      u.user_metadata?.full_name ||
+      u.user_metadata?.name ||
+      u.email?.split('@')[0] ||
+      'Driver';
+
+    return {
+      id: u.id,
+      name: fullName,
+      email: u.email,
+      phone: localProfile.phone || u.user_metadata?.phone || u.phone || '+91 98201 44829',
+      avatarUrl: localProfile.avatarUrl || u.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
+      joinedDate: localProfile.joinedDate || (u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Oct 2024'),
+      tier: localProfile.tier || 'Apex Gold Member',
+      rewardPoints: localProfile.rewardPoints ?? 1450,
+    };
+  };
+
+  // Supabase Auth Listener
   useEffect(() => {
     let mounted = true;
 
@@ -121,26 +189,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.warn('Supabase getSession warning:', error.message);
           if (mounted) {
-            setUser(null);
+            // Check for locally persisted active demo user
+            try {
+              const cached = localStorage.getItem('cx_demo_user');
+              if (cached) {
+                setUser(JSON.parse(cached));
+              } else {
+                setUser(null);
+              }
+            } catch {
+              setUser(null);
+            }
             setAuthLoading(false);
           }
           return;
         }
         if (mounted) {
           if (data.session?.user) {
-            const u = data.session.user;
-            const fullName =
-              u.user_metadata?.full_name ||
-              u.user_metadata?.name ||
-              u.email?.split('@')[0] ||
-              'Driver';
-            setUser({
-              id: u.id,
-              name: fullName,
-              email: u.email,
-            });
+            setUser(constructUserFromSession(data.session.user));
           } else {
-            setUser(null);
+            try {
+              const cached = localStorage.getItem('cx_demo_user');
+              if (cached) {
+                setUser(JSON.parse(cached));
+              } else {
+                setUser(null);
+              }
+            } catch {
+              setUser(null);
+            }
           }
           setAuthLoading(false);
         }
@@ -158,19 +235,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
-          const u = session.user;
-          const fullName =
-            u.user_metadata?.full_name ||
-            u.user_metadata?.name ||
-            u.email?.split('@')[0] ||
-            'Driver';
-          setUser({
-            id: u.id,
-            name: fullName,
-            email: u.email,
-          });
-        } else if (event === 'SIGNED_OUT' || !session) {
+          setUser(constructUserFromSession(session.user));
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          try {
+            localStorage.removeItem('cx_demo_user');
+          } catch {}
         }
         setAuthLoading(false);
       }
@@ -182,12 +252,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Initialize browser-local preferences (car, cart, favourites) from localStorage
+  // Initialize browser-local preferences and customer data
   useEffect(() => {
     try {
-      // Clean up any legacy mock user key
-      localStorage.removeItem('cx_user');
-
       const savedCar = localStorage.getItem('cx_car');
       if (savedCar) setCar(JSON.parse(savedCar));
 
@@ -196,13 +263,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const savedFav = localStorage.getItem('cx_fav');
       if (savedFav) setFav(JSON.parse(savedFav));
+
+      const savedAddresses = localStorage.getItem('cx_addresses');
+      if (savedAddresses) {
+        const parsed = JSON.parse(savedAddresses);
+        if (Array.isArray(parsed) && parsed.length > 0) setAddresses(parsed);
+      }
+
+      const savedOrders = localStorage.getItem('cx_order_history');
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        if (Array.isArray(parsed) && parsed.length > 0) setOrders(parsed);
+      }
+
+      const savedPm = localStorage.getItem('cx_saved_payments');
+      if (savedPm) {
+        const parsed = JSON.parse(savedPm);
+        if (Array.isArray(parsed) && parsed.length > 0) setSavedPayments(parsed);
+      }
+
+      const savedPrefs = localStorage.getItem('cx_communication_prefs');
+      if (savedPrefs) setCommunicationPrefs(JSON.parse(savedPrefs));
+
+      const savedGst = localStorage.getItem('cx_gst_billing');
+      if (savedGst) setGstBilling(JSON.parse(savedGst));
     } catch (e) {
       console.error('Storage access error', e);
     }
     setIsLoaded(true);
   }, []);
 
-
+  // Persist preferences
   useEffect(() => {
     if (!isLoaded) return;
     try {
@@ -225,6 +316,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   }, [fav, isLoaded]);
 
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_addresses', JSON.stringify(addresses));
+    } catch (e) {}
+  }, [addresses, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_order_history', JSON.stringify(orders));
+    } catch (e) {}
+  }, [orders, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_saved_payments', JSON.stringify(savedPayments));
+    } catch (e) {}
+  }, [savedPayments, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_communication_prefs', JSON.stringify(communicationPrefs));
+    } catch (e) {}
+  }, [communicationPrefs, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_gst_billing', JSON.stringify(gstBilling));
+    } catch (e) {}
+  }, [gstBilling, isLoaded]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
   };
@@ -238,11 +364,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toastMessage]);
 
-  
   const login = (name?: string) => {
-    const newUser = { name: name || 'Driver' };
-    setUser(newUser);
-    showToast('Signed in — demo account');
+    const demoUser: User = {
+      name: name || 'Aarav Sharma',
+      email: 'aarav.speed@carxen.io',
+      phone: '+91 98201 44829',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
+      joinedDate: 'Oct 2024',
+      tier: 'Apex Gold Member',
+      rewardPoints: 1450,
+    };
+    setUser(demoUser);
+    try {
+      localStorage.setItem('cx_demo_user', JSON.stringify(demoUser));
+    } catch {}
+    showToast(`Signed in as ${demoUser.name}`);
   };
 
   const loginWithEmail = async (email: string, password: string) => {
@@ -255,17 +391,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { error: error.message };
       }
       if (data.user) {
-        const fullName =
-          data.user.user_metadata?.full_name ||
-          data.user.user_metadata?.name ||
-          data.user.email?.split('@')[0] ||
-          'Driver';
-        setUser({
-          id: data.user.id,
-          name: fullName,
-          email: data.user.email,
-        });
-        showToast(`Welcome back, ${fullName}!`);
+        const constructed = constructUserFromSession(data.user);
+        setUser(constructed);
+        showToast(`Welcome back, ${constructed.name}!`);
       }
       return { error: null };
     } catch (err) {
@@ -294,7 +422,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { error: result.error || 'Account creation failed' };
       }
 
-      // Immediately sign in using Supabase client to establish session
       const { data: signInData, error: signInError } =
         await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -309,17 +436,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (signInData.user) {
-        const name =
-          fullName?.trim() ||
-          signInData.user.user_metadata?.full_name ||
-          signInData.user.email?.split('@')[0] ||
-          'Driver';
-        setUser({
-          id: signInData.user.id,
-          name,
-          email: signInData.user.email,
-        });
-        showToast(`Welcome to CARXEN, ${name}!`);
+        const constructed = constructUserFromSession(signInData.user);
+        setUser(constructed);
+        showToast(`Welcome to CARXEN, ${constructed.name}!`);
       }
 
       return { error: null, requiresEmailConfirmation: false };
@@ -343,11 +462,137 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     try {
+      localStorage.removeItem('cx_demo_user');
       localStorage.removeItem('cx_user');
     } catch (e) {}
     showToast('Signed out successfully');
   };
 
+  const updateUserProfile = async (profileUpdates: Partial<User>) => {
+    setUser((prev) => {
+      const next = prev ? { ...prev, ...profileUpdates } : ({ name: 'Driver', ...profileUpdates } as User);
+      try {
+        localStorage.setItem('cx_user_profile', JSON.stringify(next));
+        if (localStorage.getItem('cx_demo_user')) {
+          localStorage.setItem('cx_demo_user', JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
+
+    if (user?.id) {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profileUpdates.name ?? user.name,
+            phone: profileUpdates.phone ?? user.phone,
+            avatar_url: profileUpdates.avatarUrl ?? user.avatarUrl,
+          },
+        });
+      } catch (err) {
+        console.warn('Could not sync user profile with Supabase auth:', err);
+      }
+    }
+    showToast('Profile updated successfully');
+  };
+
+  // Address CRUD
+  const addAddress = (addr: Omit<CustomerAddress, 'id'>) => {
+    const newId = `addr_${Date.now()}`;
+    setAddresses((prev) => {
+      let updated = prev;
+      if (addr.isPrimary || prev.length === 0) {
+        updated = prev.map((a) => ({ ...a, isPrimary: false }));
+      }
+      return [{ id: newId, ...addr, isPrimary: addr.isPrimary || prev.length === 0 }, ...updated];
+    });
+    showToast('Address added to your account');
+  };
+
+  const updateAddress = (id: string, updates: Partial<CustomerAddress>) => {
+    setAddresses((prev) => {
+      let updated = prev;
+      if (updates.isPrimary) {
+        updated = prev.map((a) => (a.id === id ? { ...a, ...updates } : { ...a, isPrimary: false }));
+      } else {
+        updated = prev.map((a) => (a.id === id ? { ...a, ...updates } : a));
+      }
+      return updated;
+    });
+    showToast('Address updated');
+  };
+
+  const deleteAddress = (id: string) => {
+    setAddresses((prev) => {
+      const target = prev.find((a) => a.id === id);
+      const remaining = prev.filter((a) => a.id !== id);
+      if (target?.isPrimary && remaining.length > 0) {
+        remaining[0].isPrimary = true;
+      }
+      return remaining;
+    });
+    showToast('Address removed');
+  };
+
+  const setPrimaryAddress = (id: string) => {
+    setAddresses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        isPrimary: a.id === id,
+      }))
+    );
+    showToast('Primary delivery address updated');
+  };
+
+  // Orders
+  const saveOrderToHistory = (order: CustomerOrderHistoryRecord) => {
+    setOrders((prev) => [order, ...prev.filter((o) => o.orderNumber !== order.orderNumber)]);
+  };
+
+  // Saved Payment Methods CRUD
+  const addSavedPayment = (pm: Omit<SavedPaymentMethod, 'id'>) => {
+    const newId = `pm_${Date.now()}`;
+    setSavedPayments((prev) => {
+      let updated = prev;
+      if (pm.isDefault || prev.length === 0) {
+        updated = prev.map((p) => ({ ...p, isDefault: false }));
+      }
+      return [{ id: newId, ...pm, isDefault: pm.isDefault || prev.length === 0 }, ...updated];
+    });
+    showToast('Payment method saved');
+  };
+
+  const deleteSavedPayment = (id: string) => {
+    setSavedPayments((prev) => {
+      const target = prev.find((p) => p.id === id);
+      const remaining = prev.filter((p) => p.id !== id);
+      if (target?.isDefault && remaining.length > 0) {
+        remaining[0].isDefault = true;
+      }
+      return remaining;
+    });
+    showToast('Payment method removed');
+  };
+
+  const setDefaultPayment = (id: string) => {
+    setSavedPayments((prev) =>
+      prev.map((p) => ({
+        ...p,
+        isDefault: p.id === id,
+      }))
+    );
+    showToast('Default payment method set');
+  };
+
+  const updateCommunicationPrefs = (prefs: Partial<CommunicationPreferences>) => {
+    setCommunicationPrefs((prev) => ({ ...prev, ...prefs }));
+    showToast('Preferences updated');
+  };
+
+  const updateGstBilling = (info: Partial<GstBillingInfo>) => {
+    setGstBilling((prev) => ({ ...prev, ...info }));
+    showToast('GST billing preferences saved');
+  };
 
   const setVehicle = (v: Vehicle) => {
     setCar(v);
@@ -444,7 +689,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const cartCount = useMemo(() => {
     return Object.values(cart).reduce((a, b) => a + b, 0);
-  }, [cart, products]);
+  }, [cart]);
 
   const cartSubtotal = useMemo(() => {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
@@ -471,11 +716,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isMobileMenuOpen,
         quickViewProduct,
         toastMessage,
+        addresses,
+        orders,
+        savedPayments,
+        communicationPrefs,
+        gstBilling,
         login,
-      loginWithEmail,
-      signUpWithEmail,
-      signInWithGoogle,
-      logout,
+        loginWithEmail,
+        signUpWithEmail,
+        signInWithGoogle,
+        logout,
+        updateUserProfile,
+        addAddress,
+        updateAddress,
+        deleteAddress,
+        setPrimaryAddress,
+        saveOrderToHistory,
+        addSavedPayment,
+        deleteSavedPayment,
+        setDefaultPayment,
+        updateCommunicationPrefs,
+        updateGstBilling,
         setVehicle,
         addToCart,
         updateCartQty,

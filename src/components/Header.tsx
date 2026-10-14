@@ -91,13 +91,23 @@ export function Header() {
               href={user ? '/account' : '/login'}
               className={`tool ${user ? 'on' : ''}`}
               id="acct"
-              title={user ? 'My account' : 'Log in'}
+              title={user ? `${user.name} — My account` : 'Log in'}
               aria-label="Account"
+              style={{ overflow: 'hidden' }}
             >
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
-              </svg>
+              {user?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
+                </svg>
+              )}
             </Link>
             <Link href="/shop" className="sn">
               Shop now

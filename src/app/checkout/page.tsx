@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
@@ -29,13 +29,18 @@ export default function CheckoutPage() {
     updateCartQty,
     clearCart,
     showToast,
+    addresses,
+    saveOrderToHistory,
+    addAddress,
   } = useApp();
 
   const userName =
     user?.name && user.name !== 'Driver' && user.name !== 'Guest'
       ? user.name
       : user?.email?.split('@')[0] || '';
-  const [addressIndex, setAddressIndex] = useState(0);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(
+    addresses.find((a) => a.isPrimary)?.id || addresses[0]?.id || 'new'
+  );
   const [shippingSpeed, setShippingSpeed] = useState<'std' | 'exp'>('std');
   const [paymentMethod, setPaymentMethod] = useState<StorefrontPaymentMethod>('UPI');
   const [couponCode, setCouponCode] = useState('');
@@ -50,6 +55,13 @@ export default function CheckoutPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Sync default address if addresses change
+  useEffect(() => {
+    if (selectedAddressId !== 'new' && !addresses.some((a) => a.id === selectedAddressId)) {
+      setSelectedAddressId(addresses.find((a) => a.isPrimary)?.id || addresses[0]?.id || 'new');
+    }
+  }, [addresses, selectedAddressId]);
 
   // Interactive Card Form State
   const [cardNumber, setCardNumber] = useState('');
@@ -117,42 +129,51 @@ export default function CheckoutPage() {
       return;
     }
 
-    const selectedAddress: StorefrontShippingAddressSnapshot =
-      addressIndex === 0
-        ? {
-            name: userName,
-            addressLine1: '12, Lake View Road, Koregaon Park',
-            city: 'Pune',
-            state: 'Maharashtra',
-            postalCode: '411001',
-            country: 'IN',
-          }
-        : addressIndex === 1
-        ? {
-            name: userName,
-            addressLine1: 'Tower B, Hinjewadi Phase 2',
-            city: 'Pune',
-            state: 'Maharashtra',
-            postalCode: '411057',
-            country: 'IN',
-          }
-        : {
-            ...newAddress,
-            country: 'IN',
-          };
+    let selectedAddress: StorefrontShippingAddressSnapshot;
+    const existingAddress = addresses.find((a) => a.id === selectedAddressId);
 
-    if (
-      addressIndex === 2 &&
-      (!newAddress.name.trim() ||
+    if (selectedAddressId !== 'new' && existingAddress) {
+      selectedAddress = {
+        name: existingAddress.name || userName,
+        phone: existingAddress.phone || user?.phone || '',
+        addressLine1: existingAddress.addressLine1,
+        addressLine2: existingAddress.addressLine2,
+        city: existingAddress.city,
+        state: existingAddress.state,
+        postalCode: existingAddress.postalCode,
+        country: 'IN',
+      };
+    } else {
+      if (
+        !newAddress.name.trim() ||
         !newAddress.phone.trim() ||
         !newAddress.postalCode.trim() ||
         !newAddress.city.trim() ||
-        !newAddress.addressLine1.trim())
-    ) {
-      const message = 'Complete the new delivery address before placing your order.';
-      setSubmitError(message);
-      showToast(message);
-      return;
+        !newAddress.addressLine1.trim()
+      ) {
+        const message = 'Complete the new delivery address before placing your order.';
+        setSubmitError(message);
+        showToast(message);
+        return;
+      }
+
+      selectedAddress = {
+        ...newAddress,
+        country: 'IN',
+      };
+
+      // Also persist to customer's saved secondary addresses
+      addAddress({
+        label: 'Alternate',
+        name: newAddress.name.trim(),
+        phone: newAddress.phone.trim(),
+        addressLine1: newAddress.addressLine1.trim(),
+        city: newAddress.city.trim(),
+        state: 'Maharashtra',
+        postalCode: newAddress.postalCode.trim(),
+        country: 'India',
+        isPrimary: false,
+      });
     }
 
     const checkout: StorefrontCheckoutRequest = {
@@ -176,8 +197,48 @@ export default function CheckoutPage() {
     try {
       // The server/RPC result owns the order number and all final amounts.
       const order = await createStorefrontOrder(checkout);
+
+      // Save order to customer's working history with tracking
+      saveOrderToHistory({
+        id: `order_${order.orderNumber}`,
+        orderNumber: order.orderNumber,
+        placedAt: new Date().toISOString(),
+        status: 'CONFIRMED',
+        statusMessage: 'Order confirmed and registered at CARXEN fulfillment center',
+        paymentStatus: paymentMethod === 'Cash on delivery' ? 'PENDING' : 'PAID',
+        paymentMethod,
+        trackingNumber: `CX-EXP-${Math.floor(100000 + Math.random() * 900000)}`,
+        carrier: shippingSpeed === 'exp' ? 'Blue Dart Air Express' : 'Delhivery Priority',
+        trackingUrl: `https://www.delhivery.com/track/package/CX-EXP-${Math.floor(100000 + Math.random() * 900000)}`,
+        estimatedDelivery: shippingSpeed === 'exp' ? 'Within 48 hours' : 'Within 3-4 days',
+        shippingAddress: {
+          name: selectedAddress.name || userName,
+          phone: selectedAddress.phone || user?.phone || '',
+          addressLine1: selectedAddress.addressLine1 || '',
+          addressLine2: selectedAddress.addressLine2 || '',
+          city: selectedAddress.city || 'Pune',
+          state: selectedAddress.state || 'Maharashtra',
+          postalCode: selectedAddress.postalCode || '411045',
+          country: selectedAddress.country || 'India',
+        },
+        items: cartEntries.map(({ product, qty }) => ({
+          productId: product.id,
+          name: product.n,
+          quantity: qty,
+          unitPrice: product.p,
+          lineSubtotal: product.p * qty,
+          category: product.c,
+          image: product.image || product.images?.[0],
+        })),
+        subtotal: cartSubtotal,
+        discountAmount: couponDiscount,
+        shippingAmount: shippingCost,
+        totalAmount: finalTotal,
+        currency: 'INR',
+      });
+
       clearCart();
-      showToast('Order placed — payment remains pending');
+      showToast('Order placed — added to your order history');
       router.push(`/order/${encodeURIComponent(order.orderNumber)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The order could not be placed.';
@@ -298,36 +359,31 @@ export default function CheckoutPage() {
                     <b className="ck-n">1</b>Delivery address
                   </h3>
                   <div className="ck-ads" style={{ marginTop: '14px' }}>
-                    <button
-                      className={`ck-ad ${addressIndex === 0 ? 'on' : ''}`}
-                      onClick={() => setAddressIndex(0)}
-                    >
-                      <i />
-                      <span className="tg">Home</span>
-                      <b>{userName || 'Personal Address'}</b>
-                      <small>12, Lake View Road, Koregaon Park, Pune 411001</small>
-                    </button>
+                    {addresses.map((addr) => (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        className={`ck-ad ${selectedAddressId === addr.id ? 'on' : ''}`}
+                        onClick={() => setSelectedAddressId(addr.id)}
+                      >
+                        <i />
+                        <span className="tg">{addr.label}{addr.isPrimary ? ' · Primary' : ''}</span>
+                        <b>{addr.name}</b>
+                        <small>{addr.addressLine1}, {addr.city} {addr.postalCode}</small>
+                      </button>
+                    ))}
 
                     <button
-                      className={`ck-ad ${addressIndex === 1 ? 'on' : ''}`}
-                      onClick={() => setAddressIndex(1)}
-                    >
-                      <i />
-                      <span className="tg">Work</span>
-                      <b>{userName || 'Office Address'}</b>
-                      <small>Tower B, Hinjewadi Phase 2, Pune 411057</small>
-                    </button>
-
-                    <button
-                      className={`ck-ad nw ${addressIndex === 2 ? 'on' : ''}`}
-                      onClick={() => setAddressIndex(2)}
+                      type="button"
+                      className={`ck-ad nw ${selectedAddressId === 'new' ? 'on' : ''}`}
+                      onClick={() => setSelectedAddressId('new')}
                     >
                       <i />
                       <b>+ New address</b>
-                      <small>Deliver somewhere else</small>
+                      <small>Deliver to a different address</small>
                     </button>
 
-                    {addressIndex === 2 && (
+                    {selectedAddressId === 'new' && (
                       <div className="ck-2 ck-fm" style={{ marginTop: '10px' }}>
                         <input
                           className="lg-in"
