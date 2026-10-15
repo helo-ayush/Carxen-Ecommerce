@@ -38,11 +38,31 @@ export function Header() {
     }
   };
 
+    const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
+
   return (
-    <>
-      <div className="ann">
-        <b>New season drop</b> — Free shipping over ₹1,499 · 2-year warranty · 30-day returns
-      </div>
+    <div className="top-nav-shell">
+      {showAnnouncement && (
+        <div className="ann">
+          <div className="ann-inner">
+            {announcementConfig?.badge ? (
+              <span className="ann-badge">{announcementConfig.badge}</span>
+            ) : (
+              <span className="ann-badge">LIMITED OFFER</span>
+            )}
+            <span className="ann-text">
+              {announcementConfig?.text ||
+                '2-Year Warranty & Free Express Shipping Across India on all orders'}
+            </span>
+            {announcementConfig?.linkUrl && (
+              <Link href={announcementConfig.linkUrl} className="ann-link">
+                <span>Explore</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
       <header id="hdr" className={isScrolled ? 'sc' : ''}>
         <div className="wrap hd">
           <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
@@ -121,6 +141,6 @@ export function Header() {
           </div>
         </div>
       </header>
-    </>
+    </div>
   );
 }
