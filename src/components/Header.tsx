@@ -10,13 +10,38 @@ export function Header() {
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isRibbonHidden, setIsRibbonHidden] = useState(false);
   const [searchVal, setSearchVal] = useState('');
   const [cartBump, setCartBump] = useState(false);
 
   useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          setIsScrolled(currentScrollY > 20);
+
+          if (currentScrollY <= 15) {
+            // Near the very top, always show ribbon
+            setIsRibbonHidden(false);
+          } else if (currentScrollY > lastScrollY + 6 && currentScrollY > 60) {
+            // Scrolling downward: slide ribbon up smoothly
+            setIsRibbonHidden(true);
+          } else if (currentScrollY < lastScrollY - 6) {
+            // Scrolling upward: reveal ribbon smoothly
+            setIsRibbonHidden(false);
+          }
+
+          lastScrollY = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -41,9 +66,10 @@ export function Header() {
     const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
 
   return (
-    <div className="top-nav-shell">
+    <div className={`top-nav-shell ${isRibbonHidden ? 'ribbon-hidden' : 'ribbon-visible'}`}>
       {showAnnouncement && (
-        <div className="ann">
+        <div className={`ann ${isRibbonHidden ? 'ann-hidden' : ''}`}>
+      
           <div className="ann-inner">
             {announcementConfig?.badge ? (
               <span className="ann-badge">{announcementConfig.badge}</span>

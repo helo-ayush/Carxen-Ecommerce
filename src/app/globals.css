@@ -366,6 +366,28 @@ body:has(.hero-video-section) .top-nav-shell {
   letter-spacing: .12em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  max-height: 52px;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+  overflow: hidden;
+}
+
+/* Auto-hide when scrolling down, reveal when scrolling up */
+.top-nav-shell.ribbon-hidden .ann,
+.ann.ann-hidden {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-100%);
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+  pointer-events: none;
 }
 
 .ann-inner {
