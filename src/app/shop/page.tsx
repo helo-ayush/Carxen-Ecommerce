@@ -14,6 +14,9 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ProductCard } from '@/components/ProductCard';
+import { Search, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 function ShopContent() {
   const router = useRouter();
@@ -123,6 +126,23 @@ function ShopContent() {
     sortBy,
     products,
   ]);
+
+  const hasActiveFilters =
+    category !== 'all' ||
+    fitType !== 'all' ||
+    priceTier !== 'all' ||
+    ratingFilter ||
+    seriesFilter !== 'all' ||
+    Boolean(searchQuery.trim());
+
+  const resetAllFilters = () => {
+    setCategory('all');
+    setFitType('all');
+    setPriceTier('all');
+    setRatingFilter(false);
+    setSeriesFilter('all');
+    setSearchQuery('');
+  };
 
   return (
     <div className="in-shop">
@@ -279,71 +299,115 @@ function ShopContent() {
                 />
               ) : (
                 <>
+                  {hasActiveFilters && (
+                    <div className="active-filters-bar">
+                      <span className="title">Active filters:</span>
+                      {category !== 'all' && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setCategory('all')}
+                        >
+                          <span>Category: {category}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {fitType !== 'all' && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setFitType('all')}
+                        >
+                          <span>Fit: {fitType === 'c' ? 'Custom' : 'Universal'}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {priceTier !== 'all' && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setPriceTier('all')}
+                        >
+                          <span>Price: {priceTier}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {ratingFilter && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setRatingFilter(false)}
+                        >
+                          <span>Rating: 4.6★+</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {seriesFilter !== 'all' && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setSeriesFilter('all')}
+                        >
+                          <span>Series: {seriesFilter}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {Boolean(searchQuery.trim()) && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => setSearchQuery('')}
+                        >
+                          <span>Search: &quot;{searchQuery}&quot;</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={resetAllFilters}
+                        className="active-filter-reset"
+                      >
+                        Reset all
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid">
                     {filteredProducts.map((p) => {
                       const custom = isCustomFit(p);
                       return (
-                        <article key={p.id} className="pc">
-                          <div
-                            className="pm"
-                            onClick={() => router.push(`/product/${p.id}`)}
-                          >
-                            <ProductArt product={p} />
-                            <span className={`fitb ${custom ? '' : 'u'}`}>
-                              {custom ? `✓ Fits your ${activeCar.m}` : 'Universal fit'}
-                            </span>
-                            <span className="qv">View details</span>
-                            {p.top && <Badge variant="secondary" className="top-b">Top item</Badge>}
-                            {p.nw && <Badge variant="subtleRed" className="top-b new-b">New</Badge>}
-                          </div>
-
-                          <button
-                            className={`hrt ${isFav(p.id) ? 'on' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFav(p.id);
-                            }}
-                            aria-label="Favourite"
-                          >
-                            <svg viewBox="0 0 24 24">
-                              <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                            </svg>
-                          </button>
-
-                          <div className="pi">
-                            <h3 onClick={() => router.push(`/product/${p.id}`)}>
-                              {p.n}
-                            </h3>
-                            <div className="rt">
-                              <b>★</b> {p.r} · {p.rv} reviews
-                            </div>
-                            <div className="pr">
-                              {p.o && <s>{formatINR(p.o)}</s>}
-                              <button
-                                className="buy"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToCart(p.id, 1);
-                                  openCart();
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M6 8h12l1 12H5L6 8z" />
-                                  <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-                                </svg>
-                                {formatINR(p.p)}
-                              </button>
-                            </div>
-                          </div>
-                        </article>
+                        <ProductCard
+                          key={p.id}
+                          product={p}
+                          isFav={isFav(p.id)}
+                          onToggleFav={toggleFav}
+                          onAddToCart={addToCart}
+                          onOpenCart={openCart}
+                          fitText={custom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
+                          isCustomFitBadge={custom}
+                        />
                       );
                     })}
                   </div>
 
                   {filteredProducts.length === 0 && (
-                    <div className="empty on">
-                      <b>No matches</b>
-                      Try widening your filters or clearing the search.
+                    <div className="empty-state-card">
+                      <div className="empty-state-icon">
+                        <Search />
+                      </div>
+                      <div className="empty-state-title">No products found</div>
+                      <p className="empty-state-text">
+                        No items match your active filters. Try loosening your criteria or clearing search.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={resetAllFilters}
+                        className="btn dark"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '99px', padding: '10px 22px' }}
+                      >
+                        <RotateCcw style={{ width: '14px', height: '14px' }} />
+                        <span>Clear all filters</span>
+                      </button>
                     </div>
                   )}
                 </>

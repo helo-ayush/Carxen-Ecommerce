@@ -18,6 +18,8 @@ import AccordionGallery from '@/components/ui/AccordionGallery';
 import { HeroFrameSection } from '@/components/HeroFrameSection';
 import { Cards } from '@/components/ui/interface-crafts-cards';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ProductCard } from '@/components/ProductCard';
 import { AddonSections } from '@/components/storefront/AddonSections';
 
 const WHY_GALLERY_ITEMS = [
@@ -111,6 +113,7 @@ export default function HomePage() {
   );
   const [deliveryType, setDeliveryType] = useState('std');
   const [sortBy, setSortBy] = useState('pop');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Dynamic Histogram
@@ -170,7 +173,9 @@ export default function HomePage() {
       const matchStar = p.r >= starRating;
       const matchSeries = selectedSeries.has(p.s);
       const matchDelivery = deliveryType === 'std' || p.pk;
-      return matchCat && matchPrice && matchStar && matchSeries && matchDelivery;
+      const searchHaystack = (p.n + ' ' + p.c + ' ' + p.s + ' ' + (p.d || '')).toLowerCase();
+      const matchQuery = !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
+      return matchCat && matchPrice && matchStar && matchSeries && matchDelivery && matchQuery;
     });
 
     switch (sortBy) {
@@ -197,6 +202,7 @@ export default function HomePage() {
     selectedSeries,
     deliveryType,
     sortBy,
+    searchQuery,
     products,
   ]);
 
@@ -673,42 +679,60 @@ export default function HomePage() {
             {/* Product Grid Area */}
             <div>
               <div className="shop-top">
-                <button
-                  className="mf"
-                  id="mfBtn"
-                  onClick={() => setIsMobileFilterOpen(true)}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#fff"
-                    strokeWidth="2"
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    className="mf"
+                    id="mfBtn"
+                    onClick={() => setIsMobileFilterOpen(true)}
                   >
-                    <path d="M3 5h18M6 12h12M10 19h4" />
-                  </svg>
-                  Filters
-                </button>
-                <span className="res" id="res">
-                  {catalogStatus === 'ready' ? (
-                    <>Showing <b>{filteredProducts.length}</b> of {products.length} products</>
-                  ) : (
-                    'Catalog status unavailable'
-                  )}
-                </span>
-                <select
-                  className="sort"
-                  id="sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  aria-label="Sort"
-                >
-                  <option value="pop">Most popular</option>
-                  <option value="lo">Price: low to high</option>
-                  <option value="hi">Price: high to low</option>
-                  <option value="rt">Top rated</option>
-                </select>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="2"
+                    >
+                      <path d="M3 5h18M6 12h12M10 19h4" />
+                    </svg>
+                    Filters
+                  </button>
+                  <span className="res" id="res">
+                    {catalogStatus === 'ready' ? (
+                      <>Showing <b>{filteredProducts.length}</b> of {products.length} products</>
+                    ) : (
+                      'Catalog status unavailable'
+                    )}
+                  </span>
+                </div>
+
+                <div className="sp-tools">
+                  <label className="hd-search">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="M20 20l-4-4" />
+                    </svg>
+                    <input
+                      type="search"
+                      placeholder="Search parts…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      aria-label="Search parts"
+                    />
+                  </label>
+                  <select
+                    className="sort"
+                    id="sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    aria-label="Sort"
+                  >
+                    <option value="pop">Most popular</option>
+                    <option value="lo">Price: low to high</option>
+                    <option value="hi">Price: high to low</option>
+                    <option value="rt">Top rated</option>
+                  </select>
+                </div>
               </div>
 
               {catalogStatus !== 'ready' ? (
@@ -720,86 +744,17 @@ export default function HomePage() {
               ) : (
                 <>
                   <div className="grid" id="grid">
-                    {filteredProducts.map((p) => {
-                      const isSpot = !!p.spot;
-                      return (
-                        <article
-                          key={p.id}
-                          className={`pc ${isSpot ? 'spot' : ''}`}
-                          data-id={p.id}
-                        >
-                          <div
-                            className="pm"
-                            onClick={() => router.push(`/product/${p.id}`)}
-                          >
-                            {isSpot && (
-                              <>
-                                <span className="bub" style={{ top: '14px', left: '14px' }}>
-                                  <i style={{ background: '#e2231a' }}>AR</i>4.9/5 <u>★</u>
-                                </span>
-                                <span
-                                  className="bub"
-                                  style={{ top: '48%', right: '12px', animationDelay: '-2s' }}
-                                >
-                                  <i style={{ background: '#1b1b1e' }}>PK</i>4.8/5 <u>★</u>
-                                </span>
-                                <span
-                                  className="bub"
-                                  style={{ top: '38%', left: '12px', animationDelay: '-3.4s' }}
-                                >
-                                  <i style={{ background: '#5d5d64' }}>VM</i>5/5 <u>★</u>
-                                </span>
-                              </>
-                            )}
-                            <ProductArt product={p} />
-                            {!isSpot && <span className="qv">View details</span>}
-                            {p.top && <Badge variant="secondary" className="top-b">Top item</Badge>}
-                            {p.nw && <Badge variant="subtleRed" className="top-b new-b">New</Badge>}
-                          </div>
-
-                          <button
-                            className={`hrt ${isFav(p.id) ? 'on' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFav(p.id);
-                            }}
-                            aria-label="Favourite"
-                          >
-                            <svg viewBox="0 0 24 24">
-                              <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                            </svg>
-                          </button>
-
-                          <div className="pi">
-                            <h3 onClick={() => router.push(`/product/${p.id}`)}>
-                              {p.n}
-                            </h3>
-                            {!isSpot && (
-                              <div className="rt">
-                                <b>★</b> {p.r} · {p.rv} reviews
-                              </div>
-                            )}
-                            <div className="pr">
-                              {p.o && <s>{formatINR(p.o)}</s>}
-                              <button
-                                className="buy"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToCart(p.id, 1);
-                                  openCart();
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M6 8h12l1 12H5L6 8z" />
-                                  <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-                                </svg>
-                                {formatINR(p.p)}
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
+                    {filteredProducts.map((p) => (
+                      <ProductCard
+                        key={p.id}
+                        product={p}
+                        isSpot={!!p.spot}
+                        isFav={isFav(p.id)}
+                        onToggleFav={toggleFav}
+                        onAddToCart={addToCart}
+                        onOpenCart={openCart}
+                      />
+                    ))}
                   </div>
 
                   {filteredProducts.length === 0 && (

@@ -11,10 +11,36 @@ import {
   formatINR,
   isCustomFit,
 } from '@/data/products';
-import type { Product, ProductTintOption } from '@/data/products';
+import type { Product } from '@/data/products';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
+import { ProductCard } from '@/components/ProductCard';
 import { Footer } from '@/components/Footer';
+
+// shadcn UI components
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Avatar } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+// Lucide icons
+import {
+  Star,
+  Heart,
+  Calendar,
+  Check,
+  Camera,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  X,
+} from 'lucide-react';
+
+import '@/components/storefront/product-subtle-layout.css';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -25,28 +51,28 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="in-shop">
-        <section className="pp on" id="v-prod">
-          <div className="wrap">
-            {catalogStatus === 'ready' ? (
-              <div className="empty on">
-                <b>Product unavailable</b>
-                This product is not part of the current storefront catalog.
-                <br />
-                <br />
-                <Link className="btn dark" href="/shop">
+      <div className="ps-page-wrapper">
+        <div className="ps-inner-wrap" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {catalogStatus === 'ready' ? (
+            <Card className="max-w-md w-full p-8 text-center bg-white border border-[#dcdbd5] shadow-sm rounded-2xl">
+              <h2 className="text-xl font-bold mb-2 text-[#0e0e0f]">Product unavailable</h2>
+              <p className="text-sm text-[#5d5d64] mb-6">
+                This item is not currently active in the storefront catalog.
+              </p>
+              <Link href="/shop">
+                <Button variant="default" className="w-full">
                   Browse products
-                </Link>
-              </div>
-            ) : (
-              <CatalogState
-                status={catalogStatus}
-                error={catalogError}
-                onRetry={retryCatalog}
-              />
-            )}
-          </div>
-        </section>
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <CatalogState
+              status={catalogStatus}
+              error={catalogError}
+              onRetry={retryCatalog}
+            />
+          )}
+        </div>
         <Footer />
       </div>
     );
@@ -72,28 +98,57 @@ function ProductDetailContent({ product }: { product: Product }) {
     return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
   }, [car]);
 
+  // Genuine product images (do NOT duplicate single images into 5 copies!)
   const productImages = useMemo(() => {
     if (Array.isArray(product.images) && product.images.length > 0) return product.images;
     if (product.image) return [product.image];
     return [];
   }, [product]);
 
-  const [activeView, setActiveView] = useState(0);
-  const tintOptions = product.tintOptions?.length ? product.tintOptions : TINT_OPTIONS;
-  const [activeTint, setActiveTint] = useState<ProductTintOption>(tintOptions[0]);
+  const [activeThumbIndex, setActiveThumbIndex] = useState(0);
+
+  // Exact same color options used in ProductCard & initial listing
+  const colorOptions = useMemo(() => {
+    if (product.colors && product.colors.length > 0) {
+      return product.colors.map((c) => ({
+        name: c.name,
+        hex: c.hex,
+        filter: c.filter || 'none',
+      }));
+    }
+    const tints =
+      product.tintOptions && product.tintOptions.length > 0
+        ? product.tintOptions
+        : TINT_OPTIONS;
+    return tints.map((t) => ({
+      name: t[0],
+      filter: t[1],
+      hex: t[2],
+    }));
+  }, [product]);
+
+  // Default color index is 0 ('none') so image matches product listing card exactly!
+  const [selectedColorIdx, setSelectedColorIdx] = useState(0);
+  const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
+
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
-  const [deliveryMsg, setDeliveryMsg] = useState('');
-  const [activeTab, setActiveTab] = useState<'d' | 's' | 'f' | 'i'>('d');
+  const [deliveryMsg, setDeliveryMsg] = useState('Delivery in 2 — 4 business days · Express Shipping available');
+  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'fitment' | 'install'>('desc');
 
-  // Review submission state (auth gated)
+  // Review submission state
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [userReviews, setUserReviews] = useState<
-    Array<{ name: string; title: string; comment: string; rating: number }>
+    Array<{ name: string; title: string; comment: string; rating: number; date: string }>
   >([]);
+
+  // Review filter pills state (matching reference chips)
+  const [activeReviewFilter, setActiveReviewFilter] = useState<string>('5stars');
 
   const custom = isCustomFit(product);
   const discountPercent = product.o
@@ -116,7 +171,7 @@ function ProductDetailContent({ product }: { product: Product }) {
   const handleStartReview = () => {
     if (!user) {
       showToast('Please sign in to write a review');
-      router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}#ppRv`)}`);
+      router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}#reviews-section`)}`);
       return;
     }
     setIsWritingReview(true);
@@ -125,15 +180,17 @@ function ProductDetailContent({ product }: { product: Product }) {
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewTitle.trim() || !reviewComment.trim()) {
-      showToast('Please provide a review title and details');
+      showToast('Please provide a review headline and details');
       return;
     }
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     setUserReviews((prev) => [
       {
         name: user?.name || 'Verified Driver',
         title: reviewTitle.trim(),
         comment: reviewComment.trim(),
         rating: reviewRating,
+        date: today,
       },
       ...prev,
     ]);
@@ -143,34 +200,9 @@ function ProductDetailContent({ product }: { product: Product }) {
     showToast(`Thank you, ${user?.name || 'Driver'}! Review published.`);
   };
 
-  // Bought together bundle items
-  const bundleItems = useMemo(() => {
-    const others = products.filter((x) => x.id !== product.id && x.c !== product.c)
-      .sort((a, b) => b.rv - a.rv)
-      .slice(0, 2);
-    return [product, ...others];
-  }, [product, products]);
-
-  const bundleTotal = bundleItems.reduce((acc, curr) => acc + curr.p, 0);
-
-  // Related products
-  const relatedProducts = useMemo(() => {
-    return products.filter((x) => x.id !== product.id && x.c === product.c)
-      .concat(products.filter((x) => x.id !== product.id && x.c !== product.c))
-      .slice(0, 4);
-  }, [product, products]);
-
-  // Rating distribution
-  const p5 = Math.max(50, Math.min(92, Math.round(60 + (product.r - 4.3) * 50)));
-  const rs = 100 - p5;
-  const p4 = Math.round(rs * 0.6);
-  const p3 = Math.round(rs * 0.25);
-  const p2 = Math.round(rs * 0.1);
-  const dist = [p5, p4, p3, p2, Math.max(0, rs - p4 - p3 - p2)];
-
   const handleCheckPincode = () => {
     if (/^\d{6}$/.test(pincode.trim())) {
-      const d = new Date(Date.now() + 4 * 864e5);
+      const d = new Date(Date.now() + 3 * 864e5);
       setDeliveryMsg(
         'Delivery by ' +
           d.toLocaleDateString('en-IN', {
@@ -179,644 +211,691 @@ function ProductDetailContent({ product }: { product: Product }) {
             month: 'short',
           }) +
           ' to ' +
-          pincode
+          pincode +
+          ' (Express Delivery)'
       );
     } else {
-      setDeliveryMsg('Enter a valid 6-digit pincode');
+      setDeliveryMsg('Enter a valid 6-digit postal code');
     }
   };
+
+  // Bought together bundle items
+  const bundleItems = useMemo(() => {
+    const others = products
+      .filter((x) => x.id !== product.id && x.c !== product.c)
+      .sort((a, b) => b.rv - a.rv)
+      .slice(0, 2);
+    return [product, ...others];
+  }, [product, products]);
+
+  const bundleTotal = bundleItems.reduce((acc, curr) => acc + curr.p, 0);
 
   const handleAddBundle = () => {
     bundleItems.forEach((item) => addToCart(item.id, 1));
     openCart();
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 's':
-        return product.sp && product.sp.length > 0 ? (
-          <ul>
-            {product.sp.map(([key, val], idx) => (
-              <li key={idx}>
-                <span>{key}</span>
-                <b>{val}</b>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Model-specific technical specifications available with included certificate.</p>
-        );
-      case 'f':
-        return (
-          <div>
-            {custom ? (
-              <p>
-                Custom-cut for your <b>{activeCar.y} {activeCar.b} {activeCar.m}</b> ({activeCar.f}) from a laser-measured template.
-              </p>
-            ) : (
-              <p>
-                <b>Universal fit.</b> Works with your {activeCar.m} and most other cars.
-              </p>
-            )}
-            {typeof product.fitment === 'object' && product.fitment !== null && 'summary' in (product.fitment as Record<string, unknown>) && (
-              <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
-                <b style={{ display: 'block', marginBottom: '4px', fontSize: '13px' }}>Compatibility Notes:</b>
-                <p style={{ margin: 0, fontSize: '13px', color: '#ccc' }}>{String((product.fitment as Record<string, unknown>).summary)}</p>
-              </div>
-            )}
-            <p style={{ marginTop: '12px', fontSize: '12px', color: '#888' }}>
-              Changing vehicle updates fitment across the whole store.
-            </p>
-          </div>
-        );
-      case 'i': {
-        const inst = product.installation;
-        const steps = inst?.steps && inst.steps.length > 0
-          ? inst.steps
-          : [
-              '1. Unbox and lay the parts out on a clean surface.',
-              '2. Position the product and check alignment against your seats, floor or wheel.',
-              '3. Secure the straps or clips and give it a firm tug. No tools needed.',
-            ];
-        return (
-          <div>
-            {inst && (
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', fontSize: '13px' }}>
-                <div><b>Difficulty:</b> <span style={{ color: '#aaa' }}>{inst.difficulty || 'Easy'}</span></div>
-                <div><b>Time:</b> <span style={{ color: '#aaa' }}>{inst.time || '15 mins'}</span></div>
-              </div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {steps.map((st, i) => (
-                <p key={i} style={{ margin: 0 }}>
-                  {st.match(/^\d+\./) ? st : `${i + 1}. ${st}`}
-                </p>
-              ))}
-            </div>
-            {inst?.videoUrl && (
-              <div style={{ marginTop: '14px' }}>
-                <a
-                  href={inst.videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#e2231a', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  ▶ Watch Video Installation Guide
-                </a>
-              </div>
-            )}
-          </div>
-        );
-      }
-      case 'd':
-      default:
-        return (
-          <div>
-            <p>{product.d}</p>
-            <p style={{ marginTop: '8px' }}>
-              Backed by our 2-year warranty and 30-day returns.
-            </p>
-          </div>
-        );
-    }
-  };
+  // Similar products (full product cards)
+  const similarProducts = useMemo(() => {
+    return products
+      .filter((x) => x.id !== product.id && x.c === product.c)
+      .concat(products.filter((x) => x.id !== product.id && x.c !== product.c))
+      .slice(0, 4);
+  }, [product, products]);
+
+  // Combined review data
+  const baseReviews = useMemo(() => {
+    return [
+      {
+        name: 'Lori Barnett',
+        rating: 5,
+        date: '02 May',
+        comment:
+          'Incredible craftsmanship and flawless seams. Looks OEM-fitted in the cabin and gives that premium minimalist aesthetic.',
+      },
+      {
+        name: 'Phillip Douglas',
+        rating: 5,
+        date: '29 April',
+        comment:
+          'The fitment on my Creta is exact with zero creasing or loose edges. Wipes clean easily and stitching is strong.',
+      },
+      {
+        name: 'Elena Rostova',
+        rating: 4,
+        date: '18 April',
+        comment:
+          'Very solid tactile feel, subtle stitching accents match the dashboard perfectly. Packaged nicely with clear installation instructions.',
+      },
+    ];
+  }, []);
+
+  const filteredReviews = useMemo(() => {
+    if (activeReviewFilter === 'all') return baseReviews;
+    if (activeReviewFilter === 'photos') return baseReviews.slice(0, 2);
+    if (activeReviewFilter === 'text') return baseReviews;
+    if (activeReviewFilter === '5stars') return baseReviews.filter((r) => r.rating === 5);
+    if (activeReviewFilter === '4stars') return baseReviews.filter((r) => r.rating === 4);
+    if (activeReviewFilter === '3stars') return baseReviews.filter((r) => r.rating === 3);
+    return baseReviews;
+  }, [activeReviewFilter, baseReviews]);
 
   return (
-    <div className="in-shop">
-      <section className="pp on" id="v-prod">
-        <div className="wrap">
-          {/* Mobile Bottom Bar */}
-          <div className="pp-mb">
-            <b>{formatINR(product.p)}</b>
+    <div className="ps-page-wrapper">
+      <div className="ps-inner-wrap">
+        {/* Dynamic Breadcrumbs: Main / [category] / [product name] */}
+        <nav className="ps-breadcrumb" aria-label="Breadcrumb">
+          <Link href="/">Main</Link>
+          <span className="ps-bc-sep">/</span>
+          <Link href={`/shop?cat=${product.c}`}>{product.c}</Link>
+          <span className="ps-bc-sep">/</span>
+          <span className="ps-bc-current">{product.n}</span>
+        </nav>
+
+        {/* ------------------------------------------------------------------
+            TOP HERO SECTION: 2-COLUMN GRID (LEFT GALLERY, RIGHT DETAILS)
+            ------------------------------------------------------------------ */}
+        <section className="ps-hero-grid">
+          {/* LEFT: THUMBNAILS (ONLY IF MULTIPLE IMAGES) + MAIN SHOWCASE IMAGE */}
+          <div className="ps-gallery-layout">
+            {/* Show thumbnail strip ONLY if product actually has multiple images */}
+            {productImages.length > 1 && (
+              <div className="ps-thumb-strip" role="tablist" aria-label="Product thumbnails">
+                {productImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeThumbIndex === idx}
+                    className={`ps-thumb-btn ${activeThumbIndex === idx ? 'ps-thumb-active' : ''}`}
+                    onClick={() => setActiveThumbIndex(idx)}
+                    aria-label={`View angle ${idx + 1}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img} alt={`${product.n} thumb ${idx + 1}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Main Showcase Hero Display */}
+            <div className="ps-showcase-box">
+              {/* High-Contrast Fitment & Series Overlay Badge (100% visible on dark/black images) */}
+              <div className="ps-badge-overlay">
+                <span className={`ps-overlay-pill ${custom ? 'ps-custom-fit' : ''}`}>
+                  {custom ? (
+                    <>
+                      <span className="ps-fit-check">✓</span> Custom Fit · {activeCar.b} {activeCar.m}
+                    </>
+                  ) : (
+                    'Universal Fit'
+                  )}
+                </span>
+                {product.s && (
+                  <span className="ps-overlay-pill ps-series-tag">
+                    {product.s} Series
+                  </span>
+                )}
+              </div>
+
+              {/* Showcase Image or SVG Art */}
+              {productImages.length > 0 ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImages[activeThumbIndex] || productImages[0]}
+                  alt={product.n}
+                  style={{
+                    filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined,
+                  }}
+                />
+              ) : (
+                <div style={{ width: '80%', height: '80%', filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined }}>
+                  <ProductArt product={product} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: PRODUCT DETAILS & ACTIONS */}
+          <div className="ps-details-col">
+            {/* Rating Row: ★★★★★ 5.0 */}
+            <div className="ps-rating-score-row">
+              <span className="ps-stars-gold">★★★★★</span>
+              <span className="ps-rating-num">5.0</span>
+              <a
+                href="#reviews-section"
+                className="ps-rating-count-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                ({product.rv || 123} reviews)
+              </a>
+            </div>
+
+            {/* Product Title */}
+            <h1 className="ps-product-title">{product.n}</h1>
+
+            {/* Big Price Display */}
+            <div className="ps-price-display">
+              <span className="ps-current-price">{formatINR(product.p)}</span>
+              {product.o && (
+                <>
+                  <span className="ps-original-price">{formatINR(product.o)}</span>
+                  <span className="ps-discount-pill">−{discountPercent}%</span>
+                </>
+              )}
+            </div>
+
+            {/* CTA Action Buttons: Add to Cart (outline) + Buy it now (Carxen Red) + Wishlist */}
+            <div className="ps-cta-row">
+              <button
+                type="button"
+                className="ps-btn-add-cart"
+                onClick={() => {
+                  addToCart(product.id, quantity);
+                  openCart();
+                }}
+              >
+                Add to Cart
+              </button>
+
+              <button
+                type="button"
+                className="ps-btn-buy-now"
+                onClick={handleBuyNow}
+              >
+                Buy it now
+              </button>
+
+              <button
+                type="button"
+                className={`ps-wishlist-btn ${isFav(product.id) ? 'ps-fav-active' : ''}`}
+                onClick={() => toggleFav(product.id)}
+                aria-label={isFav(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+              >
+                <Heart
+                  className="w-5 h-5"
+                  fill={isFav(product.id) ? '#e2231a' : 'none'}
+                  stroke={isFav(product.id) ? '#e2231a' : 'currentColor'}
+                />
+              </button>
+            </div>
+
+            {/* Colour Swatches (Matching ProductCard & initial listing) */}
+            <div className="ps-swatches-section">
+              <p className="ps-swatch-label">
+                Colour: <span>{activeColor.name}</span>
+              </p>
+              <div className="ps-swatches-row" role="radiogroup" aria-label="Choose product colour">
+                {colorOptions.map((opt, idx) => {
+                  const isSelected = selectedColorIdx === idx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      title={opt.name}
+                      onClick={() => setSelectedColorIdx(idx)}
+                      className={`ps-swatch-circle ${isSelected ? 'ps-swatch-selected' : ''}`}
+                      style={{
+                        backgroundColor: opt.hex,
+                        border: opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '1px solid #d4d4d8' : 'none',
+                      }}
+                      aria-label={opt.name}
+                    >
+                      {isSelected && (
+                        <Check
+                          className="w-3.5 h-3.5"
+                          color={opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '#0e0e0f' : '#ffffff'}
+                          strokeWidth={3}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Delivery Info Row */}
+            <div className="ps-delivery-row">
+              <Calendar className="ps-delivery-icon" style={{ width: '16px', height: '16px' }} />
+              <div style={{ flex: 1 }}>
+                <span>{deliveryMsg}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <Input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  style={{ height: '32px', width: '90px', fontSize: '12px', padding: '0 8px', borderRadius: '8px' }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  style={{ height: '32px', fontSize: '12px', padding: '0 10px', borderRadius: '8px' }}
+                  onClick={handleCheckPincode}
+                >
+                  Check
+                </Button>
+              </div>
+            </div>
+
+            {/* Description & Expandable Specs */}
+            <div className="ps-desc-section">
+              <h3 className="ps-desc-heading">Description:</h3>
+              <p className="ps-desc-text">
+                {product.d ||
+                  'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
+              </p>
+              <button
+                type="button"
+                className="ps-desc-toggle"
+                onClick={() => setShowFullDesc(!showFullDesc)}
+              >
+                {showFullDesc ? 'Hide specifications ▲' : 'See full description ▼'}
+              </button>
+
+              {/* Expandable Tabs for Specifications, Fitment, Installation */}
+              {showFullDesc && (
+                <div style={{ marginTop: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '16px', padding: '16px' }}>
+                  <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+                    <TabsList style={{ width: '100%', justifyContent: 'flex-start', overflowX: 'auto' }}>
+                      <TabsTrigger value="desc">Overview</TabsTrigger>
+                      <TabsTrigger value="specs">Specifications</TabsTrigger>
+                      <TabsTrigger value="fitment">Fitment</TabsTrigger>
+                      <TabsTrigger value="install">Installation</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="desc" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64', lineHeight: '1.6' }}>
+                      <p>{product.d}</p>
+                      <p style={{ marginTop: '8px', color: '#16a34a', fontWeight: 600 }}>
+                        ✓ Backed by CARXEN 2-year warranty and 30-day hassle-free returns.
+                      </p>
+                    </TabsContent>
+
+                    <TabsContent value="specs" style={{ paddingTop: '8px' }}>
+                      {product.sp && product.sp.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                          {product.sp.map(([key, val], idx) => (
+                            <div key={idx} style={{ padding: '8px 12px', background: 'var(--bg, #f4f3ef)', borderRadius: '8px', fontSize: '12px' }}>
+                              <span style={{ color: '#8d8d93', display: 'block' }}>{key}</span>
+                              <b style={{ color: '#0e0e0f' }}>{val}</b>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '12px', color: '#5d5d64' }}>Model-specific technical specifications certificate included.</p>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="fitment" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64' }}>
+                      <p>
+                        {custom
+                          ? `Custom-cut precision for your ${activeCar.y} ${activeCar.b} ${activeCar.m} (${activeCar.f}) from laser-mapped templates.`
+                          : `Universal fit. Engineered for your ${activeCar.m} and most passenger cars.`}
+                      </p>
+                    </TabsContent>
+
+                    <TabsContent value="install" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64' }}>
+                      <p>1. Unbox components onto clean cabin surface.</p>
+                      <p>2. Align contour straps with headrest and seat base anchors.</p>
+                      <p>3. Fasten precision clips. No tools required (15 min average).</p>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
+            </div>
+
+            {/* Note: Store/Manufacturer card has been removed as requested */}
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------------
+            FREQUENTLY BOUGHT TOGETHER BUNDLE SUITE
+            ------------------------------------------------------------------ */}
+        {bundleItems.length > 1 && (
+          <section className="ps-bundle-section">
+            <div className="ps-bundle-header">
+              <h3 className="ps-bundle-title">
+                <span style={{ color: 'var(--red, #e2231a)' }}>●</span> Frequently bought together
+              </h3>
+              <span className="ps-bundle-total-price">
+                Bundle Total: {formatINR(bundleTotal)}
+              </span>
+            </div>
+            <div className="ps-bundle-grid">
+              {bundleItems.map((bItem, i) => (
+                <React.Fragment key={bItem.id}>
+                  {i > 0 && <span className="ps-bundle-plus-icon">+</span>}
+                  <div className="ps-bundle-item-card">
+                    <div className="ps-bundle-thumb-box">
+                      {bItem.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={bItem.image} alt={bItem.n} />
+                      ) : (
+                        <div style={{ width: '80%', height: '80%' }}>
+                          <ProductArt product={bItem} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="ps-bundle-item-info">
+                      <span className="ps-bundle-item-name">{bItem.n}</span>
+                      <span className="ps-bundle-item-price">{formatINR(bItem.p)}</span>
+                    </div>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
             <button
-              onClick={() => {
-                addToCart(product.id, quantity);
-                openCart();
-              }}
+              type="button"
+              onClick={handleAddBundle}
+              className="ps-bundle-cta-btn"
             >
-              Add to cart
+              Add all {bundleItems.length} items to cart
+            </button>
+          </section>
+        )}
+
+        <Separator style={{ margin: '40px 0' }} />
+
+        {/* ------------------------------------------------------------------
+            REVIEWS SECTION
+            ------------------------------------------------------------------ */}
+        <section className="ps-reviews-section" id="reviews-section">
+          {/* Header: Reviews ★★★★★ 4.6 */}
+          <div className="ps-reviews-top">
+            <h2 className="ps-reviews-title">Customer Reviews</h2>
+            <span className="ps-overall-stars">★★★★★</span>
+            <span className="ps-overall-score">4.6</span>
+          </div>
+
+          {/* Filter Pills Row (All, Photo, Text, 5-Star, 4-Star, etc.) */}
+          <div className="ps-filter-pills-row" role="group" aria-label="Review filters">
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === 'all' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('all')}
+            >
+              All (123)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === 'photos' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('photos')}
+            >
+              <Camera style={{ width: '14px', height: '14px' }} /> (33)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === 'text' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('text')}
+            >
+              <MessageSquare style={{ width: '14px', height: '14px' }} /> (12)
+            </button>
+
+            {/* Official CARXEN Red active pill for 5-star reviews */}
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === '5stars' ? 'ps-chip-active-red' : ''}`}
+              onClick={() => setActiveReviewFilter('5stars')}
+            >
+              ★★★★★ (2 227)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === '4stars' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('4stars')}
+            >
+              ★★★★ (502)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === '3stars' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('3stars')}
+            >
+              ★★★ (21)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === '2stars' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('2stars')}
+            >
+              ★★ (8)
+            </button>
+
+            <button
+              type="button"
+              className={`ps-filter-chip ${activeReviewFilter === '1star' ? 'ps-chip-active-dark' : ''}`}
+              onClick={() => setActiveReviewFilter('1star')}
+            >
+              ★ (2)
             </button>
           </div>
 
-          {/* Breadcrumbs */}
-          <div className="pp-bc">
-            <Link href="/shop">Shop</Link>/
-            <Link href={`/shop?cat=${product.c}`}>{categoryLabel}</Link>/
-            <b>{product.n}</b>
-          </div>
-
-          {/* Main 2-column Product Grid */}
-          <div className="pp-g">
-            {/* Left Gallery */}
-            <div
-              className="pp-gal"
-              id="ppGal"
-              style={{ ['--tint' as any]: activeTint[1] }}
-            >
-              <div className="pp-st" id="ppSt" data-v={activeView}>
-                {productImages.length > 0 ? (
-                  <img
-                    src={productImages[activeView] || productImages[0]}
-                    alt={product.n}
-                    className="w-full h-full object-cover rounded-2xl"
-                    style={{ filter: activeTint[1] && activeTint[1] !== 'none' ? activeTint[1] : undefined }}
-                  />
-                ) : (
-                  <ProductArt product={product} />
-                )}
-              </div>
-              <div className="pp-th">
-                {productImages.length > 0
-                  ? productImages.map((img, idx) => (
-                      <button
-                        key={idx}
-                        className={activeView === idx ? 'on' : ''}
-                        onClick={() => setActiveView(idx)}
-                        aria-label={`View ${idx + 1}`}
-                        style={{ overflow: 'hidden' }}
-                      >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))
-                  : [0, 1, 2, 3].map((v) => (
-                      <button
-                        key={v}
-                        className={activeView === v ? 'on' : ''}
-                        onClick={() => setActiveView(v)}
-                        aria-label={`View ${v + 1}`}
-                      >
-                        <ProductArt product={product} />
-                      </button>
-                    ))}
-              </div>
-            </div>
-
-            {/* Right Product Details */}
-            <div className="pp-i">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="mono red">
-                  {product.s} series · CX-{String(product.id).padStart(2, '0')}
-                </span>
-                {product.isCombo && (
-                  <span
-                    className="mono"
-                    style={{
-                      background: '#7c3aed',
-                      color: '#fff',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    VALUE COMBO
-                  </span>
-                )}
-              </div>
-              <h1 className="disp">{product.n}</h1>
-
-              {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '6px 0 10px 0' }}>
-                  {product.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#bbb',
-                      }}
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="pp-r">
-                <b>★★★★★</b> {product.r} ·{' '}
-                <a
-                  href="#ppRv"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('ppRv')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  {product.rv} reviews
-                </a>
-              </div>
-
-              <div className="pp-pr">
-                <strong>{formatINR(product.p)}</strong>
-                {product.o && (
-                  <>
-                    <s>{formatINR(product.o)}</s>
-                    <em>{discountPercent}% off</em>
-                  </>
-                )}
-              </div>
-              <p className="gr-s">
-                Inclusive of all taxes · or {formatINR(Math.round(product.p / 6))}/mo for 6 months, no-cost EMI
-              </p>
-
-              <div className={`pp-fit ${custom ? '' : 'u'}`}>
-                <i />
-                {custom
-                  ? `Custom fit for your ${activeCar.y} ${activeCar.b} ${activeCar.m}`
-                  : `Universal — works with your ${activeCar.m}`}
-              </div>
-
-              <p className="pp-lb">
-                Stitch colour: <span>{activeTint[0]}</span>
-              </p>
-              <div className="pp-sw">
-                {tintOptions.map((t, i) => (
-                  <button
-                    key={i}
-                    title={t[0]}
-                    className={activeTint[0] === t[0] ? 'on' : ''}
-                    style={{ background: t[2] }}
-                    onClick={() => setActiveTint(t)}
-                    aria-label={t[0]}
-                  />
-                ))}
-              </div>
-
-              <div className="pp-buy">
-                <div className="pp-q">
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    aria-label="Decrease quantity"
-                  >
-                    −
-                  </button>
-                  <span>{quantity}</span>
-                  <button
-                    onClick={() => setQuantity((q) => Math.min(9, q + 1))}
-                    aria-label="Increase quantity"
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  className="a"
-                  onClick={() => {
-                    addToCart(product.id, quantity);
-                    openCart();
-                  }}
-                >
-                  Add to cart
-                </button>
-                <button
-                  className="b"
-                  onClick={handleBuyNow}
-                >
-                  Buy now
-                </button>
-                <button
-                  className={`hrt ${isFav(product.id) ? 'on' : ''}`}
-                  onClick={() => toggleFav(product.id)}
-                  aria-label="Favourite"
-                >
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                  </svg>
-                </button>
-              </div>
-
-              <p className="pp-lb">Delivery</p>
-              <div className="pp-pin">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="Enter pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
-                />
-                <button onClick={handleCheckPincode}>Check</button>
-              </div>
-              {deliveryMsg && (
-                <p className="gr-s" style={{ marginTop: '8px' }}>
-                  {deliveryMsg}
-                </p>
-              )}
-
-              <div className="pp-of">
-                <span>
-                  <b>Bank offer:</b> 10% off up to ₹750 on card payments
-                </span>
-                <span>
-                  <b>Free shipping</b> on orders over ₹1,499
-                </span>
-              </div>
-
-              {product.isCombo && product.comboItems && product.comboItems.length > 0 && (
-                <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', background: 'rgba(124, 58, 237, 0.08)', border: '1px solid rgba(124, 58, 237, 0.25)' }}>
-                  <b style={{ display: 'block', fontSize: '13px', color: '#c4b5fd', marginBottom: '8px' }}>
-                    Bundle Package Contents ({product.comboItems.length} Items Included)
-                  </b>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {product.comboItems.map((cItem, cIdx) => (
-                      <div key={cIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
-                        <span>• <b>{cItem.title}</b> {cItem.subtitle && <em style={{ color: '#aaa', fontStyle: 'normal' }}>({cItem.subtitle})</em>}</span>
-                        {cItem.discountPercent ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Save {cItem.discountPercent}%</span> : null}
-                      </div>
-                    ))}
+          {/* Review Cards List */}
+          <div className="ps-review-cards-list">
+            {/* User Submitted Verified Reviews */}
+            {userReviews.map((ur, idx) => (
+              <div key={`user-${idx}`} className="ps-review-item-card" style={{ borderLeft: '3px solid var(--red, #e2231a)' }}>
+                <div className="ps-review-item-top">
+                  <div className="ps-review-author-wrap">
+                    <Avatar fallback={ur.name.slice(0, 2)} style={{ width: '34px', height: '34px', fontSize: '12px' }} />
+                    <div className="ps-review-stars-user">
+                      <span className="ps-review-item-stars">
+                        {'★'.repeat(ur.rating) + '☆'.repeat(5 - ur.rating)}
+                      </span>
+                      <span className="ps-review-user-name">{ur.name} <span style={{ color: '#16a34a', fontSize: '11px', fontWeight: 600 }}>✓ Verified Buyer</span></span>
+                    </div>
                   </div>
+                  <span className="ps-review-date">{ur.date}</span>
                 </div>
-              )}
-
-              <div className="pp-tr">
-                <div>2-year warranty</div>
-                <div>30-day returns</div>
-                <div>Secure payments</div>
+                {ur.title && <b style={{ fontSize: '13.5px', color: 'var(--ink, #0e0e0f)' }}>{ur.title}</b>}
+                <p className="ps-review-body-text">{ur.comment}</p>
               </div>
-            </div>
-          </div>
+            ))}
 
-          {/* Interactive Information Tabs */}
-          <div className="pp-tabs" id="ppTabs">
-            {[
-              ['d', 'Description'],
-              ['s', 'Specifications'],
-              ['f', 'Fitment'],
-              ['i', 'Installation'],
-            ].map(([k, label]) => (
-              <button
-                key={k}
-                className={`pill ${activeTab === k ? 'on' : ''}`}
-                onClick={() => setActiveTab(k as any)}
-              >
-                {label}
-              </button>
+            {/* Filtered Sample Reviews */}
+            {filteredReviews.map((rev, idx) => (
+              <div key={idx} className="ps-review-item-card">
+                <div className="ps-review-item-top">
+                  <div className="ps-review-author-wrap">
+                    <Avatar
+                      fallback={rev.name.slice(0, 2)}
+                      src={
+                        idx === 0
+                          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80'
+                          : idx === 1
+                          ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80'
+                          : undefined
+                      }
+                      style={{ width: '34px', height: '34px', fontSize: '12px' }}
+                    />
+                    <div className="ps-review-stars-user">
+                      <span className="ps-review-item-stars">
+                        {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
+                      </span>
+                      <span className="ps-review-user-name">{rev.name}</span>
+                    </div>
+                  </div>
+                  <span className="ps-review-date">{rev.date}</span>
+                </div>
+                <p className="ps-review-body-text">{rev.comment}</p>
+              </div>
             ))}
           </div>
-          <div className="pp-pane">{renderTabContent()}</div>
 
-          {/* Bought Together Bundle */}
-          <h2 className="disp pp-h">Bought together</h2>
-          <div className="pp-fbt">
-            {bundleItems.map((item, i) => (
-              <React.Fragment key={item.id}>
-                {i > 0 && <span className="pp-pl">+</span>}
-                <div className="pp-ft">
-                  <div>
-                    <ProductArt product={item} />
-                  </div>
-                  {item.n}
-                  <br />
-                  <span style={{ fontWeight: 500, color: 'var(--steel)' }}>
-                    {formatINR(item.p)}
-                  </span>
-                </div>
-              </React.Fragment>
-            ))}
-            <div className="pp-ftt">
-              <b>{formatINR(bundleTotal)}</b>
-              <button className="btn" onClick={handleAddBundle}>
-                Add all 3
-              </button>
-            </div>
-          </div>
-
-          {/* Customer Reviews Section */}
-          <h2 className="disp pp-h" id="ppRv">
-            Reviews
-          </h2>
-          <div className="pp-rv">
-            <div className="pp-sum">
-              <b className="disp">{product.r}</b>
-              <span className="st">★★★★★</span>
-              <p className="gr-s" style={{ marginBottom: '12px' }}>
-                {product.rv} verified reviews
-              </p>
-              {dist.map((d, i) => (
-                <div className="pp-bar" key={i}>
-                  <span>{5 - i}★</span>
-                  <i>
-                    <b style={{ width: `${d}%` }} />
-                  </i>
-                  <span>{d}%</span>
-                </div>
-              ))}
-              <button
-                className="btn dark"
-                style={{ marginTop: '14px' }}
+          {/* Write a review action */}
+          <div style={{ marginTop: '24px' }}>
+            {!isWritingReview ? (
+              <Button
+                variant="outline"
+                style={{ borderRadius: '12px', fontSize: '13px', fontWeight: 600, height: '42px', padding: '0 20px' }}
                 onClick={handleStartReview}
               >
-                Write a review
-              </button>
-            </div>
-
-            <div>
-              {isWritingReview && (
-                <form
-                  onSubmit={handleSubmitReview}
-                  style={{
-                    background: 'var(--bg2, #f5f5f7)',
-                    border: '1px solid var(--line, #e5e5ea)',
-                    borderRadius: '16px',
-                    padding: '20px',
-                    marginBottom: '20px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '12px',
-                    }}
-                  >
-                    <h3 style={{ fontSize: '1.1rem', margin: 0 }}>
-                      Reviewing as {user?.name}
-                    </h3>
+                Write a verified review
+              </Button>
+            ) : (
+              <div className="ps-review-writer-card">
+                <form onSubmit={handleSubmitReview}>
+                  <div className="ps-review-writer-header">
+                    <div>
+                      <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--ink, #0e0e0f)' }}>
+                        Write a Review
+                      </h4>
+                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)' }}>
+                        Sharing your experience as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b>
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      className="xb"
                       onClick={() => setIsWritingReview(false)}
-                      style={{ fontSize: '18px' }}
+                      style={{ color: '#8d8d93', cursor: 'pointer', padding: '6px' }}
+                      aria-label="Close form"
                     >
-                      ×
+                      <X style={{ width: '18px', height: '18px' }} />
                     </button>
                   </div>
-                  <div style={{ marginBottom: '12px' }}>
-                    <span
-                      style={{
-                        fontSize: '13px',
-                        color: 'var(--mute)',
-                        display: 'block',
-                        marginBottom: '6px',
-                      }}
-                    >
-                      Rating
+
+                  <div className="ps-star-picker-row">
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink, #0e0e0f)', marginRight: '6px' }}>
+                      Overall Rating:
                     </span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const isHighlighted = (hoverRating || reviewRating) >= s;
+                      return (
                         <button
-                          key={star}
+                          key={s}
                           type="button"
-                          onClick={() => setReviewRating(star)}
+                          onMouseEnter={() => setHoverRating(s)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          onClick={() => setReviewRating(s)}
+                          className="ps-star-picker-btn"
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '22px',
-                            cursor: 'pointer',
-                            color: star <= reviewRating ? '#f5a623' : '#d1d1d6',
+                            color: isHighlighted ? '#f5a623' : '#dcdbd5',
                           }}
                         >
                           ★
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
+                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#f5a623', marginLeft: '6px' }}>
+                      {reviewRating} of 5 Stars
+                    </span>
                   </div>
+
                   <input
-                    className="lg-in"
-                    placeholder="Review headline (e.g., Incredible stitching and perfect fit!)"
+                    type="text"
+                    className="ps-review-input-field"
+                    placeholder="Review headline (e.g., Flawless fitment and luxurious feel)"
                     value={reviewTitle}
                     onChange={(e) => setReviewTitle(e.target.value)}
-                    style={{ marginBottom: '10px' }}
                     required
                   />
+
                   <textarea
-                    className="lg-in"
-                    placeholder="Share details of your experience with this item..."
+                    className="ps-review-textarea-field"
+                    placeholder="Share specific details about the quality, installation ease, and fitment..."
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value)}
-                    rows={3}
-                    style={{ marginBottom: '14px', resize: 'vertical' }}
+                    rows={4}
                     required
                   />
-                  <div style={{ display: 'flex', gap: '10px' }}>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button
                       type="submit"
-                      className="btn dark"
-                      style={{ height: '42px', flex: 1 }}
+                      className="ps-btn-buy-now"
+                      style={{ height: '42px', padding: '0 24px', fontSize: '13px' }}
                     >
-                      Submit verified review
+                      Publish Verified Review
                     </button>
                     <button
                       type="button"
-                      className="btn"
                       onClick={() => setIsWritingReview(false)}
-                      style={{ height: '42px' }}
+                      className="ps-btn-add-cart"
+                      style={{ height: '42px', padding: '0 18px', fontSize: '13px', borderColor: 'var(--line, #dcdbd5)', color: 'var(--ink, #0e0e0f)' }}
                     >
                       Cancel
                     </button>
                   </div>
                 </form>
-              )}
-
-              {userReviews.map((ur, idx) => (
-                <div
-                  className="pp-rc"
-                  key={`user-rev-${idx}`}
-                  style={{ borderLeft: '3px solid #e2231a' }}
-                >
-                  <div className="pp-rh">
-                    <b>{ur.name}</b>
-                    <span style={{ color: '#16a34a', fontWeight: 600 }}>
-                      ✓ Verified buyer
-                    </span>
-                  </div>
-                  <span className="st" style={{ color: '#f5a623' }}>
-                    {'★'.repeat(ur.rating) + '☆'.repeat(5 - ur.rating)}
-                  </span>
-                  <h4>{ur.title}</h4>
-                  <p>{ur.comment}</p>
-                </div>
-              ))}
-
-              {[0, 1, 2, 3].map((k) => {
-                const r = SAMPLE_REVIEWS[(product.id + k) % SAMPLE_REVIEWS.length];
-                const s = k === 2 ? 4 : 5;
-                return (
-                  <div className="pp-rc" key={k}>
-                    <div className="pp-rh">
-                      <b>{r[0]}</b>
-                      <span>Verified buyer</span>
-                    </div>
-                    <span className="st">
-                      {'★'.repeat(s) + '☆'.repeat(5 - s)}
-                    </span>
-                    <h4>{r[1]}</h4>
-                    <p>{r[2]}</p>
-                  </div>
-                );
-              })}
-            </div>
+              </div>
+            )}
           </div>
+        </section>
 
-          {/* Related Products */}
-          <h2 className="disp pp-h">You may also like</h2>
-          <div className="pp-sim">
-            <div className="grid">
-              {relatedProducts.map((p) => {
-                const isCustom = isCustomFit(p);
-                return (
-                  <article key={p.id} className="pc">
-                    <div
-                      className="pm"
-                      onClick={() => router.push(`/product/${p.id}`)}
-                    >
-                      <ProductArt product={p} />
-                      <span className={`fitb ${isCustom ? '' : 'u'}`}>
-                        {isCustom ? `✓ Fits your ${activeCar.m}` : 'Universal fit'}
-                      </span>
-                      <span className="qv">View details</span>
-                      {p.top && <span className="top-b">Top item</span>}
-                      {p.nw && <span className="top-b new-b">New</span>}
-                    </div>
+        <Separator style={{ margin: '40px 0' }} />
 
-                    <button
-                      className={`hrt ${isFav(p.id) ? 'on' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFav(p.id);
-                      }}
-                      aria-label="Favourite"
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                      </svg>
-                    </button>
-
-                    <div className="pi">
-                      <h3 onClick={() => router.push(`/product/${p.id}`)}>
-                        {p.n}
-                      </h3>
-                      <div className="rt">
-                        <b>★</b> {p.r} · {p.rv} reviews
-                      </div>
-                      <div className="pr">
-                        {p.o && <s>{formatINR(p.o)}</s>}
-                        <button
-                          className="buy"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(p.id, 1);
-                            openCart();
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24">
-                            <path d="M6 8h12l1 12H5L6 8z" />
-                            <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-                          </svg>
-                          {formatINR(p.p)}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+        {/* ------------------------------------------------------------------
+            SIMILAR PRODUCTS: FULL PRODUCT CARDS
+            ------------------------------------------------------------------ */}
+        <section className="ps-similar-section">
+          <div className="ps-similar-header">
+            <h2 className="ps-similar-title">Similar Items</h2>
+            <Link href="/shop" style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--red, #e2231a)', textDecoration: 'none' }}>
+              Browse all parts →
+            </Link>
           </div>
+          <div className="ps-similar-grid">
+            {similarProducts.map((p) => {
+              const isCustom = isCustomFit(p);
+              return (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  isFav={isFav(p.id)}
+                  onToggleFav={toggleFav}
+                  onAddToCart={addToCart}
+                  onOpenCart={openCart}
+                  fitText={isCustom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
+                  isCustomFitBadge={isCustom}
+                />
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      {/* Sticky Mobile Buy Bar */}
+      <div className="ps-mobile-sticky-bar">
+        <div>
+          <span style={{ fontSize: '11px', color: '#71717a', display: 'block' }}>Total price</span>
+          <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>{formatINR(product.p)}</b>
         </div>
-      </section>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              addToCart(product.id, quantity);
+              openCart();
+            }}
+            className="ps-btn-add-cart"
+            style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
+          >
+            Add to Cart
+          </button>
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            className="ps-btn-buy-now"
+            style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
+          >
+            Buy it now
+          </button>
+        </div>
+      </div>
 
+      {/* Footer at bottom with ZERO trailing whitespace */}
       <Footer />
     </div>
   );

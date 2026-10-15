@@ -1,0 +1,838 @@
+/* ==========================================================================
+   CARXEN LUXURY SUBTLE CHECKOUT STYLES
+   ========================================================================== */
+
+.subtle-ck-wrap {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(24px, 3.5vw, 44px) clamp(16px, 2.5vw, 24px) 0;
+  box-sizing: border-box;
+}
+
+/* Header & Stepper */
+.subtle-ck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(14, 14, 15, 0.08);
+}
+
+.subtle-ck-title-group h1 {
+  font-family: var(--disp, 'Cabinet Grotesk', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink, #0e0e10);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.subtle-ck-title-group p {
+  font-size: 13px;
+  color: var(--steel, #5d5d64);
+  margin: 4px 0 0;
+}
+
+/* Sleek Stepper */
+.subtle-ck-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtle-ck-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8d8d93;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.subtle-ck-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f0efe9;
+  color: #6d6d74;
+  border: 1px solid #dcdbd5;
+  transition: all 0.2s ease;
+}
+
+.subtle-ck-step-item.active {
+  color: var(--ink, #0e0e10);
+}
+
+.subtle-ck-step-item.active .subtle-ck-step-num {
+  background: var(--ink, #0e0e10);
+  color: #ffffff;
+  border-color: var(--ink, #0e0e10);
+}
+
+.subtle-ck-step-item.done {
+  color: var(--ink, #0e0e10);
+}
+
+.subtle-ck-step-item.done .subtle-ck-step-num {
+  background: #1b1b1e;
+  color: #ffffff;
+  border-color: #1b1b1e;
+}
+
+.subtle-ck-step-divider {
+  width: 28px;
+  height: 1px;
+  background: #dcdbd5;
+}
+
+/* Layout Grid */
+.subtle-ck-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.9fr);
+  gap: clamp(24px, 3.2vw, 42px);
+  align-items: start;
+  margin-bottom: 56px;
+}
+
+@media (max-width: 980px) {
+  .subtle-ck-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+/* Sections stack */
+.subtle-ck-main-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Card Section Overrides */
+.subtle-ck-card {
+  border: 1px solid rgba(14, 14, 15, 0.08) !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 18px rgba(0, 0, 0, 0.02) !important;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subtle-ck-card-header {
+  padding: 22px 24px 16px !important;
+}
+
+.subtle-ck-step-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--steel, #5d5d64);
+  margin-bottom: 6px;
+}
+
+.subtle-ck-step-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink, #0e0e10);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+
+.subtle-ck-card-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #0e0e10) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subtle-ck-card-content {
+  padding: 0 24px 24px !important;
+}
+
+/* Delivery Address Grid */
+.subtle-ck-addr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.subtle-ck-addr-tile {
+  position: relative;
+  text-align: left;
+  background: #faf9f6;
+  border: 1.5px solid #e7e6e0;
+  border-radius: 16px;
+  padding: 16px 16px 16px 44px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtle-ck-addr-tile:hover {
+  border-color: #b5b4ac;
+  background: #ffffff;
+}
+
+.subtle-ck-addr-tile.active {
+  border-color: var(--ink, #0e0e10);
+  background: #ffffff;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.subtle-ck-radio-dot {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #c8c7c1;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+
+.subtle-ck-addr-tile.active .subtle-ck-radio-dot {
+  border-color: var(--ink, #0e0e10);
+  background: var(--ink, #0e0e10);
+}
+
+.subtle-ck-addr-tile.active .subtle-ck-radio-dot::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.subtle-ck-addr-new-btn {
+  border-style: dashed !important;
+  border-color: #d1d0c9 !important;
+  background: #faf9f6 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 110px;
+  padding: 16px;
+}
+
+.subtle-ck-addr-new-btn:hover {
+  border-color: var(--ink, #0e0e10) !important;
+  background: #f4f3ef !important;
+}
+
+.subtle-ck-addr-new-btn.active {
+  border-color: var(--ink, #0e0e10) !important;
+  background: #ffffff !important;
+}
+
+/* New Address Form */
+.subtle-ck-form-box {
+  margin-top: 16px;
+  padding: 20px;
+  background: #faf9f6;
+  border: 1px solid #e7e6e0;
+  border-radius: 16px;
+}
+
+.subtle-ck-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .subtle-ck-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.subtle-ck-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtle-ck-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #0e0e10);
+}
+
+/* Delivery Speed Options */
+.subtle-ck-speed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .subtle-ck-speed-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.subtle-ck-speed-tile {
+  position: relative;
+  text-align: left;
+  border: 1.5px solid #e7e6e0;
+  border-radius: 16px;
+  padding: 16px 18px 16px 46px;
+  background: #faf9f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.subtle-ck-speed-tile:hover {
+  border-color: #b5b4ac;
+  background: #ffffff;
+}
+
+.subtle-ck-speed-tile.active {
+  border-color: var(--ink, #0e0e10);
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.subtle-ck-speed-tile .subtle-ck-radio-dot {
+  left: 16px;
+  top: 18px;
+}
+
+.subtle-ck-speed-tile.active .subtle-ck-radio-dot {
+  border-color: var(--ink, #0e0e10);
+  background: var(--ink, #0e0e10);
+}
+
+.subtle-ck-speed-tile.active .subtle-ck-radio-dot::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.subtle-ck-speed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.subtle-ck-speed-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #0e0e10);
+}
+
+.subtle-ck-speed-date {
+  font-size: 12px;
+  color: var(--steel, #5d5d64);
+}
+
+.subtle-ck-speed-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #0e0e10);
+  margin-top: 4px;
+}
+
+.subtle-ck-speed-price.free {
+  color: #1b873f;
+}
+
+/* Payment Selector & Panels */
+.subtle-ck-pm-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  background: #f4f3ef;
+  padding: 6px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .subtle-ck-pm-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.subtle-ck-pm-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #5d5d64;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.subtle-ck-pm-tab:hover {
+  color: var(--ink, #0e0e10);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.subtle-ck-pm-tab.active {
+  background: #ffffff;
+  color: var(--ink, #0e0e10);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.subtle-ck-pm-tab svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+}
+
+/* Card Visualizer (Sleek Matte Dark) */
+.subtle-ck-card-preview {
+  background: linear-gradient(135deg, #1b1b1e 0%, #0e0e10 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 20px 22px;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 170px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.subtle-ck-card-preview::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(226, 35, 26, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.subtle-ck-card-preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subtle-ck-card-preview-num {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.subtle-ck-card-preview-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.subtle-ck-card-preview-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8d8d93;
+  margin-bottom: 2px;
+}
+
+.subtle-ck-card-preview-val {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+/* UPI & Banking Quick Pills */
+.subtle-ck-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.subtle-ck-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 99px;
+  border: 1px solid #dcdbd5;
+  background: #ffffff;
+  color: var(--ink, #0e0e10);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.subtle-ck-pill-btn:hover {
+  border-color: #0e0e10;
+  background: #f4f3ef;
+}
+
+.subtle-ck-pill-btn.active {
+  border-color: var(--ink, #0e0e10);
+  background: var(--ink, #0e0e10);
+  color: #ffffff;
+}
+
+/* Right Column: Sticky Summary */
+.subtle-ck-summary-sticky {
+  position: sticky;
+  top: 96px;
+}
+
+.subtle-ck-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 290px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.subtle-ck-item-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.subtle-ck-item-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #f4f3ef;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.subtle-ck-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.subtle-ck-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #0e0e10);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.subtle-ck-item-meta {
+  font-size: 12px;
+  color: var(--steel, #5d5d64);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtle-ck-stepper-btn-group {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dcdbd5;
+  border-radius: 8px;
+  background: #ffffff;
+  height: 24px;
+  margin-top: 4px;
+}
+
+.subtle-ck-stepper-btn {
+  width: 24px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #0e0e10;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.subtle-ck-stepper-btn:hover {
+  background: #f0efe9;
+}
+
+.subtle-ck-stepper-val {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink, #0e0e10);
+  min-width: 14px;
+  text-align: center;
+}
+
+.subtle-ck-item-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #0e0e10);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Coupon Box */
+.subtle-ck-coupon-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.subtle-ck-coupon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1b873f;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-top: 8px;
+}
+
+.subtle-ck-quick-coupon-btn {
+  font-size: 12px;
+  color: var(--steel, #5d5d64);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.subtle-ck-quick-coupon-btn:hover {
+  color: var(--ink, #0e0e10);
+  text-decoration: underline;
+}
+
+/* Price rows */
+.subtle-ck-cost-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.subtle-ck-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: var(--steel, #5d5d64);
+}
+
+.subtle-ck-cost-row.discount {
+  color: #1b873f;
+  font-weight: 600;
+}
+
+.subtle-ck-cost-row.total {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink, #0e0e10);
+  padding-top: 10px;
+  border-top: 1px solid rgba(14, 14, 15, 0.08);
+}
+
+.subtle-ck-savings-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin-top: 14px;
+}
+
+/* Primary CTA Button */
+.subtle-ck-place-btn {
+  width: 100%;
+  height: 48px;
+  background: var(--ink, #0e0e10);
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-top: 18px;
+  box-shadow: 0 4px 14px rgba(14, 14, 16, 0.15);
+}
+
+.subtle-ck-place-btn:hover {
+  background: #25252a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(14, 14, 16, 0.2);
+}
+
+.subtle-ck-place-btn:active {
+  transform: translateY(0);
+}
+
+.subtle-ck-place-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Trust Badges */
+.subtle-ck-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(14, 14, 15, 0.08);
+}
+
+.subtle-ck-trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--steel, #5d5d64);
+  gap: 4px;
+}
+
+.subtle-ck-trust-item svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--steel, #5d5d64);
+  stroke-width: 1.8;
+  fill: none;
+}
+
+/* Sticky Mobile Bar */
+.subtle-ck-mobile-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #dcdbd5;
+  padding: 12px 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 980px) {
+  .subtle-ck-mobile-bar {
+    display: flex;
+  }
+}
+
+.subtle-ck-mobile-total {
+  display: flex;
+  flex-direction: column;
+}
+
+.subtle-ck-mobile-total small {
+  font-size: 11px;
+  color: var(--steel, #5d5d64);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.subtle-ck-mobile-total b {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink, #0e0e10);
+  line-height: 1.15;
+}
+
+.subtle-ck-mobile-btn {
+  flex: 1;
+  max-width: 220px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--ink, #0e0e10);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

@@ -1,0 +1,888 @@
+/* ==========================================================================
+   CARXEN CHECKOUT — WARM BRAND PALETTE (NO BLUE)
+   ========================================================================== */
+
+.inf-ck-page-bg {
+  min-height: 100vh;
+  background-color: var(--bg, #f4f3ef);
+  background-image: radial-gradient(at 50% 0%, #ffffff 0%, var(--bg, #f4f3ef) 100%);
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+}
+
+.inf-ck-main {
+  flex: 1 0 auto;
+  width: 100%;
+  padding: clamp(20px, 3.5vw, 48px) clamp(16px, 2.5vw, 32px) 0;
+  box-sizing: border-box;
+}
+
+.inf-ck-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto 48px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 10px 36px -10px rgba(14, 14, 16, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(14, 14, 16, 0.08);
+  padding: clamp(20px, 3.2vw, 36px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+}
+
+/* Header & Stepper */
+.inf-ck-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #eeede8;
+  margin-bottom: 28px;
+}
+
+.inf-ck-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.inf-ck-logo img {
+  height: 28px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.inf-ck-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inf-ck-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #71717a;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.inf-ck-step:hover {
+  color: #0e0e10;
+}
+
+.inf-ck-step-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #d4d4d8;
+  color: #71717a;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.inf-ck-step.done {
+  color: #0e0e10;
+}
+
+.inf-ck-step.done .inf-ck-step-badge {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.inf-ck-step.active {
+  color: #0e0e10;
+}
+
+.inf-ck-step.active .inf-ck-step-badge {
+  background: var(--red, #e2231a);
+  border-color: var(--red, #e2231a);
+  color: #ffffff;
+}
+
+.inf-ck-step-chevron {
+  width: 14px;
+  height: 14px;
+  color: #d4d4d8;
+}
+
+/* Two Column Layout */
+.inf-ck-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.85fr);
+  gap: clamp(20px, 3vw, 36px);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .inf-ck-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+/* Left Column */
+.inf-ck-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inf-ck-sec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.inf-ck-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0e0e10;
+}
+
+.inf-ck-sec-title svg {
+  width: 17px;
+  height: 17px;
+  color: #27272a;
+}
+
+/* Shipping Details Overview Card */
+.inf-ck-ship-summary {
+  background: #faf9f6;
+  border: 1px solid #e7e6e0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inf-ck-ship-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inf-ck-ship-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0e0e10;
+}
+
+.inf-ck-ship-addr {
+  font-size: 12px;
+  color: #5d5d64;
+  line-height: 1.4;
+}
+
+.inf-ck-text-btn {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red, #e2231a);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.inf-ck-text-btn:hover {
+  color: #b91a12;
+}
+
+/* Payment Radio Options Stack */
+.inf-ck-pay-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inf-ck-pay-card {
+  border: 1px solid #e7e6e0;
+  border-radius: 14px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.inf-ck-pay-card.active {
+  border-color: var(--red, #e2231a);
+  box-shadow: 0 0 0 1px var(--red, #e2231a), 0 4px 14px rgba(226, 35, 26, 0.08);
+}
+
+.inf-ck-pay-card-header {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inf-ck-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0e0e10;
+}
+
+.inf-ck-radio-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #d4d4d8;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.inf-ck-pay-card.active .inf-ck-radio-circle {
+  border-color: var(--red, #e2231a);
+  background: var(--red, #e2231a);
+}
+
+.inf-ck-pay-card.active .inf-ck-radio-circle::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* Network Badges in Header */
+.inf-ck-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inf-ck-badge-visa {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  font-style: italic;
+  color: #0e0e10;
+  background: #faf9f6;
+  border: 1px solid #e7e6e0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.inf-ck-badge-mc {
+  display: flex;
+  align-items: center;
+  height: 16px;
+  padding: 2px 4px;
+}
+
+.inf-ck-mc-circle-red {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #eb001b;
+  margin-right: -5px;
+}
+
+.inf-ck-mc-circle-orange {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f79e1b;
+  opacity: 0.9;
+}
+
+.inf-ck-badge-amex {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: #1e1e24;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.inf-ck-badge-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red, #e2231a);
+  background: rgba(226, 35, 26, 0.08);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.inf-ck-badge-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0e0e10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Expanded Card Body */
+.inf-ck-card-body {
+  padding: 0 18px 20px;
+  border-top: 1px solid #f4f3ef;
+  margin-top: 4px;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inf-ck-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 540px) {
+  .inf-ck-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inf-ck-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.inf-ck-field label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #3f3f46;
+}
+
+.inf-ck-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inf-ck-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: #a1a1aa;
+  pointer-events: none;
+}
+
+.inf-ck-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #e7e6e0;
+  border-radius: 9px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #0e0e10;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.inf-ck-input.has-icon {
+  padding-left: 38px;
+}
+
+.inf-ck-input:focus {
+  border-color: var(--red, #e2231a);
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.1);
+}
+
+.inf-ck-input::placeholder {
+  color: #a1a1aa;
+}
+
+.inf-ck-help-icon {
+  position: absolute;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  color: #a1a1aa;
+  cursor: help;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Save Info Checkbox */
+.inf-ck-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: #3f3f46;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inf-ck-checkbox-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red, #e2231a);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Primary Pay Button */
+.inf-ck-pay-btn {
+  width: 100%;
+  height: 46px;
+  background: var(--red, #e2231a);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s ease;
+  box-shadow: 0 4px 14px rgba(226, 35, 26, 0.25);
+}
+
+.inf-ck-pay-btn:hover {
+  background: #c91d15;
+  box-shadow: 0 6px 18px rgba(226, 35, 26, 0.35);
+}
+
+.inf-ck-pay-btn:active {
+  transform: translateY(1px);
+}
+
+.inf-ck-pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Right Column (3 Rounded Cards) */
+.inf-ck-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 32px;
+}
+
+.inf-ck-card {
+  background: #ffffff;
+  border: 1px solid #e7e6e0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.inf-ck-card-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.inf-ck-card-t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0e0e10;
+}
+
+.inf-ck-card-t svg {
+  width: 16px;
+  height: 16px;
+  color: #27272a;
+}
+
+/* Cart Items inside Right Card */
+.inf-ck-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.inf-ck-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inf-ck-item-thumb-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #f4f3ef;
+  border: 1px solid #e7e6e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.inf-ck-item-remove-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  color: #71717a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.inf-ck-item-remove-btn:hover {
+  color: var(--red, #e2231a);
+  border-color: var(--red, #e2231a);
+}
+
+.inf-ck-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0e0e10;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.inf-ck-item-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e7e6e0;
+  border-radius: 6px;
+  background: #ffffff;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.inf-ck-item-stepper button {
+  width: 20px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #71717a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.inf-ck-item-stepper button:hover {
+  background: #f4f3ef;
+  color: #0e0e10;
+}
+
+.inf-ck-item-stepper span {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0e0e10;
+  padding: 0 5px;
+}
+
+.inf-ck-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0e0e10;
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 65px;
+}
+
+/* Promo Code Box */
+.inf-ck-promo-row {
+  display: flex;
+  gap: 8px;
+}
+
+.inf-ck-promo-btn {
+  height: 40px;
+  padding: 0 18px;
+  background: #0e0e10;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.inf-ck-promo-btn:hover {
+  background: #27272a;
+}
+
+.inf-ck-promo-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #10b981;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-weight: 600;
+}
+
+.inf-ck-quick-promo {
+  font-size: 11.5px;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inf-ck-quick-promo:hover {
+  color: var(--red, #e2231a);
+  text-decoration: underline;
+}
+
+/* Summary Card Rows */
+.inf-ck-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inf-ck-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #71717a;
+}
+
+.inf-ck-summary-row b,
+.inf-ck-summary-row span:last-child {
+  color: #0e0e10;
+  font-weight: 600;
+}
+
+.inf-ck-summary-row.discount span:last-child {
+  color: #10b981;
+}
+
+.inf-ck-summary-row.total {
+  padding-top: 12px;
+  border-top: 1px solid #eeede8;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0e0e10;
+}
+
+.inf-ck-summary-row.total span:last-child {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0e0e10;
+}
+
+/* Confetti Canvas Overlay */
+.inf-ck-confetti-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Step 3: Confirmation Screen */
+.inf-ck-confirm-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 0 12px;
+}
+
+.inf-ck-confirm-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  border: 2px solid #a7f3d0;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  animation: infConfirmPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes infConfirmPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.inf-ck-confirm-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0e0e10;
+  margin: 0 0 6px;
+}
+
+.inf-ck-confirm-subtitle {
+  font-size: 13.5px;
+  color: #5d5d64;
+  margin: 0 0 24px;
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+.inf-ck-confirm-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 20px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 768px) {
+  .inf-ck-confirm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inf-ck-confirm-card {
+  background: #faf9f6;
+  border: 1px solid #e7e6e0;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.inf-ck-confirm-card h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0e0e10;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inf-ck-confirm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.inf-ck-btn-primary {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 10px;
+  background: var(--red, #e2231a);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  box-shadow: 0 4px 14px rgba(226, 35, 26, 0.25);
+}
+
+.inf-ck-btn-primary:hover {
+  background: #c91d15;
+  box-shadow: 0 6px 18px rgba(226, 35, 26, 0.35);
+}
+
+.inf-ck-btn-secondary {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0e0e10;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1px solid #d4d4d8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.inf-ck-btn-secondary:hover {
+  background: #f4f3ef;
+  border-color: #0e0e10;
+}
