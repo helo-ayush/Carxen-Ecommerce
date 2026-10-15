@@ -348,9 +348,16 @@ input, select {
   width: 100%;
 }
 
+body:has(.hero-video-section) {
+  background-color: #000;
+}
+
 body:has(.hero-video-section) .top-nav-shell {
   position: fixed;
-  inset: 0 0 auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
 }
 
 /* announcement ribbon */
@@ -370,24 +377,34 @@ body:has(.hero-video-section) .top-nav-shell {
   opacity: 1;
   transform: translateY(0);
   transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.3s ease;
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Auto-hide when scrolling down, reveal when scrolling up */
 .top-nav-shell.ribbon-hidden .ann,
 .ann.ann-hidden {
-  max-height: 0;
-  opacity: 0;
+  max-height: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-width: 0 !important;
+  border-bottom: 0 solid transparent !important;
+  opacity: 0 !important;
   transform: translateY(-100%);
-  padding-top: 0;
-  padding-bottom: 0;
-  border-bottom-color: transparent;
   pointer-events: none;
+}
+
+/* Seamless flush fit against viewport top edge with zero gap */
+.top-nav-shell.ribbon-hidden header {
+  transform: translateY(-1px);
 }
 
 .ann-inner {
