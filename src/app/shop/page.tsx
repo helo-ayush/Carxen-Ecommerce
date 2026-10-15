@@ -185,10 +185,14 @@ function ShopContent() {
                 />
               </label>
               <button
+                type="button"
                 className="sf-t"
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
+                aria-label="Toggle filters"
               >
-                Filters
+                <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
+                <span>Filters</span>
+                {hasActiveFilters && <span className="sf-badge" />}
               </button>
               <select
                 className="sort"
@@ -217,76 +221,129 @@ function ShopContent() {
           </div>
 
           <div className="shop-g">
+            {isFilterOpen && (
+              <div
+                className="drawer-backdrop"
+                onClick={() => setIsFilterOpen(false)}
+                aria-hidden="true"
+              />
+            )}
             <div className={`sp-f ${isFilterOpen ? 'open' : ''}`}>
-              <div className="fbox">
-                <h4>Fit type</h4>
-                <div className="sp-cs">
-                  <button
-                    className={`pill ${fitType === 'all' ? 'on' : ''}`}
-                    onClick={() => setFitType('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    className={`pill ${fitType === 'c' ? 'on' : ''}`}
-                    onClick={() => setFitType('c')}
-                  >
-                    Custom fit
-                  </button>
-                  <button
-                    className={`pill ${fitType === 'u' ? 'on' : ''}`}
-                    onClick={() => setFitType('u')}
-                  >
-                    Universal
-                  </button>
+              <div className="drawer-header-mobile">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <SlidersHorizontal style={{ width: '15px', height: '15px', color: '#e2231a' }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: '#0e0e0f' }}>Filters</span>
                 </div>
-              </div>
-
-              <div className="fbox">
-                <h4>Price</h4>
-                <div className="sp-cs">
-                  {[
-                    ['all', 'Any'],
-                    ['lo', 'Under ₹2,000'],
-                    ['mid', '₹2,000 – ₹3,999'],
-                    ['hi', '₹4,000 +'],
-                  ].map(([val, label]) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {hasActiveFilters && (
                     <button
-                      key={val}
-                      className={`pill ${priceTier === val ? 'on' : ''}`}
-                      onClick={() => setPriceTier(val as any)}
+                      type="button"
+                      onClick={resetAllFilters}
+                      style={{ fontSize: '12px', color: '#e2231a', fontWeight: 600 }}
                     >
-                      {label}
+                      Reset
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="fbox">
-                <h4>Rating</h4>
-                <div className="sp-cs">
+                  )}
                   <button
-                    className={`pill ${ratingFilter ? 'on' : ''}`}
-                    onClick={() => setRatingFilter(!ratingFilter)}
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="drawer-close-btn"
+                    aria-label="Close filters"
                   >
-                    4.6★ &amp; up
+                    <X style={{ width: '16px', height: '16px' }} />
                   </button>
                 </div>
               </div>
 
-              <div className="fbox">
-                <h4>Series</h4>
-                <div className="sp-cs">
-                  {['all', ...SERIES_LIST.map((s) => s[0])].map((s) => (
+              <div className="drawer-scroll-body">
+                <div className="fbox">
+                  <h4>Fit type</h4>
+                  <div className="sp-cs">
                     <button
-                      key={s}
-                      className={`pill ${seriesFilter === s ? 'on' : ''}`}
-                      onClick={() => setSeriesFilter(s)}
+                      className={`pill ${fitType === 'all' ? 'on' : ''}`}
+                      onClick={() => setFitType('all')}
                     >
-                      {s === 'all' ? 'All' : s}
+                      All
                     </button>
-                  ))}
+                    <button
+                      className={`pill ${fitType === 'c' ? 'on' : ''}`}
+                      onClick={() => setFitType('c')}
+                    >
+                      Custom fit
+                    </button>
+                    <button
+                      className={`pill ${fitType === 'u' ? 'on' : ''}`}
+                      onClick={() => setFitType('u')}
+                    >
+                      Universal
+                    </button>
+                  </div>
                 </div>
+
+                <div className="fbox">
+                  <h4>Price</h4>
+                  <div className="sp-cs">
+                    {[
+                      ['all', 'Any'],
+                      ['lo', 'Under ₹2,000'],
+                      ['mid', '₹2,000 – ₹3,999'],
+                      ['hi', '₹4,000 +'],
+                    ].map(([val, label]) => (
+                      <button
+                        key={val}
+                        className={`pill ${priceTier === val ? 'on' : ''}`}
+                        onClick={() => setPriceTier(val as any)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="fbox">
+                  <h4>Rating</h4>
+                  <div className="sp-cs">
+                    <button
+                      className={`pill ${ratingFilter ? 'on' : ''}`}
+                      onClick={() => setRatingFilter(!ratingFilter)}
+                    >
+                      4.6★ &amp; up
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fbox">
+                  <h4>Series</h4>
+                  <div className="sp-cs">
+                    {['all', ...SERIES_LIST.map((s) => s[0])].map((s) => (
+                      <button
+                        key={s}
+                        className={`pill ${seriesFilter === s ? 'on' : ''}`}
+                        onClick={() => setSeriesFilter(s)}
+                      >
+                        {s === 'all' ? 'All' : s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="drawer-footer-mobile">
+                <button
+                  type="button"
+                  className="btn dark"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'center',
+                    padding: '11px',
+                    borderRadius: '99px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                  onClick={() => setIsFilterOpen(false)}
+                >
+                  Show {filteredProducts.length} Results
+                </button>
               </div>
             </div>
 

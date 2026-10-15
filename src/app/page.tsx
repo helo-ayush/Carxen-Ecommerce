@@ -538,8 +538,33 @@ export default function HomePage() {
           </div>
 
           <div className="shop-g">
+            {isMobileFilterOpen && (
+              <div
+                className="drawer-backdrop"
+                onClick={() => setIsMobileFilterOpen(false)}
+                aria-hidden="true"
+              />
+            )}
             {/* Sidebar */}
             <aside className={`side ${isMobileFilterOpen ? 'on' : ''}`} id="side">
+              <div className="drawer-header-mobile">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e2231a" strokeWidth="2.5">
+                    <path d="M3 5h18M6 12h12M10 19h4" />
+                  </svg>
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: '#0e0e0f' }}>Filters</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="drawer-close-btn"
+                  aria-label="Close filters"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
               <div className="fbox">
                 <h4>
                   Price range <button onClick={handleResetPrice}>Reset</button>
@@ -666,14 +691,16 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <button
-                className="btn mf"
-                id="sideDone"
-                onClick={() => setIsMobileFilterOpen(false)}
-                style={{ justifyContent: 'center', marginTop: '6px' }}
-              >
-                Show results
-              </button>
+              <div className="drawer-footer-mobile">
+                <button
+                  className="btn dark"
+                  id="sideDone"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  style={{ width: '100%', justifyContent: 'center', padding: '11px', borderRadius: '99px', fontSize: '13px', fontWeight: 600 }}
+                >
+                  Show Results
+                </button>
+              </div>
             </aside>
 
             {/* Product Grid Area */}
