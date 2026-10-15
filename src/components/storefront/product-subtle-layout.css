@@ -633,11 +633,93 @@
   margin-bottom: 56px;
 }
 
+.ps-reviews-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
 .ps-reviews-top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.ps-reviews-score-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-overall-count {
+  font-size: 13px;
+  color: var(--steel, #5d5d64);
+  font-weight: 500;
+}
+
+.ps-reviews-action-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ps-write-review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 99px;
+  background: var(--ink, #0e0e0f);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.ps-write-review-btn:hover {
+  background: #232328;
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+
+.ps-write-review-btn:active {
+  transform: translateY(0);
+}
+
+.ps-write-review-btn.verified-buyer {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.ps-verified-pill-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  margin-left: 2px;
+  letter-spacing: -0.01em;
+}
+
+.ps-lock-pill-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+  margin-left: 2px;
 }
 
 .ps-reviews-title {
@@ -657,6 +739,179 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--ink, #0e0e0f);
+}
+
+.ps-review-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+  margin-top: -2px;
+}
+
+.ps-verified-badge {
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Modal overlay & card for verified purchase restriction */
+.ps-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  animation: fadeInModal 0.2s ease forwards;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ps-modal-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid var(--line, #dcdbd5);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUpModal {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ps-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line, #dcdbd5);
+  background: #fafaf8;
+}
+
+.ps-modal-shield-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fef3c7;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ps-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+  margin: 0;
+}
+
+.ps-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: var(--steel, #5d5d64);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ps-modal-close:hover {
+  background: #ebeae4;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-modal-body {
+  padding: 20px;
+}
+
+.ps-modal-text {
+  font-size: 13.5px;
+  color: var(--steel, #5d5d64);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.ps-modal-product-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f7f6f3;
+  border-radius: 12px;
+  border: 1px solid var(--line, #dcdbd5);
+  margin-bottom: 14px;
+}
+
+.ps-modal-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ps-modal-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ps-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ps-modal-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #0e0e0f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-modal-status-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.ps-modal-subtext {
+  font-size: 11.5px;
+  color: var(--mute, #8d8d93);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.ps-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line, #dcdbd5);
+  background: #fafaf8;
 }
 
 /* Filter pills row */

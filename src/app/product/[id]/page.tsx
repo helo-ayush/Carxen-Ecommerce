@@ -38,6 +38,9 @@ import {
   ChevronUp,
   Plus,
   X,
+  Pencil,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 
 import '@/components/storefront/product-subtle-layout.css';
@@ -92,6 +95,7 @@ function ProductDetailContent({ product }: { product: Product }) {
     isFav,
     showToast,
     products,
+    orders,
   } = useApp();
 
   const activeCar = useMemo(() => {
@@ -137,15 +141,61 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'fitment' | 'install'>('desc');
 
-  // Review submission state
+  // Review item definition matching other customer reviews 100%
+  interface ReviewRecord {
+    id: string;
+    name: string;
+    rating: number;
+    date: string;
+    title: string;
+    comment: string;
+    avatarUrl?: string;
+    isVerified?: boolean;
+    hasPhoto?: boolean;
+  }
+
+  // Verification: check if the logged in customer has ordered this item
+  const hasOrderedThisProduct = useMemo(() => {
+    const prodIdNum = Number(product.id);
+    if (orders && orders.length > 0) {
+      const match = orders.some((order) =>
+        order.items?.some((item) => Number(item.productId) === prodIdNum)
+      );
+      if (match) return true;
+    }
+    try {
+      const stored = localStorage.getItem('cx_order_history');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.some((order: any) =>
+            order.items?.some((item: any) => Number(item.productId) === prodIdNum)
+          );
+        }
+      }
+    } catch {}
+    return false;
+  }, [orders, product.id]);
+
+  // Review submission & modal state
   const [isWritingReview, setIsWritingReview] = useState(false);
+  const [showNotOrderedModal, setShowNotOrderedModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
-  const [userReviews, setUserReviews] = useState<
-    Array<{ name: string; title: string; comment: string; rating: number; date: string }>
-  >([]);
+  const [userReviews, setUserReviews] = useState<ReviewRecord[]>([]);
+
+  // Load persisted user-published reviews on mount
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`cx_product_reviews_${product.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setUserReviews(parsed);
+      }
+    } catch {}
+  }, [product.id]);
 
   // Review filter pills state (matching reference chips)
   const [activeReviewFilter, setActiveReviewFilter] = useState<string>('5stars');
@@ -170,11 +220,20 @@ function ProductDetailContent({ product }: { product: Product }) {
 
   const handleStartReview = () => {
     if (!user) {
-      showToast('Please sign in to write a review');
+      showToast('Please sign in to write a review for your purchases');
       router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}#reviews-section`)}`);
       return;
     }
+
+    if (!hasOrderedThisProduct) {
+      setShowNotOrderedModal(true);
+      return;
+    }
+
     setIsWritingReview(true);
+    setTimeout(() => {
+      document.getElementById('review-writer-card-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   const handleSubmitReview = (e: React.FormEvent) => {
@@ -183,21 +242,35 @@ function ProductDetailContent({ product }: { product: Product }) {
       showToast('Please provide a review headline and details');
       return;
     }
+
+    if (!hasOrderedThisProduct) {
+      setShowNotOrderedModal(true);
+      return;
+    }
+
     const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-    setUserReviews((prev) => [
-      {
-        name: user?.name || 'Verified Driver',
-        title: reviewTitle.trim(),
-        comment: reviewComment.trim(),
-        rating: reviewRating,
-        date: today,
-      },
-      ...prev,
-    ]);
+    const newReview: ReviewRecord = {
+      id: `user-${Date.now()}`,
+      name: user?.name || 'Verified Driver',
+      rating: reviewRating,
+      date: today,
+      title: reviewTitle.trim(),
+      comment: reviewComment.trim(),
+      avatarUrl: user?.avatarUrl || '',
+      isVerified: true,
+      hasPhoto: false,
+    };
+
+    const updated = [newReview, ...userReviews];
+    setUserReviews(updated);
+    try {
+      localStorage.setItem(`cx_product_reviews_${product.id}`, JSON.stringify(updated));
+    } catch {}
+
     setIsWritingReview(false);
     setReviewTitle('');
     setReviewComment('');
-    showToast(`Thank you, ${user?.name || 'Driver'}! Review published.`);
+    showToast(`Thank you, ${user?.name || 'Driver'}! Your verified review has been published.`);
   };
 
   const handleCheckPincode = () => {
@@ -243,42 +316,67 @@ function ProductDetailContent({ product }: { product: Product }) {
       .slice(0, 4);
   }, [product, products]);
 
-  // Combined review data
-  const baseReviews = useMemo(() => {
+  // Pre-populated base customer reviews with matching format
+  const baseReviews: ReviewRecord[] = useMemo(() => {
     return [
       {
+        id: 'base-1',
         name: 'Lori Barnett',
         rating: 5,
         date: '02 May',
+        title: 'Incredible craftsmanship and flawless seams',
         comment:
           'Incredible craftsmanship and flawless seams. Looks OEM-fitted in the cabin and gives that premium minimalist aesthetic.',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
+        isVerified: true,
+        hasPhoto: true,
       },
       {
+        id: 'base-2',
         name: 'Phillip Douglas',
         rating: 5,
         date: '29 April',
+        title: 'Exact fitment on my Creta with zero creasing',
         comment:
           'The fitment on my Creta is exact with zero creasing or loose edges. Wipes clean easily and stitching is strong.',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
+        isVerified: true,
+        hasPhoto: true,
       },
       {
+        id: 'base-3',
         name: 'Elena Rostova',
         rating: 4,
         date: '18 April',
+        title: 'Solid tactile feel and subtle styling',
         comment:
           'Very solid tactile feel, subtle stitching accents match the dashboard perfectly. Packaged nicely with clear installation instructions.',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&auto=format&fit=crop&q=80',
+        isVerified: true,
+        hasPhoto: false,
       },
     ];
   }, []);
 
+  // Unified reviews list: user published reviews and other customer reviews
+  const allReviews = useMemo(() => {
+    return [...userReviews, ...baseReviews];
+  }, [userReviews, baseReviews]);
+
   const filteredReviews = useMemo(() => {
-    if (activeReviewFilter === 'all') return baseReviews;
-    if (activeReviewFilter === 'photos') return baseReviews.slice(0, 2);
-    if (activeReviewFilter === 'text') return baseReviews;
-    if (activeReviewFilter === '5stars') return baseReviews.filter((r) => r.rating === 5);
-    if (activeReviewFilter === '4stars') return baseReviews.filter((r) => r.rating === 4);
-    if (activeReviewFilter === '3stars') return baseReviews.filter((r) => r.rating === 3);
-    return baseReviews;
-  }, [activeReviewFilter, baseReviews]);
+    if (activeReviewFilter === 'all') return allReviews;
+    if (activeReviewFilter === 'photos') return allReviews.filter((r) => r.hasPhoto);
+    if (activeReviewFilter === 'text') return allReviews;
+    if (activeReviewFilter === '5stars') return allReviews.filter((r) => r.rating === 5);
+    if (activeReviewFilter === '4stars') return allReviews.filter((r) => r.rating === 4);
+    if (activeReviewFilter === '3stars') return allReviews.filter((r) => r.rating === 3);
+    if (activeReviewFilter === '2stars') return allReviews.filter((r) => r.rating === 2);
+    if (activeReviewFilter === '1star') return allReviews.filter((r) => r.rating === 1);
+    return allReviews;
+  }, [activeReviewFilter, allReviews]);
 
   return (
     <div className="ps-page-wrapper">
@@ -607,11 +705,33 @@ function ProductDetailContent({ product }: { product: Product }) {
             REVIEWS SECTION
             ------------------------------------------------------------------ */}
         <section className="ps-reviews-section" id="reviews-section">
-          {/* Header: Reviews ★★★★★ 4.6 */}
-          <div className="ps-reviews-top">
-            <h2 className="ps-reviews-title">Customer Reviews</h2>
-            <span className="ps-overall-stars">★★★★★</span>
-            <span className="ps-overall-score">4.6</span>
+          {/* Header Bar: Left Title/Score + Right Prominent "Write a Review" Button */}
+          <div className="ps-reviews-header-bar">
+            <div className="ps-reviews-top">
+              <h2 className="ps-reviews-title">Customer Reviews</h2>
+              <div className="ps-reviews-score-cluster">
+                <span className="ps-overall-stars">★★★★★</span>
+                <span className="ps-overall-score">4.6</span>
+                <span className="ps-overall-count">({allReviews.length + 120} reviews)</span>
+              </div>
+            </div>
+
+            <div className="ps-reviews-action-box">
+              <button
+                type="button"
+                className={`ps-write-review-btn ${hasOrderedThisProduct ? 'verified-buyer' : ''}`}
+                onClick={handleStartReview}
+                aria-label="Write a Review"
+              >
+                <Pencil style={{ width: '15px', height: '15px' }} />
+                <span>Write a Review</span>
+                {hasOrderedThisProduct ? (
+                  <span className="ps-verified-pill-tag">✓ Verified Buyer</span>
+                ) : (
+                  <span className="ps-lock-pill-tag">Verified Only</span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Filter Pills Row (All, Photo, Text, 5-Star, 4-Star, etc.) */}
@@ -621,7 +741,7 @@ function ProductDetailContent({ product }: { product: Product }) {
               className={`ps-filter-chip ${activeReviewFilter === 'all' ? 'ps-chip-active-dark' : ''}`}
               onClick={() => setActiveReviewFilter('all')}
             >
-              All (123)
+              All ({allReviews.length})
             </button>
 
             <button
@@ -682,78 +802,75 @@ function ProductDetailContent({ product }: { product: Product }) {
             </button>
           </div>
 
-          {/* Review Cards List */}
+          {/* Review Cards List (Both user-submitted and customer reviews share identical styling) */}
           <div className="ps-review-cards-list">
-            {/* User Submitted Verified Reviews */}
-            {userReviews.map((ur, idx) => (
-              <div key={`user-${idx}`} className="ps-review-item-card" style={{ borderLeft: '3px solid var(--red, #e2231a)' }}>
-                <div className="ps-review-item-top">
-                  <div className="ps-review-author-wrap">
-                    <Avatar fallback={ur.name.slice(0, 2)} style={{ width: '34px', height: '34px', fontSize: '12px' }} />
-                    <div className="ps-review-stars-user">
-                      <span className="ps-review-item-stars">
-                        {'★'.repeat(ur.rating) + '☆'.repeat(5 - ur.rating)}
-                      </span>
-                      <span className="ps-review-user-name">{ur.name} <span style={{ color: '#16a34a', fontSize: '11px', fontWeight: 600 }}>✓ Verified Buyer</span></span>
-                    </div>
-                  </div>
-                  <span className="ps-review-date">{ur.date}</span>
-                </div>
-                {ur.title && <b style={{ fontSize: '13.5px', color: 'var(--ink, #0e0e0f)' }}>{ur.title}</b>}
-                <p className="ps-review-body-text">{ur.comment}</p>
-              </div>
-            ))}
-
-            {/* Filtered Sample Reviews */}
-            {filteredReviews.map((rev, idx) => (
-              <div key={idx} className="ps-review-item-card">
+            {filteredReviews.map((rev) => (
+              <div key={rev.id} className="ps-review-item-card">
                 <div className="ps-review-item-top">
                   <div className="ps-review-author-wrap">
                     <Avatar
-                      fallback={rev.name.slice(0, 2)}
-                      src={
-                        idx === 0
-                          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80'
-                          : idx === 1
-                          ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80'
-                          : undefined
-                      }
-                      style={{ width: '34px', height: '34px', fontSize: '12px' }}
+                      fallback={rev.name.slice(0, 2).toUpperCase()}
+                      src={rev.avatarUrl}
+                      style={{ width: '36px', height: '36px', fontSize: '12px' }}
                     />
                     <div className="ps-review-stars-user">
                       <span className="ps-review-item-stars">
                         {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
                       </span>
-                      <span className="ps-review-user-name">{rev.name}</span>
+                      <span className="ps-review-user-name">
+                        {rev.name}
+                        {rev.isVerified && (
+                          <span className="ps-verified-badge">
+                            ✓ Verified Buyer
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                   <span className="ps-review-date">{rev.date}</span>
                 </div>
+                {rev.title && <div className="ps-review-item-title">{rev.title}</div>}
                 <p className="ps-review-body-text">{rev.comment}</p>
               </div>
             ))}
           </div>
 
-          {/* Write a review action */}
-          <div style={{ marginTop: '24px' }}>
+          {/* Write a review form & trigger area */}
+          <div id="review-writer-card-anchor" style={{ marginTop: '24px' }}>
             {!isWritingReview ? (
-              <Button
-                variant="outline"
-                style={{ borderRadius: '12px', fontSize: '13px', fontWeight: 600, height: '42px', padding: '0 20px' }}
-                onClick={handleStartReview}
-              >
-                Write a verified review
-              </Button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: '#fafaf8', border: '1px solid var(--line, #dcdbd5)', borderRadius: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--ink, #0e0e0f)' }}>
+                    Have you ordered this product?
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)' }}>
+                    {hasOrderedThisProduct
+                      ? 'Share your honest feedback to help fellow drivers make the right choice.'
+                      : 'Only verified customers who ordered this product can write a review.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`ps-write-review-btn ${hasOrderedThisProduct ? 'verified-buyer' : ''}`}
+                  onClick={handleStartReview}
+                >
+                  <Pencil style={{ width: '14px', height: '14px' }} />
+                  <span>Write a Review</span>
+                  {hasOrderedThisProduct && (
+                    <span className="ps-verified-pill-tag">✓ Verified Buyer</span>
+                  )}
+                </button>
+              </div>
             ) : (
               <div className="ps-review-writer-card">
                 <form onSubmit={handleSubmitReview}>
                   <div className="ps-review-writer-header">
                     <div>
                       <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--ink, #0e0e0f)' }}>
-                        Write a Review
+                        Write a Verified Review
                       </h4>
                       <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)' }}>
-                        Sharing your experience as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b>
+                        Sharing your review as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b> · <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Verified Owner of {product.n}</span>
                       </p>
                     </div>
                     <button
@@ -804,7 +921,7 @@ function ProductDetailContent({ product }: { product: Product }) {
 
                   <textarea
                     className="ps-review-textarea-field"
-                    placeholder="Share specific details about the quality, installation ease, and fitment..."
+                    placeholder="Share specific details about the quality, installation ease, and fitment on your car..."
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value)}
                     rows={4}
@@ -833,6 +950,78 @@ function ProductDetailContent({ product }: { product: Product }) {
             )}
           </div>
         </section>
+
+        {/* Verified Purchase Requirement Modal */}
+        {showNotOrderedModal && (
+          <div className="ps-modal-overlay" onClick={() => setShowNotOrderedModal(false)}>
+            <div className="ps-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="ps-modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="ps-modal-shield-icon">
+                    <Lock style={{ width: '16px', height: '16px', color: '#b45309' }} />
+                  </div>
+                  <h3 className="ps-modal-title">Verified Purchase Required</h3>
+                </div>
+                <button
+                  type="button"
+                  className="ps-modal-close"
+                  onClick={() => setShowNotOrderedModal(false)}
+                  aria-label="Close"
+                >
+                  <X style={{ width: '16px', height: '16px' }} />
+                </button>
+              </div>
+
+              <div className="ps-modal-body">
+                <p className="ps-modal-text">
+                  To ensure all reviews on CARXEN are 100% genuine and trustworthy for fellow enthusiasts, <b>only customers who have ordered and purchased this product can publish a review.</b>
+                </p>
+
+                <div className="ps-modal-product-preview">
+                  <div className="ps-modal-thumb">
+                    {product.image ? (
+                      <img src={product.image} alt={product.n} />
+                    ) : (
+                      <ProductArt product={product} />
+                    )}
+                  </div>
+                  <div className="ps-modal-info">
+                    <span className="ps-modal-item-name">{product.n}</span>
+                    <span className="ps-modal-status-chip">✕ Not found in your order history</span>
+                  </div>
+                </div>
+
+                <p className="ps-modal-subtext">
+                  If you recently ordered this product or under a different email, please check your order status or sign in with that account.
+                </p>
+              </div>
+
+              <div className="ps-modal-actions">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNotOrderedModal(false);
+                    router.push('/customer');
+                  }}
+                  className="rounded-full"
+                >
+                  View My Orders
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowNotOrderedModal(false);
+                    addToCart(product.id, 1);
+                    openCart();
+                  }}
+                  className="bg-[#e2231a] hover:bg-[#b91a12] text-white rounded-full"
+                >
+                  Order This Product
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         <Separator style={{ margin: '40px 0' }} />
 
