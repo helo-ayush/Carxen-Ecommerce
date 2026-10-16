@@ -166,18 +166,6 @@ function HeaderContent() {
           ) : (
             /* SHOP / STORE PAGES: Interactive Vehicle Fitment Chip + Expanded Search */
             <div className="hd-shop-center">
-              <Link
-                href="/account?tab=garage"
-                className="hd-vehicle-chip"
-                title={`Active Vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m} · Click to manage vehicles in My Garage`}
-              >
-                <span className="hd-vehicle-dot" />
-                <span className="hd-vehicle-name">
-                  {activeCar.y} {activeCar.b} {activeCar.m}
-                </span>
-                <span className="hd-vehicle-badge">Change</span>
-              </Link>
-
               <form className="hd-search hd-search-expanded" onSubmit={handleSearchSubmit}>
                 <svg viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7" />
@@ -206,6 +194,18 @@ function HeaderContent() {
                   </button>
                 )}
               </form>
+
+              <Link
+                href="/account?tab=garage"
+                className="hd-vehicle-chip"
+                title={`Active Vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m} · Click to manage vehicles in My Garage`}
+              >
+                <span className="hd-vehicle-dot" />
+                <span className="hd-vehicle-name">
+                  {activeCar.y} {activeCar.b} {activeCar.m}
+                </span>
+                <span className="hd-vehicle-badge">Change</span>
+              </Link>
             </div>
           )}
 

@@ -304,63 +304,15 @@ function ShopContent() {
         <div className="wrap">
           <div className="sp-h">
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <h1 className="disp" id="spT" style={{ margin: 0 }}>
-                  Made for your {activeCar.m}
-                  <span className="red">.</span>
-                </h1>
-                <Link
-                  href="/account?tab=garage"
-                  className="sp-change-vehicle-btn"
-                  title="Change vehicle or add new car in My Garage"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    borderRadius: '20px',
-                    background: '#f4f4f5',
-                    border: '1px solid #e4e4e7',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#0e0e0f',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <CarFront style={{ width: '13px', height: '13px', color: '#e2231a' }} />
-                  <span>Change vehicle</span>
-                  <span style={{ fontSize: '11px', color: '#71717a' }}>&rarr;</span>
-                </Link>
-              </div>
+              <h1 className="disp" id="spT">
+                Made for your {activeCar.m}
+                <span className="red">.</span>
+              </h1>
               <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--steel, #8c8b86)' }}>
                 {filteredProducts.length} precision-fit parts compatible with your {activeCar.y} {activeCar.b} {activeCar.m}
               </p>
             </div>
             <div className="sp-tools">
-              <label className="hd-search">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M20 20l-4-4" />
-                </svg>
-                <input
-                  type="search"
-                  placeholder="Search by name, tags (e.g. Waterproof, Nappa)…"
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  aria-label="Search parts and tags"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className="hd-search-clear"
-                    onClick={() => handleSearchChange('')}
-                    aria-label="Clear search"
-                  >
-                    <X style={{ width: '13px', height: '13px' }} />
-                  </button>
-                )}
-              </label>
               <button
                 type="button"
                 className="sf-t"
