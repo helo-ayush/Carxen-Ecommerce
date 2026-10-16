@@ -349,43 +349,6 @@ function ShopContent() {
             ))}
           </div>
 
-          {/* Search Help & Popular Tags */}
-          <div className="search-help-bar">
-            <div className="search-help-label">
-              <TagIcon style={{ width: '13px', height: '13px' }} />
-              <span>Search Help & Tags:</span>
-            </div>
-            <div className="search-help-tags">
-              {allStoreTags.map((tag) => {
-                const isSelected =
-                  searchQuery.toLowerCase().trim() === tag.toLowerCase();
-                const count = tagCounts[tag] ?? 0;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleTagSelect(tag)}
-                    className={`search-tag-chip ${isSelected ? 'active' : ''}`}
-                    title={`Search parts with tag #${tag}`}
-                  >
-                    <span>#{tag}</span>
-                    {count > 0 && <span className="chip-count">({count})</span>}
-                    {isSelected && <X style={{ width: '11px', height: '11px', marginLeft: '2px' }} />}
-                  </button>
-                );
-              })}
-              {searchQuery.trim() && (
-                <button
-                  type="button"
-                  onClick={() => handleSearchChange('')}
-                  className="search-tag-clear"
-                >
-                  Clear search
-                </button>
-              )}
-            </div>
-          </div>
-
           <div className="shop-g">
             {isFilterOpen && (
               <div
@@ -422,6 +385,64 @@ function ShopContent() {
               </div>
 
               <div className="drawer-scroll-body">
+                {/* Search Tags / Popular Filter Tags */}
+                <div className="fbox">
+                  <h4>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <TagIcon style={{ width: '13px', height: '13px', color: 'var(--red, #e2231a)' }} />
+                      Search tags
+                    </span>
+                    {searchQuery.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => handleSearchChange('')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '11px',
+                          color: '#e2231a',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </h4>
+                  <div className="sp-cs">
+                    {allStoreTags.map((tag) => {
+                      const isSelected =
+                        searchQuery.toLowerCase().trim() === tag.toLowerCase();
+                      const count = tagCounts[tag] ?? 0;
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagSelect(tag)}
+                          className={`pill ${isSelected ? 'on' : ''}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11.5px',
+                            padding: '6px 11px',
+                          }}
+                          title={`Filter by tag #${tag}`}
+                        >
+                          <span>#{tag}</span>
+                          {count > 0 && (
+                            <span style={{ fontSize: '10px', opacity: isSelected ? 0.95 : 0.6 }}>
+                              ({count})
+                            </span>
+                          )}
+                          {isSelected && <X style={{ width: '10px', height: '10px', marginLeft: '1px' }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="fbox">
                   <h4>Fit type</h4>
                   <div className="sp-cs">
