@@ -577,3 +577,126 @@
     gap: 10px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   DELIVERED ORDERS HIGHLIGHT & REVIEWS ACTIONS
+   -------------------------------------------------------------------------- */
+.ac-delivered-filter-chip {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  border: 1.5px solid #86efac !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease;
+}
+
+.ac-delivered-filter-chip:hover {
+  background: #dcfce7 !important;
+  border-color: #4ade80 !important;
+}
+
+.ac-delivered-filter-chip.active {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+
+.ac-delivered-filter-chip.active .ac-delivered-badge-pill {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.ac-delivered-badge-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #bbf7d0;
+  color: #14532d;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ac-delivered-spotlight-bar {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);
+}
+
+.ac-delivered-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #16a34a;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+}
+
+.ac-order-tile.is-delivered {
+  border: 1.5px solid #86efac;
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.06);
+  position: relative;
+  background: #ffffff;
+}
+
+.ac-delivered-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Item Actions Row (See Product & Write/Edit/Delete Review) */
+.ac-item-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.ac-review-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.ac-star-picker-btn {
+  font-size: 26px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.ac-star-picker-btn:hover {
+  transform: scale(1.15);
+}
+

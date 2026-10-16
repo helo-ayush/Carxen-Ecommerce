@@ -32,6 +32,8 @@ import {
   Lock,
   Printer,
   X,
+  Star,
+  Download,
 } from 'lucide-react';
 import './account.css';
 
@@ -86,6 +88,20 @@ export default function AccountPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [trackingModalOrder, setTrackingModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
   const [invoiceModalOrder, setInvoiceModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
+
+  // Customer Product Reviews state (productId -> review record)
+  const [customerReviews, setCustomerReviews] = useState<Record<number, any>>({});
+  const [reviewModalData, setReviewModalData] = useState<{
+    productId: number;
+    productName: string;
+    productImage?: string;
+    orderNumber: string;
+    existingReview?: any;
+  } | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [hoverReviewRating, setHoverReviewRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
 
   // Hidden file input for direct photo upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -308,6 +324,249 @@ export default function AccountPage() {
     });
     showToast(`Items from #${order.orderNumber} added to cart`);
     openCart();
+  };
+
+  // Sync customer product reviews from localStorage across all purchased products
+  const loadCustomerReviews = React.useCallback(() => {
+    const map: Record<number, any> = {};
+    if (orders && orders.length > 0) {
+      orders.forEach((order) => {
+        order.items?.forEach((it) => {
+          try {
+            const raw = localStorage.getItem(`cx_product_reviews_${it.productId}`);
+            if (raw) {
+              const list = JSON.parse(raw);
+              if (Array.isArray(list)) {
+                const found = list.find((r: any) =>
+                  (user?.name && r.name && r.name.toLowerCase() === user.name.toLowerCase()) ||
+                  (r.id && String(r.id).startsWith('user-'))
+                );
+                if (found) {
+                  map[it.productId] = found;
+                }
+              }
+            }
+          } catch {}
+        });
+      });
+    }
+    setCustomerReviews(map);
+  }, [orders, user?.name]);
+
+  React.useEffect(() => {
+    loadCustomerReviews();
+  }, [loadCustomerReviews]);
+
+  // Open review modal for writing or editing
+  const handleOpenReviewModal = (item: { productId: number; name: string; image?: string }, order: CustomerOrderHistoryRecord) => {
+    const existing = customerReviews[item.productId];
+    if (existing) {
+      setReviewRating(existing.rating || 5);
+      setReviewTitle(existing.title || '');
+      setReviewComment(existing.comment || '');
+    } else {
+      setReviewRating(5);
+      setReviewTitle('');
+      setReviewComment('');
+    }
+    setHoverReviewRating(0);
+    setReviewModalData({
+      productId: item.productId,
+      productName: item.name,
+      productImage: item.image,
+      orderNumber: order.orderNumber,
+      existingReview: existing || null,
+    });
+  };
+
+  // Submit or update a verified customer review
+  const handleSubmitCustomerReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalData) return;
+    if (!reviewTitle.trim() || !reviewComment.trim()) {
+      showToast('Please provide a review headline and comment');
+      return;
+    }
+
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const prodId = reviewModalData.productId;
+    let reviewsList: any[] = [];
+    try {
+      const stored = localStorage.getItem(`cx_product_reviews_${prodId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) reviewsList = parsed;
+      }
+    } catch {}
+
+    const reviewId = reviewModalData.existingReview?.id || `user-${Date.now()}`;
+    const newRecord = {
+      id: reviewId,
+      name: user?.name || 'Verified Driver',
+      rating: reviewRating,
+      date: today,
+      title: reviewTitle.trim(),
+      comment: reviewComment.trim(),
+      avatarUrl: user?.avatarUrl || '',
+      isVerified: true,
+      replies: reviewModalData.existingReview?.replies || [],
+    };
+
+    const existingIdx = reviewsList.findIndex((r: any) => r.id === reviewId);
+    if (existingIdx >= 0) {
+      reviewsList[existingIdx] = newRecord;
+    } else {
+      reviewsList = [newRecord, ...reviewsList];
+    }
+
+    try {
+      localStorage.setItem(`cx_product_reviews_${prodId}`, JSON.stringify(reviewsList));
+    } catch {}
+
+    loadCustomerReviews();
+    setReviewModalData(null);
+    showToast(reviewModalData.existingReview ? 'Review updated successfully!' : 'Verified review published!');
+  };
+
+  // Delete an existing customer review
+  const handleDeleteCustomerReview = (productId: number, productName: string) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Are you sure you want to delete your review for "${productName}"?`)) {
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem(`cx_product_reviews_${productId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((r: any) => {
+            const isUserReview = (user?.name && r.name && r.name.toLowerCase() === user.name.toLowerCase()) ||
+              (r.id && String(r.id).startsWith('user-'));
+            return !isUserReview;
+          });
+          localStorage.setItem(`cx_product_reviews_${productId}`, JSON.stringify(filtered));
+        }
+      }
+    } catch {}
+
+    loadCustomerReviews();
+    showToast(`Your review for "${productName}" has been deleted.`);
+  };
+
+  // Download official formatted tax invoice HTML/PDF document
+  const handleDownloadInvoice = (order: CustomerOrderHistoryRecord) => {
+    const invoiceHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tax Invoice - ${order.orderNumber}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; color: #0e0e0f; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2231a; padding-bottom: 16px; margin-bottom: 24px; }
+    .logo-text { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #0e0e0f; }
+    .logo-accent { color: #e2231a; }
+    .tagline { font-size: 11px; color: #5d5d64; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .inv-title { font-size: 20px; font-weight: 800; color: #0e0e0f; text-align: right; }
+    .inv-meta { font-size: 12px; color: #5d5d64; text-align: right; margin-top: 4px; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; font-size: 13px; }
+    .details-box { background: #f4f3ef; border: 1px solid #dcdbd5; border-radius: 8px; padding: 14px; }
+    .details-box b { display: block; margin-bottom: 6px; font-size: 13.5px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+    th { background: #0e0e0f; color: #ffffff; text-align: left; padding: 10px 12px; font-weight: 600; }
+    th.right, td.right { text-align: right; }
+    th.center, td.center { text-align: center; }
+    td { padding: 10px 12px; border-bottom: 1px solid #dcdbd5; }
+    .totals { width: 260px; margin-left: auto; font-size: 13px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
+    .totals-row.grand { border-top: 2px solid #0e0e0f; font-weight: 800; font-size: 16px; color: #e2231a; margin-top: 6px; padding-top: 6px; }
+    .footer { margin-top: 48px; border-top: 1px dashed #dcdbd5; padding-top: 16px; font-size: 11.5px; color: #8d8d93; text-align: center; }
+    .print-btn { display: inline-block; padding: 10px 20px; background: #e2231a; color: #fff; font-weight: 700; border-radius: 6px; text-decoration: none; margin-bottom: 24px; cursor: pointer; border: none; font-size: 13px; }
+    @media print { .print-btn { display: none; } body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  <div class="header">
+    <div>
+      <div class="logo-text">CARXEN<span class="logo-accent">.</span></div>
+      <div class="tagline">Engineered for Every Drive · Premium Automotive Accessories</div>
+      <div style="font-size: 12px; color: #5d5d64; margin-top: 6px;">
+        GSTIN: 27AABCC8920D1ZE<br>
+        Baner Highway Link Road, Pune, Maharashtra 411045
+      </div>
+    </div>
+    <div>
+      <div class="inv-title">TAX INVOICE</div>
+      <div class="inv-meta">
+        <b>Invoice #:</b> INV-${order.orderNumber}<br>
+        <b>Order Date:</b> ${new Date(order.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}<br>
+        <b>Payment Status:</b> ${order.paymentStatus} (${order.paymentMethod})
+      </div>
+    </div>
+  </div>
+
+  <div class="details-grid">
+    <div class="details-box">
+      <b>Billed & Shipped To:</b>
+      <div>${order.shippingAddress.name}</div>
+      <div>${order.shippingAddress.addressLine1}${order.shippingAddress.addressLine2 ? ', ' + order.shippingAddress.addressLine2 : ''}</div>
+      <div>${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.postalCode}</div>
+      <div>Phone: ${order.shippingAddress.phone || '+91 98201 44829'}</div>
+    </div>
+    <div class="details-box">
+      <b>Dispatch & Tracking Details:</b>
+      <div>Carrier: <b>${order.carrier}</b></div>
+      <div>AWB / Tracking #: <b>${order.trackingNumber}</b></div>
+      <div>Status: <b>${order.status.replace(/_/g, ' ')}</b></div>
+      <div>Estimated / Delivery: ${order.estimatedDelivery}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product Description</th>
+        <th class="center">Qty</th>
+        <th class="right">Unit Price</th>
+        <th class="right">Amount (INR)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${order.items.map((it) => `
+        <tr>
+          <td><b>${it.name}</b>${it.category ? ' <span style="font-size:11px;color:#8d8d93">[' + it.category + ']</span>' : ''}</td>
+          <td class="center">${it.quantity}</td>
+          <td class="right">${formatINR(it.unitPrice)}</td>
+          <td class="right"><b>${formatINR(it.lineSubtotal)}</b></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal:</span><span>${formatINR(order.subtotal)}</span></div>
+    ${order.discountAmount > 0 ? `<div class="totals-row" style="color:#16a34a"><span>Discount:</span><span>- ${formatINR(order.discountAmount)}</span></div>` : ''}
+    <div class="totals-row"><span>Shipping & Handling:</span><span>FREE</span></div>
+    <div class="totals-row grand"><span>Total Amount:</span><span>${formatINR(order.totalAmount)}</span></div>
+  </div>
+
+  <div class="footer">
+    Thank you for choosing CARXEN. Backed by CARXEN 2-Year Comprehensive Warranty and 30-Day Hassle-Free Returns.<br>
+    For support or inquiries, email care@carxen.io or call 1800-209-8899.
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([invoiceHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Invoice-${order.orderNumber}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Invoice for order #${order.orderNumber} downloaded!`);
   };
 
   // Payment Add
@@ -717,7 +976,7 @@ export default function AccountPage() {
                       marginBottom: '18px',
                     }}
                   >
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         onClick={() => setOrderFilter('ALL')}
@@ -737,10 +996,12 @@ export default function AccountPage() {
                       <button
                         type="button"
                         onClick={() => setOrderFilter('DELIVERED')}
-                        className={`ac-btn-outline ${orderFilter === 'DELIVERED' ? 'ac-btn-dark' : ''}`}
+                        className={`ac-btn-outline ac-delivered-filter-chip ${orderFilter === 'DELIVERED' ? 'active' : ''}`}
                         style={{ height: '34px', fontSize: '12.5px', padding: '0 12px' }}
                       >
-                        Delivered ({orders.filter((o) => o.status === 'DELIVERED').length})
+                        <Check size={14} />
+                        <span>Delivered ({orders.filter((o) => o.status === 'DELIVERED').length})</span>
+                        <span className="ac-delivered-badge-pill">Verified</span>
                       </button>
                     </div>
 
@@ -762,6 +1023,35 @@ export default function AccountPage() {
                       />
                     </div>
                   </div>
+
+                  {/* Highlighted Delivered Spotlight Banner */}
+                  {orders.some((o) => o.status === 'DELIVERED') && (
+                    <div className="ac-delivered-spotlight-bar">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="ac-delivered-icon-badge">
+                          <Check size={16} color="#ffffff" strokeWidth={3} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#14532d' }}>
+                            Delivered Purchases & Reviews Center ({orders.filter((o) => o.status === 'DELIVERED').length})
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#166534' }}>
+                            These items have arrived safely. You can review your products, manage ratings, see full specifications, and download tax invoices.
+                          </div>
+                        </div>
+                      </div>
+                      {orderFilter !== 'DELIVERED' && (
+                        <button
+                          type="button"
+                          onClick={() => setOrderFilter('DELIVERED')}
+                          className="ac-btn-outline"
+                          style={{ height: '30px', fontSize: '12px', padding: '0 10px', background: '#ffffff', borderColor: '#86efac', color: '#15803d' }}
+                        >
+                          View Delivered Orders Only
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {filteredOrders.length === 0 ? (
                     <div
@@ -792,10 +1082,18 @@ export default function AccountPage() {
                       const stepIndex = isDelivered ? 4 : isOutForDelivery ? 3 : isShipped ? 2 : 1;
 
                       return (
-                        <div key={order.id} className="ac-order-tile">
+                        <div key={order.id} className={`ac-order-tile ${isDelivered ? 'is-delivered' : ''}`}>
                           {/* Order Top Bar */}
                           <div className="ac-order-top-bar">
                             <div>
+                              {isDelivered && (
+                                <div style={{ marginBottom: '6px' }}>
+                                  <span className="ac-delivered-ribbon">
+                                    <Check size={12} strokeWidth={3} />
+                                    <span>Delivered · Verified for Reviews</span>
+                                  </span>
+                                </div>
+                              )}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span className="ac-order-num">#{order.orderNumber}</span>
                                 <span style={{ color: '#a1a1aa', fontSize: '12px' }}>•</span>
@@ -877,55 +1175,131 @@ export default function AccountPage() {
                             </button>
                           </div>
 
-                          {/* Items List */}
+                          {/* Items List with See Product & Review Actions */}
                           <div style={{ borderTop: '1px solid #f4f4f5', paddingTop: '10px' }}>
-                            {order.items.map((it, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '6px 0',
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {order.items.map((it, idx) => {
+                              const existingRev = customerReviews[it.productId];
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    padding: '10px 0',
+                                    borderBottom: idx < order.items.length - 1 ? '1px solid #f4f4f5' : 'none',
+                                  }}
+                                >
                                   <div
                                     style={{
-                                      width: '38px',
-                                      height: '38px',
-                                      borderRadius: '6px',
-                                      background: '#f4f4f5',
-                                      overflow: 'hidden',
-                                      flexShrink: 0,
-                                      display: 'grid',
-                                      placeItems: 'center',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '12px',
                                     }}
                                   >
-                                    {it.image ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={it.image} alt={it.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                      <CarFront size={18} style={{ color: '#71717a' }} />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#09090b' }}>
-                                      {it.name}
+                                    <Link
+                                      href={`/product/${it.productId}`}
+                                      style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0 }}
+                                      title="Click to see product details"
+                                    >
+                                      <div
+                                        style={{
+                                          width: '42px',
+                                          height: '42px',
+                                          borderRadius: '8px',
+                                          background: '#f4f4f5',
+                                          overflow: 'hidden',
+                                          flexShrink: 0,
+                                          display: 'grid',
+                                          placeItems: 'center',
+                                          border: '1px solid #e4e4e7',
+                                        }}
+                                      >
+                                        {it.image ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img src={it.image} alt={it.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                          <CarFront size={20} style={{ color: '#71717a' }} />
+                                        )}
+                                      </div>
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#09090b', lineHeight: '1.3' }}>
+                                          {it.name}
+                                        </div>
+                                        <div style={{ fontSize: '11.5px', color: '#71717a', marginTop: '2px' }}>
+                                          Qty: {it.quantity} · {formatINR(it.unitPrice)}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#09090b', whiteSpace: 'nowrap' }}>
+                                      {formatINR(it.lineSubtotal)}
                                     </div>
-                                    <div style={{ fontSize: '11.5px', color: '#71717a' }}>
-                                      Qty: {it.quantity} · {formatINR(it.unitPrice)}
+                                  </div>
+
+                                  {/* Item Actions Row: See Product + Write/Edit/Delete Review */}
+                                  <div className="ac-item-actions-row">
+                                    <Link
+                                      href={`/product/${it.productId}`}
+                                      className="ac-btn-outline"
+                                      style={{ height: '28px', fontSize: '11.5px', padding: '0 10px', textDecoration: 'none' }}
+                                    >
+                                      <ExternalLink size={12} />
+                                      <span>See Product</span>
+                                    </Link>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                      {existingRev ? (
+                                        <>
+                                          <span className="ac-review-status-pill" title={existingRev.title}>
+                                            <Star size={11} fill="#16a34a" color="#16a34a" />
+                                            <span>{existingRev.rating}/5 Rated</span>
+                                          </span>
+                                          <button
+                                            type="button"
+                                            className="ac-btn-outline"
+                                            onClick={() => handleOpenReviewModal(it, order)}
+                                            style={{ height: '28px', fontSize: '11.5px', padding: '0 8px' }}
+                                            title="Edit your review"
+                                          >
+                                            <Pencil size={11} />
+                                            <span>Edit Review</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="ac-btn-danger"
+                                            onClick={() => handleDeleteCustomerReview(it.productId, it.name)}
+                                            style={{ height: '28px', fontSize: '11.5px', padding: '0 8px' }}
+                                            title="Delete your review"
+                                          >
+                                            <Trash2 size={11} />
+                                            <span>Delete</span>
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="ac-btn-outline"
+                                          onClick={() => handleOpenReviewModal(it, order)}
+                                          style={{
+                                            height: '28px',
+                                            fontSize: '11.5px',
+                                            padding: '0 10px',
+                                            borderColor: '#86efac',
+                                            color: '#15803d',
+                                            background: '#f0fdf4',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          <Star size={12} color="#16a34a" fill="#16a34a" />
+                                          <span>Write a Review</span>
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
-                                <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#09090b' }}>
-                                  {formatINR(it.lineSubtotal)}
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
 
-                          {/* Card Footer Actions (Re-order in Signature Red!) */}
+                          {/* Card Footer Actions (Download Invoice, View Invoice, Re-order) */}
                           <div
                             style={{
                               display: 'flex',
@@ -935,8 +1309,18 @@ export default function AccountPage() {
                               marginTop: '14px',
                               paddingTop: '12px',
                               borderTop: '1px solid #f4f4f5',
+                              flexWrap: 'wrap',
                             }}
                           >
+                            <button
+                              type="button"
+                              className="ac-btn-outline"
+                              onClick={() => handleDownloadInvoice(order)}
+                              style={{ height: '32px', fontSize: '12.5px', padding: '0 12px' }}
+                            >
+                              <Download size={13} />
+                              Download Invoice
+                            </button>
                             <button
                               type="button"
                               className="ac-btn-outline"
@@ -944,7 +1328,7 @@ export default function AccountPage() {
                               style={{ height: '32px', fontSize: '12.5px', padding: '0 12px' }}
                             >
                               <FileText size={13} />
-                              Invoice
+                              View Invoice
                             </button>
                             <button
                               type="button"
@@ -1984,16 +2368,27 @@ export default function AccountPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px', paddingTop: '12px', borderTop: '1px solid #f4f4f5' }}>
-              <button
-                type="button"
-                className="ac-btn-dark"
-                onClick={() => window.print()}
-                style={{ height: '34px', fontSize: '12.5px' }}
-              >
-                <Printer size={13} />
-                Print Invoice
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '12px', borderTop: '1px solid #f4f4f5', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="ac-btn-dark"
+                  onClick={() => handleDownloadInvoice(invoiceModalOrder)}
+                  style={{ height: '34px', fontSize: '12.5px' }}
+                >
+                  <Download size={13} />
+                  Download Invoice
+                </button>
+                <button
+                  type="button"
+                  className="ac-btn-outline"
+                  onClick={() => window.print()}
+                  style={{ height: '34px', fontSize: '12.5px' }}
+                >
+                  <Printer size={13} />
+                  Print
+                </button>
+              </div>
               <button
                 type="button"
                 className="ac-btn-outline"
@@ -2003,6 +2398,141 @@ export default function AccountPage() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODAL: WRITE / EDIT PRODUCT REVIEW                                */}
+      {/* ================================================================= */}
+      {reviewModalData && (
+        <div className="ac-dialog-overlay" onClick={() => setReviewModalData(null)}>
+          <div
+            className="ac-dialog-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '480px', padding: '24px' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f4f4f5', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#09090b' }}>
+                  {reviewModalData.existingReview ? 'Edit Your Review' : 'Write a Product Review'}
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#71717a' }}>
+                  Order #{reviewModalData.orderNumber} · <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Verified Purchase</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewModalData(null)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#71717a' }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: '#fafaf8', borderRadius: '10px', border: '1px solid #e4e4e7', marginBottom: '16px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '6px', background: '#fff', overflow: 'hidden', flexShrink: 0, display: 'grid', placeItems: 'center', border: '1px solid #e4e4e7' }}>
+                {reviewModalData.productImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={reviewModalData.productImage} alt={reviewModalData.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <CarFront size={20} color="#71717a" />
+                )}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#09090b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {reviewModalData.productName}
+                </div>
+                <Link
+                  href={`/product/${reviewModalData.productId}`}
+                  target="_blank"
+                  style={{ fontSize: '11.5px', color: '#e2231a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                >
+                  <span>See product details</span>
+                  <ExternalLink size={11} />
+                </Link>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitCustomerReview}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#3f3f46', marginBottom: '6px' }}>
+                  Overall Rating:
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const isFilled = (hoverReviewRating || reviewRating) >= star;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        className="ac-star-picker-btn"
+                        onMouseEnter={() => setHoverReviewRating(star)}
+                        onMouseLeave={() => setHoverReviewRating(0)}
+                        onClick={() => setReviewRating(star)}
+                        style={{ color: isFilled ? '#f5a623' : '#d4d4d8' }}
+                      >
+                        ★
+                      </button>
+                    );
+                  })}
+                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#f5a623', marginLeft: '6px' }}>
+                    {reviewRating} of 5 Stars
+                  </span>
+                </div>
+              </div>
+
+              <div className="ac-field">
+                <label>Review Headline</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Flawless fitment and luxurious feel"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="ac-field">
+                <label>Your Feedback</label>
+                <textarea
+                  placeholder="Share specific details about the quality, installation ease, and fitment on your car..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={4}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #d4d4d8',
+                    fontSize: '13px',
+                    outline: 'none',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  className="ac-btn-outline"
+                  onClick={() => setReviewModalData(null)}
+                  style={{ height: '36px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ac-btn-dark"
+                  style={{ height: '36px', fontSize: '13px', background: '#0e0e0f' }}
+                >
+                  {reviewModalData.existingReview ? 'Update Review' : 'Publish Verified Review'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
