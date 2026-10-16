@@ -7253,3 +7253,140 @@ footer {
   border-radius: 999px;
 }
 
+/* ========================================================
+   CARXEN Premium Products Pagination System
+   ======================================================== */
+.cx-pagination-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line, #e5e7eb);
+}
+
+.cx-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cx-pagination-info {
+  font-family: var(--sans, sans-serif);
+  font-size: 13px;
+  color: var(--steel, #6b7280);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cx-pagination-info b {
+  color: var(--ink, #0e0e0f);
+  font-weight: 700;
+}
+
+.cx-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cx-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--sans, sans-serif);
+  background: #ffffff;
+  color: var(--ink, #0e0e0f);
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.cx-page-btn:hover:not(:disabled) {
+  border-color: #0e0e0f;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.cx-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #a1a1aa;
+}
+
+.cx-page-btn.cx-page-num {
+  min-width: 38px;
+  padding: 0 8px;
+}
+
+.cx-page-btn.cx-page-active {
+  background: #0e0e0f;
+  color: #ffffff;
+  border-color: #0e0e0f;
+  box-shadow: 0 4px 14px rgba(14, 14, 15, 0.22);
+  font-weight: 700;
+}
+
+.cx-page-btn.cx-page-active:hover {
+  background: #1b1b1e;
+  border-color: #1b1b1e;
+}
+
+.cx-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 38px;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.cx-pagination-quick {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: #9ca3af;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .cx-pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .cx-pagination-info {
+    order: 2;
+    font-size: 12px;
+  }
+  .cx-pagination-controls {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+  }
+  .cx-pagination-quick {
+    order: 3;
+  }
+}
+
+

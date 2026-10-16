@@ -16,6 +16,7 @@ import { Footer } from '@/components/Footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
+import { Pagination } from '@/components/ui/Pagination';
 import { Search, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 function ShopContent() {
@@ -157,6 +158,21 @@ function ShopContent() {
     dealsOnly,
     products,
   ]);
+
+  // Pagination State (12 items per page for shop collection)
+  const PAGE_SIZE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Automatically reset to page 1 whenever any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, fitType, priceTier, ratingFilter, seriesFilter, searchQuery, sortBy, dealsOnly]);
+
+  const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
 
   const hasActiveFilters =
     category !== 'all' ||
@@ -467,8 +483,8 @@ function ShopContent() {
                     </div>
                   )}
 
-                  <div className="grid">
-                    {filteredProducts.map((p) => {
+                  <div className="grid" id="shop-products-grid">
+                    {paginatedProducts.map((p) => {
                       const custom = isCustomFit(p);
                       return (
                         <ProductCard
@@ -484,6 +500,15 @@ function ShopContent() {
                       );
                     })}
                   </div>
+
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredProducts.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    scrollTargetId="shop-products-grid"
+                  />
 
                   {filteredProducts.length === 0 && (
                     <div className="empty-state-card">

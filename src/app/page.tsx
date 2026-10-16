@@ -20,6 +20,7 @@ import { Cards } from '@/components/ui/interface-crafts-cards';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
+import { Pagination } from '@/components/ui/Pagination';
 import { AddonSections } from '@/components/storefront/AddonSections';
 
 const WHY_GALLERY_ITEMS = [
@@ -205,6 +206,21 @@ export default function HomePage() {
     searchQuery,
     products,
   ]);
+
+  // Pagination State (9 items per page for landing grid)
+  const PAGE_SIZE = 9;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Automatically reset to page 1 whenever any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCat, priceMin, priceMax, starRating, selectedSeries, deliveryType, sortBy, searchQuery]);
+
+  const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
 
   // Fitment Finder State
   const [selectedBrand, setSelectedBrand] = useState('');
@@ -726,7 +742,13 @@ export default function HomePage() {
                   </button>
                   <span className="res" id="res">
                     {catalogStatus === 'ready' ? (
-                      <>Showing <b>{filteredProducts.length}</b> of {products.length} products</>
+                      filteredProducts.length > 0 ? (
+                        <>
+                          Showing <b>{(currentPage - 1) * PAGE_SIZE + 1} – {Math.min(currentPage * PAGE_SIZE, filteredProducts.length)}</b> of {filteredProducts.length} products
+                        </>
+                      ) : (
+                        <>0 products found</>
+                      )
                     ) : (
                       'Catalog status unavailable'
                     )}
@@ -771,7 +793,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <div className="grid" id="grid">
-                    {filteredProducts.map((p) => (
+                    {paginatedProducts.map((p) => (
                       <ProductCard
                         key={p.id}
                         product={p}
@@ -783,6 +805,15 @@ export default function HomePage() {
                       />
                     ))}
                   </div>
+
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredProducts.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    scrollTargetId="shop"
+                  />
 
                   {filteredProducts.length === 0 && (
                     <div className="empty on" id="empty">
