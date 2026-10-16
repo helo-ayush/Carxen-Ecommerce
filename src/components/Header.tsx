@@ -28,6 +28,8 @@ function HeaderContent() {
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
+    let accumulatedDelta = 0;
+    let isHidden = false;
     let ticking = false;
 
     const handleScroll = () => {
@@ -36,12 +38,37 @@ function HeaderContent() {
           const currentScrollY = window.scrollY;
           setIsScrolled(currentScrollY > 20);
 
-          if (currentScrollY <= 15) {
-            setIsRibbonHidden(false);
-          } else if (currentScrollY > lastScrollY + 6 && currentScrollY > 60) {
+          // 1. Safe zone near the top: always keep the ribbon visible
+          if (currentScrollY <= 60) {
+            if (isHidden) {
+              isHidden = false;
+              setIsRibbonHidden(false);
+            }
+            accumulatedDelta = 0;
+            lastScrollY = currentScrollY;
+            ticking = false;
+            return;
+          }
+
+          const diff = currentScrollY - lastScrollY;
+
+          // If scroll direction reversed, reset delta accumulator
+          if ((diff > 0 && accumulatedDelta < 0) || (diff < 0 && accumulatedDelta > 0)) {
+            accumulatedDelta = 0;
+          }
+          accumulatedDelta += diff;
+
+          // 2. Downward scroll: require at least 35px continuous downward scroll past 100px
+          if (accumulatedDelta > 35 && currentScrollY > 100 && !isHidden) {
+            isHidden = true;
             setIsRibbonHidden(true);
-          } else if (currentScrollY < lastScrollY - 6) {
+            accumulatedDelta = 0;
+          }
+          // 3. Upward scroll: require at least 25px continuous upward scroll to reveal
+          else if (accumulatedDelta < -25 && isHidden) {
+            isHidden = false;
             setIsRibbonHidden(false);
+            accumulatedDelta = 0;
           }
 
           lastScrollY = currentScrollY;
