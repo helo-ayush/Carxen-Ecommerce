@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/ui/Pagination';
-import { Search, X, SlidersHorizontal, RotateCcw, Tag as TagIcon, Sparkles } from 'lucide-react';
+import { Search, X, SlidersHorizontal, RotateCcw, Tag as TagIcon, Sparkles, CarFront } from 'lucide-react';
 
 function ShopContent() {
   const router = useRouter();
@@ -304,10 +304,35 @@ function ShopContent() {
         <div className="wrap">
           <div className="sp-h">
             <div>
-              <h1 className="disp" id="spT">
-                Made for your {activeCar.m}
-                <span className="red">.</span>
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h1 className="disp" id="spT" style={{ margin: 0 }}>
+                  Made for your {activeCar.m}
+                  <span className="red">.</span>
+                </h1>
+                <Link
+                  href="/account?tab=garage"
+                  className="sp-change-vehicle-btn"
+                  title="Change vehicle or add new car in My Garage"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    background: '#f4f4f5',
+                    border: '1px solid #e4e4e7',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#0e0e0f',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <CarFront style={{ width: '13px', height: '13px', color: '#e2231a' }} />
+                  <span>Change vehicle</span>
+                  <span style={{ fontSize: '11px', color: '#71717a' }}>&rarr;</span>
+                </Link>
+              </div>
               <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--steel, #8c8b86)' }}>
                 {filteredProducts.length} precision-fit parts compatible with your {activeCar.y} {activeCar.b} {activeCar.m}
               </p>

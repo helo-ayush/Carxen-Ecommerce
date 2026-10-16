@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useApp } from '@/context/AppContext';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useApp, type GarageVehicle } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/customer';
 import { Footer } from '@/components/Footer';
@@ -48,7 +48,7 @@ function getInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export default function AccountPage() {
+function AccountContent() {
   const router = useRouter();
   const {
     user,
@@ -77,12 +77,45 @@ export default function AccountPage() {
     showToast,
     isVerifiedBuyer,
     totalProductsBought,
+    garageVehicles,
+    addGarageVehicle,
+    updateGarageVehicle,
+    deleteGarageVehicle,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<AccountTab>('orders');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<AccountTab>(
+    (tabParam as AccountTab) || 'orders'
+  );
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('ALL');
   const [orderSearch, setOrderSearch] = useState('');
   const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      tabParam === 'garage' ||
+      tabParam === 'orders' ||
+      tabParam === 'addresses' ||
+      tabParam === 'payments' ||
+      tabParam === 'security'
+    ) {
+      setActiveTab(tabParam as AccountTab);
+    }
+  }, [tabParam]);
+
+  // Vehicle Add / Edit Modal state
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<GarageVehicle | null>(null);
+  const [vehicleForm, setVehicleForm] = useState({
+    b: 'Porsche',
+    m: '',
+    y: '2024',
+    f: 'Petrol',
+    isDefault: false,
+  });
+  const [isCustomBrand, setIsCustomBrand] = useState(false);
 
   // Modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -607,6 +640,95 @@ export default function AccountPage() {
     setNewCardExpiry('');
     setNewUpiId('');
     setIsPaymentModalOpen(false);
+  };
+
+  // Garage Vehicle Handlers
+  const handleOpenAddVehicle = () => {
+    setEditingVehicle(null);
+    setIsCustomBrand(false);
+    setVehicleForm({
+      b: 'Porsche',
+      m: '',
+      y: '2024',
+      f: 'Petrol',
+      isDefault: false,
+    });
+    setIsVehicleModalOpen(true);
+  };
+
+  const handleOpenEditVehicle = (veh: GarageVehicle, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingVehicle(veh);
+    const standardBrands = [
+      'Porsche',
+      'BMW',
+      'Mercedes-Benz',
+      'Audi',
+      'Toyota',
+      'Maruti Suzuki',
+      'Hyundai',
+      'Tata',
+      'Mahindra',
+      'Kia',
+      'Honda',
+      'Ford',
+      'Ferrari',
+      'Lamborghini',
+      'Volkswagen',
+    ];
+    setIsCustomBrand(!standardBrands.includes(veh.b));
+    setVehicleForm({
+      b: veh.b,
+      m: veh.m,
+      y: veh.y,
+      f: veh.f || 'Petrol',
+      isDefault: Boolean(car && car.m === veh.m && car.y === veh.y),
+    });
+    setIsVehicleModalOpen(true);
+  };
+
+  const handleDeleteVehicle = async (id: string, name: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (garageVehicles.length <= 1) {
+      showToast('You must keep at least 1 vehicle in your garage.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to remove "${name}" from your garage?`)) {
+      await deleteGarageVehicle(id);
+    }
+  };
+
+  const handleSaveVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const brand = vehicleForm.b.trim();
+    const model = vehicleForm.m.trim();
+    const year = vehicleForm.y.trim();
+    const fuel = vehicleForm.f.trim() || 'Petrol';
+
+    if (!brand || !model || !year) {
+      showToast('Please fill in Brand, Model, and Year.');
+      return;
+    }
+
+    if (editingVehicle) {
+      await updateGarageVehicle({
+        id: editingVehicle.id,
+        b: brand,
+        m: model,
+        y: year,
+        f: fuel,
+        isDefault: vehicleForm.isDefault,
+      });
+    } else {
+      await addGarageVehicle({
+        b: brand,
+        m: model,
+        y: year,
+        f: fuel,
+        isDefault: vehicleForm.isDefault,
+      });
+    }
+    setIsVehicleModalOpen(false);
   };
 
   // Password update
@@ -1557,37 +1679,46 @@ export default function AccountPage() {
               {/* TAB 3: GARAGE & FITMENT                                   */}
               {/* ========================================================= */}
               {activeTab === 'garage' && (
-                <div style={{ maxWidth: '680px' }}>
+                <div style={{ maxWidth: '820px' }}>
+                  {/* Active Vehicle & Fitment Guarantee */}
                   <div
                     style={{
                       background: '#ffffff',
                       border: '1px solid #e4e4e7',
                       borderRadius: '14px',
                       padding: '22px',
-                      marginBottom: '16px',
+                      marginBottom: '20px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
                         <div style={{ fontSize: '11px', fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <ShieldCheck size={13} color="#16a34a" />
-                          Active Vehicle & Fitment Guarantee
+                          ACTIVE VEHICLE &amp; FITMENT GUARANTEE
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#09090b', margin: '2px 0' }}>
+                        <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#09090b', margin: '4px 0 2px' }}>
                           {car ? `${car.y} ${car.b} ${car.m}` : '2023 Porsche 911 GT3 (992)'}
                         </h3>
                         <div style={{ fontSize: '13px', color: '#71717a' }}>
-                          Trim / Engine: {car?.f || '4.0L Naturally Aspirated Flat-6 (502 HP)'}
+                          Trim / Engine: {car?.f || 'Petrol'}
                         </div>
                       </div>
 
-                      <Link className="ac-btn-red" href="/garage" style={{ height: '36px', fontSize: '13px' }}>
-                        <CarFront size={14} />
-                        Change Vehicle
-                      </Link>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="ac-btn-red"
+                          onClick={handleOpenAddVehicle}
+                          style={{ height: '36px', fontSize: '13px' }}
+                        >
+                          <Plus size={14} />
+                          Add New Vehicle
+                        </button>
+                      </div>
                     </div>
                   </div>
 
+                  {/* My Garage Vehicles Grid */}
                   <div
                     style={{
                       background: '#ffffff',
@@ -1596,38 +1727,103 @@ export default function AccountPage() {
                       padding: '20px',
                     }}
                   >
-                    <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#09090b', marginBottom: '10px' }}>
-                      Quick Switch Vehicle
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#09090b' }}>
+                          Quick Switch Vehicle ({garageVehicles.length})
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>
+                          Click any vehicle to switch or edit its details. All changes are saved to your customer profile.
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                      <button
-                        type="button"
-                        className="ac-btn-outline"
-                        onClick={() => setVehicle({ b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol' })}
-                        style={{ textAlign: 'left', padding: '10px', height: 'auto', display: 'block' }}
-                      >
-                        <b style={{ display: 'block', fontSize: '13px' }}>Porsche 911 GT3</b>
-                        <small style={{ color: '#71717a', fontSize: '11.5px' }}>2023 · Petrol</small>
-                      </button>
 
-                      <button
-                        type="button"
-                        className="ac-btn-outline"
-                        onClick={() => setVehicle({ b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' })}
-                        style={{ textAlign: 'left', padding: '10px', height: 'auto', display: 'block' }}
-                      >
-                        <b style={{ display: 'block', fontSize: '13px' }}>BMW M3 Competition</b>
-                        <small style={{ color: '#71717a', fontSize: '11.5px' }}>2024 · Petrol</small>
-                      </button>
+                    <div className="ac-garage-grid">
+                      {garageVehicles.map((veh) => {
+                        const isActive =
+                          Boolean(car && car.m === veh.m && car.y === veh.y) ||
+                          (!car && veh.isDefault);
 
+                        return (
+                          <div
+                            key={veh.id}
+                            className={`ac-vehicle-card ${isActive ? 'is-active' : ''}`}
+                            onClick={() => setVehicle({ b: veh.b, m: veh.m, y: veh.y, f: veh.f })}
+                            title="Click to set as active vehicle"
+                          >
+                            <div>
+                              <div className="ac-vehicle-card-header">
+                                <span className="ac-vehicle-card-title">
+                                  {veh.b} {veh.m}
+                                </span>
+                                {isActive && (
+                                  <span className="ac-vehicle-active-tag">
+                                    <Check size={11} /> Active
+                                  </span>
+                                )}
+                              </div>
+                              <div className="ac-vehicle-card-sub">
+                                {veh.y} · {veh.f || 'Petrol'}
+                              </div>
+                            </div>
+
+                            <div className="ac-vehicle-actions" onClick={(e) => e.stopPropagation()}>
+                              {!isActive ? (
+                                <button
+                                  type="button"
+                                  className="ac-btn-subtle-red"
+                                  onClick={() => setVehicle({ b: veh.b, m: veh.m, y: veh.y, f: veh.f })}
+                                  style={{ height: '26px', fontSize: '11.5px', padding: '0 8px' }}
+                                >
+                                  Select
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  <Check size={12} /> In Use
+                                </span>
+                              )}
+
+                              <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                                <button
+                                  type="button"
+                                  className="ac-btn-outline"
+                                  onClick={(e) => handleOpenEditVehicle(veh, e)}
+                                  title="Edit Vehicle"
+                                  style={{ height: '26px', width: '28px', padding: 0, display: 'grid', placeItems: 'center' }}
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ac-btn-danger"
+                                  onClick={(e) => handleDeleteVehicle(veh.id, `${veh.y} ${veh.b} ${veh.m}`, e)}
+                                  title="Delete Vehicle"
+                                  style={{ height: '26px', width: '28px', padding: 0, display: 'grid', placeItems: 'center' }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* 4th Box / Add New Vehicle Box (Always present alongside saved vehicles) */}
                       <button
                         type="button"
-                        className="ac-btn-outline"
-                        onClick={() => setVehicle({ b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' })}
-                        style={{ textAlign: 'left', padding: '10px', height: 'auto', display: 'block' }}
+                        className="ac-add-vehicle-card"
+                        onClick={handleOpenAddVehicle}
+                        title="Add a new vehicle to your garage"
                       >
-                        <b style={{ display: 'block', fontSize: '13px' }}>Toyota GR Supra 3.0</b>
-                        <small style={{ color: '#71717a', fontSize: '11.5px' }}>2022 · Petrol</small>
+                        <div className="ac-add-vehicle-icon">
+                          <Plus size={18} />
+                        </div>
+                        <b style={{ fontSize: '13px', color: '#09090b', display: 'block', marginBottom: '2px' }}>
+                          Add New Vehicle
+                        </b>
+                        <small style={{ color: '#71717a', fontSize: '11px' }}>
+                          Register another car
+                        </small>
                       </button>
                     </div>
                   </div>
@@ -2563,7 +2759,225 @@ export default function AccountPage() {
         </div>
       )}
 
+      {/* ================================================================= */}
+      {/* MODAL: ADD / EDIT VEHICLE MODAL                                  */}
+      {/* ================================================================= */}
+      {isVehicleModalOpen && (
+        <div className="ac-dialog-overlay" onClick={() => setIsVehicleModalOpen(false)}>
+          <div className="ac-dialog-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', color: '#e2231a', display: 'grid', placeItems: 'center' }}>
+                  <CarFront size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#09090b', margin: 0 }}>
+                    {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#71717a' }}>
+                    Saved to customer profile in database
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVehicleModalOpen(false)}
+                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVehicle}>
+              {/* Brand Selector */}
+              <div className="ac-field">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ margin: 0 }}>Make / Brand</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomBrand(!isCustomBrand)}
+                    style={{ fontSize: '11.5px', color: '#e2231a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    {isCustomBrand ? 'Choose from list' : '+ Enter custom brand'}
+                  </button>
+                </div>
+                {isCustomBrand ? (
+                  <input
+                    type="text"
+                    value={vehicleForm.b}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, b: e.target.value })}
+                    placeholder="e.g. Aston Martin, Ferrari, Volvo"
+                    required
+                  />
+                ) : (
+                  <select
+                    value={vehicleForm.b}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, b: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid #d4d4d8',
+                      padding: '0 10px',
+                      fontSize: '13.5px',
+                      background: '#fff',
+                    }}
+                  >
+                    {[
+                      'Porsche',
+                      'BMW',
+                      'Mercedes-Benz',
+                      'Audi',
+                      'Toyota',
+                      'Maruti Suzuki',
+                      'Hyundai',
+                      'Tata',
+                      'Mahindra',
+                      'Kia',
+                      'Honda',
+                      'Ford',
+                      'Ferrari',
+                      'Lamborghini',
+                      'Volkswagen',
+                    ].map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Model */}
+              <div className="ac-field">
+                <label>Model &amp; Generation</label>
+                <input
+                  type="text"
+                  value={vehicleForm.m}
+                  onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
+                  placeholder="e.g. 911 GT3 (992), M3 Competition, Fortuner"
+                  required
+                />
+              </div>
+
+              {/* Year & Fuel */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="ac-field" style={{ margin: 0 }}>
+                  <label>Model Year</label>
+                  <select
+                    value={vehicleForm.y}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, y: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid #d4d4d8',
+                      padding: '0 10px',
+                      fontSize: '13.5px',
+                      background: '#fff',
+                    }}
+                  >
+                    {['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016'].map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ac-field" style={{ margin: 0 }}>
+                  <label>Fuel / Engine</label>
+                  <select
+                    value={vehicleForm.f}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, f: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid #d4d4d8',
+                      padding: '0 10px',
+                      fontSize: '13.5px',
+                      background: '#fff',
+                    }}
+                  >
+                    {['Petrol', 'Diesel', 'Hybrid', 'Electric', 'Turbo Petrol', 'V8 Twin-Turbo'].map((fuel) => (
+                      <option key={fuel} value={fuel}>
+                        {fuel}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Set as active toggle */}
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '14px',
+                  marginBottom: '18px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#3f3f46',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={vehicleForm.isDefault}
+                  onChange={(e) => setVehicleForm({ ...vehicleForm, isDefault: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
+                />
+                <span>Set as active vehicle for part fitment guarantee</span>
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="ac-btn-outline"
+                  onClick={() => setIsVehicleModalOpen(false)}
+                  style={{ height: '36px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ac-btn-red"
+                  style={{ height: '36px', fontSize: '13px' }}
+                >
+                  {editingVehicle ? 'Update Vehicle' : 'Add to Garage'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="ac-portal-wrap"
+          style={{
+            minHeight: '60vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            color: '#71717a',
+          }}
+        >
+          Loading Garage &amp; Account...
+        </div>
+      }
+    >
+      <AccountContent />
+    </Suspense>
   );
 }

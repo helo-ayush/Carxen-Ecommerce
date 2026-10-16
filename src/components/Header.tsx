@@ -167,9 +167,9 @@ function HeaderContent() {
             /* SHOP / STORE PAGES: Interactive Vehicle Fitment Chip + Expanded Search */
             <div className="hd-shop-center">
               <Link
-                href="/garage"
+                href="/account?tab=garage"
                 className="hd-vehicle-chip"
-                title={`Active Vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m} · Click to change`}
+                title={`Active Vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m} · Click to manage vehicles in My Garage`}
               >
                 <span className="hd-vehicle-dot" />
                 <span className="hd-vehicle-name">

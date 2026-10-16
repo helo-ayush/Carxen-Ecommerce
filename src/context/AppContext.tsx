@@ -46,6 +46,22 @@ export interface Vehicle {
   f: string; // fuel
 }
 
+export interface GarageVehicle {
+  id: string;
+  b: string; // brand
+  m: string; // model
+  y: string; // year
+  f: string; // fuel
+  nickname?: string;
+  isDefault?: boolean;
+}
+
+export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
+  { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
+  { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
+  { id: 'veh-3', b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' },
+];
+
 interface AppContextType {
   products: Product[];
   storeSettings: Record<string, any> | null;
@@ -56,6 +72,7 @@ interface AppContextType {
   user: User | null;
   authLoading: boolean;
   car: Vehicle | null;
+  garageVehicles: GarageVehicle[];
   cart: Record<number, number>;
   cartCount: number;
   cartSubtotal: number;
@@ -86,6 +103,9 @@ interface AppContextType {
   updateCommunicationPrefs: (prefs: Partial<CommunicationPreferences>) => void;
   updateGstBilling: (info: Partial<GstBillingInfo>) => void;
   setVehicle: (v: Vehicle) => void;
+  addGarageVehicle: (v: Omit<GarageVehicle, 'id'>) => Promise<GarageVehicle>;
+  updateGarageVehicle: (v: GarageVehicle) => Promise<void>;
+  deleteGarageVehicle: (id: string) => Promise<void>;
   addToCart: (productId: number, qty?: number) => void;
   updateCartQty: (productId: number, delta: number) => void;
   removeFromCart: (productId: number) => void;
@@ -127,6 +147,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [savedPayments, setSavedPayments] = useState<SavedPaymentMethod[]>(DEFAULT_SAVED_PAYMENTS);
   const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
+  const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
 
   const requestCatalog = useCallback(async (signal?: AbortSignal) => {
     setCatalogStatus('loading');
@@ -235,6 +256,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           if (data.profile.gstBilling) {
             setGstBilling(data.profile.gstBilling);
+          }
+          if (Array.isArray(data.profile.garageVehicles) && data.profile.garageVehicles.length > 0) {
+            setGarageVehicles(data.profile.garageVehicles);
+          }
+          if (data.profile.activeVehicle) {
+            setCar(data.profile.activeVehicle);
           }
         }
 
@@ -365,6 +392,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const savedGst = localStorage.getItem('cx_gst_billing');
       if (savedGst) setGstBilling(JSON.parse(savedGst));
+
+      const savedGarage = localStorage.getItem('cx_garage_vehicles');
+      if (savedGarage) {
+        const parsed = JSON.parse(savedGarage);
+        if (Array.isArray(parsed) && parsed.length > 0) setGarageVehicles(parsed);
+      }
     } catch (e) {
       console.error('Storage access error', e);
     }
@@ -428,6 +461,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('cx_gst_billing', JSON.stringify(gstBilling));
     } catch (e) {}
   }, [gstBilling, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem('cx_garage_vehicles', JSON.stringify(garageVehicles));
+    } catch (e) {}
+  }, [garageVehicles, isLoaded]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -778,9 +818,97 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setVehicle = (v: Vehicle) => {
+  const setVehicle = async (v: Vehicle) => {
     setCar(v);
     showToast(`Garage set — ${v.y} ${v.b} ${v.m}`);
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ activeVehicle: v }),
+      });
+    } catch (err) {
+      // quiet
+    }
+  };
+
+  const addGarageVehicle = async (v: Omit<GarageVehicle, 'id'>) => {
+    const newVeh: GarageVehicle = {
+      ...v,
+      id: `veh_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    };
+    const updated = v.isDefault
+      ? [...garageVehicles.map((item) => ({ ...item, isDefault: false })), newVeh]
+      : [...garageVehicles, newVeh];
+
+    setGarageVehicles(updated);
+    if (newVeh.isDefault || !car) {
+      setCar({ b: newVeh.b, m: newVeh.m, y: newVeh.y, f: newVeh.f });
+    }
+    showToast(`Added ${newVeh.y} ${newVeh.b} ${newVeh.m} to Garage`);
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/vehicles', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newVeh),
+      });
+    } catch (err) {
+      console.warn('Backend vehicle save error:', err);
+    }
+    return newVeh;
+  };
+
+  const updateGarageVehicle = async (v: GarageVehicle) => {
+    const updated = garageVehicles.map((item) => {
+      if (item.id === v.id) return v;
+      if (v.isDefault) return { ...item, isDefault: false };
+      return item;
+    });
+    setGarageVehicles(updated);
+
+    if (v.isDefault || (car && car.m === v.m)) {
+      setCar({ b: v.b, m: v.m, y: v.y, f: v.f });
+    }
+    showToast(`Updated ${v.y} ${v.b} ${v.m}`);
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/vehicles', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(v),
+      });
+    } catch (err) {
+      console.warn('Backend vehicle update error:', err);
+    }
+  };
+
+  const deleteGarageVehicle = async (id: string) => {
+    const target = garageVehicles.find((x) => x.id === id);
+    const updated = garageVehicles.filter((x) => x.id !== id);
+    setGarageVehicles(updated);
+
+    if (target && car && car.m === target.m && car.y === target.y) {
+      if (updated.length > 0) {
+        const nextActive = updated[0];
+        setCar({ b: nextActive.b, m: nextActive.m, y: nextActive.y, f: nextActive.f });
+      }
+    }
+    showToast('Vehicle removed from garage');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`/api/storefront/customer/vehicles?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      });
+    } catch (err) {
+      console.warn('Backend vehicle delete error:', err);
+    }
   };
 
   const addToCart = (productId: number, qty = 1) => {
@@ -943,6 +1071,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateCommunicationPrefs,
         updateGstBilling,
         setVehicle,
+        garageVehicles,
+        addGarageVehicle,
+        updateGarageVehicle,
+        deleteGarageVehicle,
         addToCart,
         updateCartQty,
         removeFromCart,
