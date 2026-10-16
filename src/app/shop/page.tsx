@@ -23,6 +23,9 @@ function ShopContent() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('q') || '';
   const catParam = searchParams.get('cat') || 'all';
+  const seriesParam = searchParams.get('series') || 'all';
+  const sortParam = searchParams.get('sort') || 'pop';
+  const dealsParam = searchParams.get('deals') === '1';
 
   const {
     car,
@@ -46,18 +49,43 @@ function ShopContent() {
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
   const [priceTier, setPriceTier] = useState<'all' | 'lo' | 'mid' | 'hi'>('all');
   const [ratingFilter, setRatingFilter] = useState(false);
-  const [seriesFilter, setSeriesFilter] = useState('all');
+  const [seriesFilter, setSeriesFilter] = useState(seriesParam);
   const [searchQuery, setSearchQuery] = useState(queryParam);
-  const [sortBy, setSortBy] = useState('pop');
+  const [sortBy, setSortBy] = useState(sortParam);
+  const [dealsOnly, setDealsOnly] = useState(dealsParam);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
-    if (queryParam) setSearchQuery(queryParam);
+    setSearchQuery(queryParam);
   }, [queryParam]);
 
   useEffect(() => {
-    if (catParam) setCategory(catParam);
+    setCategory(catParam);
   }, [catParam]);
+
+  useEffect(() => {
+    setSeriesFilter(seriesParam);
+  }, [seriesParam]);
+
+  useEffect(() => {
+    setSortBy(sortParam);
+  }, [sortParam]);
+
+  useEffect(() => {
+    setDealsOnly(dealsParam);
+  }, [dealsParam]);
+
+  const handleCategorySelect = (k: string) => {
+    setCategory(k);
+    const params = new URLSearchParams(searchParams.toString());
+    if (k === 'all') {
+      params.delete('cat');
+    } else {
+      params.set('cat', k);
+    }
+    const qs = params.toString();
+    router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
 
   const priceRanges = {
     all: [0, 1e9],
@@ -90,13 +118,15 @@ function ShopContent() {
       ).toLowerCase();
       const matchQuery =
         !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
+      const matchDeals = !dealsOnly || Boolean(p.isCombo || (p.o && p.o > p.p));
       return (
         matchCat &&
         matchFit &&
         matchPrice &&
         matchRating &&
         matchSeries &&
-        matchQuery
+        matchQuery &&
+        matchDeals
       );
     });
 
@@ -124,6 +154,7 @@ function ShopContent() {
     seriesFilter,
     searchQuery,
     sortBy,
+    dealsOnly,
     products,
   ]);
 
@@ -133,6 +164,7 @@ function ShopContent() {
     priceTier !== 'all' ||
     ratingFilter ||
     seriesFilter !== 'all' ||
+    dealsOnly ||
     Boolean(searchQuery.trim());
 
   const resetAllFilters = () => {
@@ -142,34 +174,24 @@ function ShopContent() {
     setRatingFilter(false);
     setSeriesFilter('all');
     setSearchQuery('');
+    setDealsOnly(false);
+    router.replace('/shop', { scroll: false });
   };
 
   return (
     <div className="in-shop">
       <section className="sp on" id="v-shop">
-        <div className="sp-bar">
-          <div className="wrap">
-            <div className="sp-car">
-              <i />
-              <span>
-                {activeCar.y} {activeCar.b} {activeCar.m} · {activeCar.f}
-              </span>
-            </div>
-            <Link href="/garage" className="ch">
-              Change vehicle
-            </Link>
-            <span className="sp-ct">
-              {filteredProducts.length} parts for your {activeCar.m}
-            </span>
-          </div>
-        </div>
-
         <div className="wrap">
           <div className="sp-h">
-            <h1 className="disp" id="spT">
-              Made for your {activeCar.m}
-              <span className="red">.</span>
-            </h1>
+            <div>
+              <h1 className="disp" id="spT">
+                Made for your {activeCar.m}
+                <span className="red">.</span>
+              </h1>
+              <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--steel, #8c8b86)' }}>
+                {filteredProducts.length} precision-fit parts compatible with your {activeCar.y} {activeCar.b} {activeCar.m}
+              </p>
+            </div>
             <div className="sp-tools">
               <label className="hd-search">
                 <svg viewBox="0 0 24 24">
@@ -213,7 +235,7 @@ function ShopContent() {
               <button
                 key={k}
                 className={`pill ${category === k ? 'on' : ''}`}
-                onClick={() => setCategory(k)}
+                onClick={() => handleCategorySelect(k)}
               >
                 {label}
               </button>
@@ -406,6 +428,22 @@ function ShopContent() {
                           onClick={() => setSeriesFilter('all')}
                         >
                           <span>Series: {seriesFilter}</span>
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      {dealsOnly && (
+                        <button
+                          type="button"
+                          className="active-filter-chip"
+                          onClick={() => {
+                            setDealsOnly(false);
+                            const params = new URLSearchParams(searchParams.toString());
+                            params.delete('deals');
+                            const qs = params.toString();
+                            router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
+                          }}
+                        >
+                          <span>Combos & Deals</span>
                           <X className="w-3 h-3" />
                         </button>
                       )}
