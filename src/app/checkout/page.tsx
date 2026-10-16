@@ -325,7 +325,8 @@ export default function CheckoutPage() {
     const checkout: StorefrontCheckoutRequest = {
       customer: {
         name: selectedAddress.name || userName,
-        ...(selectedAddress.phone ? { phone: selectedAddress.phone } : {}),
+        ...(user?.email ? { email: user.email } : {}),
+        ...(selectedAddress.phone ? { phone: selectedAddress.phone } : (user?.phone ? { phone: user.phone } : {})),
       },
       shippingAddress: selectedAddress,
       items: cartEntries.map(({ product, qty }) => ({

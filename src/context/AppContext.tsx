@@ -99,6 +99,8 @@ interface AppContextType {
   openQuickView: (p: Product) => void;
   closeQuickView: () => void;
   showToast: (msg: string) => void;
+  isVerifiedBuyer: boolean;
+  totalProductsBought: number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -696,7 +698,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Orders
   const saveOrderToHistory = (order: CustomerOrderHistoryRecord) => {
-    setOrders((prev) => [order, ...prev.filter((o) => o.orderNumber !== order.orderNumber)]);
+    setOrders((prev) => {
+      const updated = [order, ...prev.filter((o) => o.orderNumber !== order.orderNumber)];
+      try {
+        localStorage.setItem('cx_order_history', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to sync order history to localStorage:', err);
+      }
+      return updated;
+    });
   };
 
   // Saved Payment Methods CRUD
@@ -872,6 +882,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 0);
   }, [cart, products]);
 
+  // Total products bought across all non-cancelled orders in customer history
+  const totalProductsBought = useMemo(() => {
+    return orders.reduce((sum, order) => {
+      if (order.status?.toLowerCase() === 'cancelled') return sum;
+      const orderProductsCount = (order.items || []).reduce(
+        (itemSum, item) => itemSum + (item.quantity || 1),
+        0
+      );
+      return sum + orderProductsCount;
+    }, 0);
+  }, [orders]);
+
+  // Verified Buyer badge earned when any user has purchased >= 3 products
+  const isVerifiedBuyer = useMemo(() => {
+    return Boolean(user && totalProductsBought >= 3);
+  }, [user, totalProductsBought]);
+
   return (
     <AppContext.Provider
       value={{
@@ -887,6 +914,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         cart,
         cartCount,
         cartSubtotal,
+        isVerifiedBuyer,
+        totalProductsBought,
         fav,
         isCartOpen,
         isMobileMenuOpen,

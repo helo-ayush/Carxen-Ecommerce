@@ -35,6 +35,7 @@ import {
   Star,
   Download,
 } from 'lucide-react';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import './account.css';
 
 type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
@@ -74,6 +75,8 @@ export default function AccountPage() {
     addToCart,
     openCart,
     showToast,
+    isVerifiedBuyer,
+    totalProductsBought,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<AccountTab>('orders');
@@ -764,10 +767,28 @@ export default function AccountPage() {
                     <div>
                       <div className="ac-user-heading">
                         <span className="ac-user-name">{name}</span>
+                        {isVerifiedBuyer && (
+                          <VerifiedBadge
+                            size={20}
+                            tooltipText="Verified User · Purchased 3+ products from CARXEN"
+                          />
+                        )}
                         <span className="ac-member-pill">
                           <Sparkles size={12} color="#e2231a" />
                           {tier}
                         </span>
+                        {isVerifiedBuyer ? (
+                          <span className="ac-verified-buyer-tag">
+                            Verified Buyer ({totalProductsBought} products)
+                          </span>
+                        ) : (
+                          <span
+                            className="ac-buyer-progress-tag"
+                            title={`${Math.max(0, 3 - totalProductsBought)} more item(s) needed to unlock Verified User badge`}
+                          >
+                            {totalProductsBought}/3 to Verified
+                          </span>
+                        )}
                       </div>
                       <div className="ac-user-subtext">
                         <span>
@@ -864,10 +885,15 @@ export default function AccountPage() {
                     onClick={() => { setActiveTab('orders'); setOrderFilter('ALL'); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="ac-stat-number">{orders.length}</div>
+                    <div className="ac-stat-number" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      {orders.length}
+                      {isVerifiedBuyer && (
+                        <VerifiedBadge size={16} tooltipText="Verified User · Purchased 3+ products" />
+                      )}
+                    </div>
                     <div className="ac-stat-tag">
                       <Package size={12} />
-                      Total Orders
+                      {isVerifiedBuyer ? `${totalProductsBought} Items (Verified)` : `${orders.length} Orders (${totalProductsBought} Items)`}
                     </div>
                   </div>
 

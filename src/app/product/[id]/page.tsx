@@ -42,6 +42,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import '@/components/storefront/product-subtle-layout.css';
 
 export default function ProductDetailPage() {
@@ -95,6 +96,8 @@ function ProductDetailContent({ product }: { product: Product }) {
     showToast,
     products,
     orders,
+    isVerifiedBuyer,
+    totalProductsBought,
   } = useApp();
 
   const activeCar = useMemo(() => {
@@ -187,6 +190,9 @@ function ProductDetailContent({ product }: { product: Product }) {
     return false;
   }, [orders, product.id]);
 
+  // Verified Buyer logic: users who have bought >= 3 products across orders, or ordered this product
+  const isEligibleToReview = Boolean(isVerifiedBuyer || hasOrderedThisProduct);
+
   // Review submission & modal state
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [showNotOrderedModal, setShowNotOrderedModal] = useState(false);
@@ -251,7 +257,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       return;
     }
 
-    if (!hasOrderedThisProduct) {
+    if (!isEligibleToReview) {
       setShowNotOrderedModal(true);
       return;
     }
@@ -269,7 +275,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       return;
     }
 
-    if (!hasOrderedThisProduct) {
+    if (!isEligibleToReview) {
       setShowNotOrderedModal(true);
       return;
     }
@@ -311,7 +317,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       authorAvatar: user?.avatarUrl || '',
       date: 'Just now',
       text: replyText.trim(),
-      isVerifiedBuyer: hasOrderedThisProduct,
+      isVerifiedBuyer: Boolean(isVerifiedBuyer || hasOrderedThisProduct),
       isStaff: false,
     };
 
@@ -904,13 +910,18 @@ function ProductDetailContent({ product }: { product: Product }) {
             <div className="ps-reviews-action-box">
               <button
                 type="button"
-                className={`ps-write-review-btn ${hasOrderedThisProduct ? 'verified-buyer' : ''}`}
+                className={`ps-write-review-btn ${isEligibleToReview ? 'verified-buyer' : ''}`}
                 onClick={handleStartReview}
                 aria-label="Write a Review"
               >
                 <Pencil style={{ width: '15px', height: '15px' }} />
                 <span>Write a Review</span>
-                {hasOrderedThisProduct ? (
+                {isVerifiedBuyer ? (
+                  <span className="ps-verified-pill-tag">
+                    <VerifiedBadge size={14} showTooltip={false} />
+                    Verified Buyer
+                  </span>
+                ) : hasOrderedThisProduct ? (
                   <span className="ps-verified-pill-tag">✓ Verified Buyer</span>
                 ) : (
                   <span className="ps-lock-pill-tag">Verified Only</span>
@@ -979,8 +990,14 @@ function ProductDetailContent({ product }: { product: Product }) {
                     <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--ink, #0e0e0f)' }}>
                       Write a Verified Review
                     </h4>
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)' }}>
-                      Sharing your review as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b> · <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Verified Owner of {product.n}</span>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                      Sharing review as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b>
+                      {isVerifiedBuyer && (
+                        <VerifiedBadge size={15} tooltipText="Verified User · Purchased 3+ products" />
+                      )}
+                      <span style={{ color: '#16a34a', fontWeight: 600, marginLeft: '4px' }}>
+                        {isVerifiedBuyer ? '✓ Verified CARXEN Buyer' : `✓ Verified Owner of ${product.n}`}
+                      </span>
                     </p>
                   </div>
                   <button
@@ -1092,12 +1109,13 @@ function ProductDetailContent({ product }: { product: Product }) {
                           <span className="ps-review-item-stars">
                             {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
                           </span>
-                          <span className="ps-review-user-name">
+                          <span className="ps-review-user-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             {rev.name}
                             {rev.isVerified && (
-                              <span className="ps-verified-badge">
-                                ✓ Verified Buyer
-                              </span>
+                              <VerifiedBadge
+                                size={15}
+                                tooltipText="Verified User · Purchased 3+ products from CARXEN"
+                              />
                             )}
                           </span>
                         </div>
@@ -1136,12 +1154,13 @@ function ProductDetailContent({ product }: { product: Product }) {
                     {/* Inline Reply Form to Continue Conversation */}
                     {isReplying && (
                       <div className="ps-reply-form-card">
-                        <div className="ps-reply-form-author">
+                        <div className="ps-reply-form-author" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           Replying as: <b>{user?.name || 'Verified Driver'}</b>
-                          {hasOrderedThisProduct && (
-                            <span className="ps-verified-badge" style={{ marginLeft: '6px' }}>
-                              ✓ Verified Buyer
-                            </span>
+                          {isVerifiedBuyer && (
+                            <VerifiedBadge
+                              size={15}
+                              tooltipText="Verified User · Purchased 3+ products from CARXEN"
+                            />
                           )}
                         </div>
                         <textarea
@@ -1178,15 +1197,16 @@ function ProductDetailContent({ product }: { product: Product }) {
                         {combinedReplies.map((rep) => (
                           <div key={rep.id} className="ps-reply-item">
                             <div className="ps-reply-item-top">
-                              <div className="ps-reply-author-info">
+                              <div className="ps-reply-author-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 <span className="ps-reply-author-name">{rep.authorName}</span>
                                 {rep.isStaff && (
                                   <span className="ps-staff-badge">CARXEN Team</span>
                                 )}
                                 {rep.isVerifiedBuyer && !rep.isStaff && (
-                                  <span className="ps-verified-badge" style={{ fontSize: '10.5px' }}>
-                                    ✓ Verified Buyer
-                                  </span>
+                                  <VerifiedBadge
+                                    size={14}
+                                    tooltipText="Verified User · Purchased 3+ products from CARXEN"
+                                  />
                                 )}
                               </div>
                               <span className="ps-reply-date">{rep.date}</span>
@@ -1282,7 +1302,7 @@ function ProductDetailContent({ product }: { product: Product }) {
 
               <div className="ps-modal-body">
                 <p className="ps-modal-text">
-                  To ensure all reviews on CARXEN are 100% genuine and trustworthy for fellow enthusiasts, <b>only customers who have ordered and purchased this product can publish a review.</b>
+                  To ensure all reviews on CARXEN are 100% genuine and trustworthy for fellow enthusiasts, <b>only Verified Buyers (customers who have purchased 3+ products from CARXEN) or customers who ordered this item can publish a review.</b>
                 </p>
 
                 <div className="ps-modal-product-preview">
@@ -1295,12 +1315,14 @@ function ProductDetailContent({ product }: { product: Product }) {
                   </div>
                   <div className="ps-modal-info">
                     <span className="ps-modal-item-name">{product.n}</span>
-                    <span className="ps-modal-status-chip">✕ Not found in your order history</span>
+                    <span className="ps-modal-status-chip">
+                      {totalProductsBought}/3 Products Purchased · Not Yet Verified
+                    </span>
                   </div>
                 </div>
 
                 <p className="ps-modal-subtext">
-                  If you recently ordered this product or under a different email, please check your order status or sign in with that account.
+                  You need {Math.max(1, 3 - totalProductsBought)} more product purchase{3 - totalProductsBought === 1 ? '' : 's'} to unlock your platform Verified User badge, or purchase this product directly to review.
                 </p>
               </div>
 

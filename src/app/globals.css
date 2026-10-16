@@ -7143,3 +7143,113 @@ footer {
     font-size: 11px !important;
   }
 }
+
+/* ========================================================
+   TWITTER-STYLE VERIFIED USER TICK MARK & TOOLTIP
+   ======================================================== */
+.cx-verified-badge-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+  margin: 0 4px;
+}
+
+.cx-verified-badge-svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(29, 155, 240, 0.35));
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cx-verified-badge-wrap:hover .cx-verified-badge-svg {
+  transform: scale(1.15) rotate(4deg);
+}
+
+.cx-verified-badge-tooltip {
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  background: #09090b;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+}
+
+.cx-verified-badge-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #09090b transparent transparent transparent;
+}
+
+.cx-tooltip-title {
+  font-weight: 700;
+  color: #38bdf8;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  letter-spacing: -0.01em;
+}
+
+.cx-tooltip-desc {
+  font-size: 10px;
+  color: #d4d4d8;
+  font-weight: 500;
+}
+
+.cx-verified-badge-wrap:hover .cx-verified-badge-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ac-verified-buyer-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0284c7;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
+.ac-buyer-progress-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #71717a;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
