@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import {
   SERIES_LIST,
   CATEGORIES_LIST,
+  DEFAULT_PRESET_TAGS,
   formatINR,
   isCustomFit,
 } from '@/data/products';
@@ -17,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/ui/Pagination';
-import { Search, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { Search, X, SlidersHorizontal, RotateCcw, Tag as TagIcon, Sparkles } from 'lucide-react';
 
 function ShopContent() {
   const router = useRouter();
@@ -76,6 +77,32 @@ function ShopContent() {
     setDealsOnly(dealsParam);
   }, [dealsParam]);
 
+  const allStoreTags = useMemo(() => {
+    const set = new Set<string>(DEFAULT_PRESET_TAGS);
+    products.forEach((p) => {
+      if (Array.isArray(p.tags)) {
+        p.tags.forEach((t) => {
+          if (typeof t === 'string' && t.trim()) set.add(t.trim());
+        });
+      }
+    });
+    return Array.from(set);
+  }, [products]);
+
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach((p) => {
+      if (Array.isArray(p.tags)) {
+        p.tags.forEach((t) => {
+          if (typeof t === 'string' && t.trim()) {
+            counts[t.trim()] = (counts[t.trim()] || 0) + 1;
+          }
+        });
+      }
+    });
+    return counts;
+  }, [products]);
+
   const handleCategorySelect = (k: string) => {
     setCategory(k);
     const params = new URLSearchParams(searchParams.toString());
@@ -83,6 +110,38 @@ function ShopContent() {
       params.delete('cat');
     } else {
       params.set('cat', k);
+    }
+    const qs = params.toString();
+    router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
+
+  const handleTagSelect = (tag: string) => {
+    const isCurrentlyActive = searchQuery.trim().toLowerCase() === tag.toLowerCase();
+    const nextQuery = isCurrentlyActive ? '' : tag;
+    setSearchQuery(nextQuery);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextQuery) {
+      params.set('q', nextQuery);
+      // When clicking a tag, search across all categories by default so user sees all items
+      if (category !== 'all') {
+        setCategory('all');
+        params.delete('cat');
+      }
+    } else {
+      params.delete('q');
+    }
+    const qs = params.toString();
+    router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val.trim()) {
+      params.set('q', val.trim());
+    } else {
+      params.delete('q');
     }
     const qs = params.toString();
     router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
@@ -96,6 +155,13 @@ function ShopContent() {
   };
 
   const filteredProducts = useMemo(() => {
+    const rawQuery = searchQuery.trim().toLowerCase();
+    const tokens = rawQuery
+      .replace(/^#/, '')
+      .split(/\s+/)
+      .map((t) => t.replace(/^#/, ''))
+      .filter(Boolean);
+
     const list = products.filter((p) => {
       const matchCat = category === 'all' || p.c === category;
       const matchFit =
@@ -104,10 +170,21 @@ function ShopContent() {
       const matchPrice = p.p >= minP && p.p <= maxP;
       const matchRating = !ratingFilter || p.r >= 4.6;
       const matchSeries = seriesFilter === 'all' || p.s === seriesFilter;
+      const matchDeals = !dealsOnly || Boolean(p.isCombo || (p.o && p.o > p.p));
+
+      if (!matchCat || !matchFit || !matchPrice || !matchRating || !matchSeries || !matchDeals) {
+        return false;
+      }
+
+      if (tokens.length === 0) return true;
+
       const tagsStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
       const colorsStr = Array.isArray(p.colors)
         ? p.colors.map((c) => c.name).join(' ')
         : (Array.isArray(p.tintOptions) ? p.tintOptions.map((t) => t[0]).join(' ') : '');
+      const specsStr = Array.isArray(p.sp) ? p.sp.map((s) => `${s[0]} ${s[1]}`).join(' ') : '';
+      const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment) : '';
+
       const searchHaystack = (
         p.n + ' ' +
         p.c + ' ' +
@@ -115,20 +192,12 @@ function ShopContent() {
         (p.categoryLabel || '') + ' ' +
         (p.d || '') + ' ' +
         tagsStr + ' ' +
-        colorsStr
+        colorsStr + ' ' +
+        specsStr + ' ' +
+        fitmentStr
       ).toLowerCase();
-      const matchQuery =
-        !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
-      const matchDeals = !dealsOnly || Boolean(p.isCombo || (p.o && p.o > p.p));
-      return (
-        matchCat &&
-        matchFit &&
-        matchPrice &&
-        matchRating &&
-        matchSeries &&
-        matchQuery &&
-        matchDeals
-      );
+
+      return tokens.every((token) => searchHaystack.includes(token));
     });
 
     switch (sortBy) {
@@ -158,6 +227,41 @@ function ShopContent() {
     dealsOnly,
     products,
   ]);
+
+  // If a category was chosen but produces 0 results, find if other categories have matches
+  const crossCategoryMatches = useMemo(() => {
+    if (category === 'all' || !searchQuery.trim()) return [];
+    const rawQuery = searchQuery.trim().toLowerCase();
+    const tokens = rawQuery
+      .replace(/^#/, '')
+      .split(/\s+/)
+      .map((t) => t.replace(/^#/, ''))
+      .filter(Boolean);
+    if (tokens.length === 0) return [];
+
+    return products.filter((p) => {
+      const tagsStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
+      const colorsStr = Array.isArray(p.colors)
+        ? p.colors.map((c) => c.name).join(' ')
+        : (Array.isArray(p.tintOptions) ? p.tintOptions.map((t) => t[0]).join(' ') : '');
+      const specsStr = Array.isArray(p.sp) ? p.sp.map((s) => `${s[0]} ${s[1]}`).join(' ') : '';
+      const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment) : '';
+
+      const searchHaystack = (
+        p.n + ' ' +
+        p.c + ' ' +
+        p.s + ' ' +
+        (p.categoryLabel || '') + ' ' +
+        (p.d || '') + ' ' +
+        tagsStr + ' ' +
+        colorsStr + ' ' +
+        specsStr + ' ' +
+        fitmentStr
+      ).toLowerCase();
+
+      return tokens.every((token) => searchHaystack.includes(token));
+    });
+  }, [category, searchQuery, products]);
 
   // Pagination State (12 items per page for shop collection)
   const PAGE_SIZE = 12;
@@ -216,11 +320,21 @@ function ShopContent() {
                 </svg>
                 <input
                   type="search"
-                  placeholder="Search parts…"
+                  placeholder="Search by name, tags (e.g. Waterproof, Nappa)…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Search parts"
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  aria-label="Search parts and tags"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="hd-search-clear"
+                    onClick={() => handleSearchChange('')}
+                    aria-label="Clear search"
+                  >
+                    <X style={{ width: '13px', height: '13px' }} />
+                  </button>
+                )}
               </label>
               <button
                 type="button"
@@ -256,6 +370,43 @@ function ShopContent() {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Search Help & Popular Tags */}
+          <div className="search-help-bar">
+            <div className="search-help-label">
+              <TagIcon style={{ width: '13px', height: '13px' }} />
+              <span>Search Help & Tags:</span>
+            </div>
+            <div className="search-help-tags">
+              {allStoreTags.map((tag) => {
+                const isSelected =
+                  searchQuery.toLowerCase().trim() === tag.toLowerCase();
+                const count = tagCounts[tag] ?? 0;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagSelect(tag)}
+                    className={`search-tag-chip ${isSelected ? 'active' : ''}`}
+                    title={`Search parts with tag #${tag}`}
+                  >
+                    <span>#{tag}</span>
+                    {count > 0 && <span className="chip-count">({count})</span>}
+                    {isSelected && <X style={{ width: '11px', height: '11px', marginLeft: '2px' }} />}
+                  </button>
+                );
+              })}
+              {searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange('')}
+                  className="search-tag-clear"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="shop-g">
@@ -483,6 +634,23 @@ function ShopContent() {
                     </div>
                   )}
 
+                  {/* Cross-Category Search Match Prompt */}
+                  {crossCategoryMatches.length > 0 && filteredProducts.length === 0 && (
+                    <div className="cross-cat-notice">
+                      <div className="cross-cat-notice-text">
+                        No products in <strong>{CATEGORIES_LIST.find((c) => c[0] === category)?.[1] || category}</strong> match &quot;<strong>{searchQuery}</strong>&quot;, but <strong>{crossCategoryMatches.length} matching products</strong> exist in other categories.
+                      </div>
+                      <button
+                        type="button"
+                        className="cross-cat-notice-btn"
+                        onClick={() => handleCategorySelect('all')}
+                      >
+                        <Sparkles style={{ width: '13px', height: '13px' }} />
+                        <span>Search all categories ({crossCategoryMatches.length})</span>
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid" id="shop-products-grid">
                     {paginatedProducts.map((p) => {
                       const custom = isCustomFit(p);
@@ -494,6 +662,7 @@ function ShopContent() {
                           onToggleFav={toggleFav}
                           onAddToCart={addToCart}
                           onOpenCart={openCart}
+                          onTagClick={handleTagSelect}
                           fitText={custom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
                           isCustomFitBadge={custom}
                         />

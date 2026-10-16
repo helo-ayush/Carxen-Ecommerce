@@ -242,6 +242,29 @@ function asTintOptions(value: unknown): ProductTintOption[] | undefined {
   return options.length > 0 ? options : undefined;
 }
 
+function getFallbackTags(category: ProductCategory, isCustomFit: boolean, name: string): string[] {
+  const lowerName = name.toLowerCase();
+  if (category === 'seats') {
+    return ['Custom Fit', 'Nappa Leather', 'Waterproof', 'Breathable', 'Easy Clean', 'SUV', 'Sedan'];
+  }
+  if (category === 'mats') {
+    return ['All-Weather', 'Waterproof', 'Custom Fit', 'Anti-Slip', 'Easy Clean', 'OEM Grade'];
+  }
+  if (category === 'steering') {
+    return ['Anti-Slip', 'Nappa Leather', 'Breathable', 'Custom Fit', 'Easy Clean'];
+  }
+  if (category === 'comfort') {
+    if (lowerName.includes('pillow') || lowerName.includes('neck')) {
+      return ['Breathable', 'Easy Clean', 'OEM Grade', 'SUV', 'Sedan'];
+    }
+    if (lowerName.includes('organiser') || lowerName.includes('organizer')) {
+      return ['Waterproof', 'Easy Clean', 'Scratch-Resistant', 'SUV', 'OEM Grade'];
+    }
+    return ['Breathable', 'Easy Clean', 'OEM Grade', 'Sedan', 'SUV'];
+  }
+  return ['OEM Grade', 'Easy Clean', 'Scratch-Resistant'];
+}
+
 function mapProductRow(row: EcommerceProductRow): Product | null {
   const id = asFiniteNumber(row.publicId) ?? 1;
   const name = asNonEmptyString(row.name) || 'CarXen Accessory';
@@ -257,9 +280,14 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     : [];
   const imageUrl = rawImages[0] || isImageUrl(row.artKey);
   const images = rawImages.length > 0 ? rawImages : (imageUrl ? [imageUrl] : []);
-  const tags = Array.isArray(row.tags)
+  const rawTags = Array.isArray(row.tags)
     ? (row.tags as unknown[]).filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
     : [];
+  const isCustomFit =
+    typeof row.isCustomFit === 'boolean'
+      ? row.isCustomFit
+      : category === 'seats' || category === 'mats';
+  const tags = rawTags.length > 0 ? rawTags : getFallbackTags(category, isCustomFit, name);
   const description =
     asNonEmptyString(row.description) ??
     'Engineered automotive accessory for enhanced cabin aesthetics and protection.';
@@ -282,10 +310,6 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
   const categoryLabel =
     asNonEmptyString(row.categoryLabel) || asNonEmptyString(row.categoryKey) || 'Accessories';
   const tintOptions = asTintOptions(row.colors) || asTintOptions(row.tintOptions);
-  const isCustomFit =
-    typeof row.isCustomFit === 'boolean'
-      ? row.isCustomFit
-      : category === 'seats' || category === 'mats';
 
   return {
     id,

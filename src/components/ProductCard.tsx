@@ -13,6 +13,7 @@ export interface ProductCardProps {
   onToggleFav: (productId: number) => void;
   onAddToCart: (productId: number, qty?: number) => void;
   onOpenCart?: () => void;
+  onTagClick?: (tag: string) => void;
   fitText?: string | null;
   isCustomFitBadge?: boolean;
   className?: string;
@@ -25,6 +26,7 @@ export function ProductCard({
   onToggleFav,
   onAddToCart,
   onOpenCart,
+  onTagClick,
   fitText,
   isCustomFitBadge = false,
   className = '',
@@ -77,6 +79,15 @@ export function ProductCard({
   const handleFavClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onToggleFav(product.id);
+  };
+
+  const handleTagClick = (e: React.MouseEvent, tag: string) => {
+    e.stopPropagation();
+    if (onTagClick) {
+      onTagClick(tag);
+    } else {
+      router.push(`/shop?q=${encodeURIComponent(tag)}`);
+    }
   };
 
   const categoryName = (() => {
@@ -165,6 +176,30 @@ export function ProductCard({
             <span className="score">{product.r.toFixed(1)}</span>
             <span className="count">({product.rv} reviews)</span>
           </div>
+
+          {/* Product Tags */}
+          {Array.isArray(product.tags) && product.tags.length > 0 && (
+            <div className="ref-tags" aria-label="Product tags">
+              {product.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="ref-tag-pill"
+                  onClick={(e) => handleTagClick(e, tag)}
+                  title={`Search products with tag #${tag}`}
+                >
+                  #{tag}
+                </span>
+              ))}
+              {product.tags.length > 3 && (
+                <span
+                  className="ref-tag-pill more"
+                  title={product.tags.slice(3).join(', ')}
+                >
+                  +{product.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="ref-info-bottom">

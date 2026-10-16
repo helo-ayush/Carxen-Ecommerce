@@ -99,3 +99,17 @@ export const TINT_OPTIONS: [string, string, string][] = [
 export const isCustomFit = (p: Product) => p.customFit ?? (p.c === 'seats' || p.c === 'mats');
 
 export const formatINR = (n: number) => '₹' + n.toLocaleString('en-IN');
+
+export const DEFAULT_PRESET_TAGS = [
+  'Waterproof',
+  'Custom Fit',
+  'Nappa Leather',
+  'All-Weather',
+  'Anti-Slip',
+  'Scratch-Resistant',
+  'OEM Grade',
+  'SUV',
+  'Sedan',
+  'Breathable',
+  'Easy Clean',
+] as const;

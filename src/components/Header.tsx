@@ -90,14 +90,37 @@ function HeaderContent() {
     }
   }, [cartCount]);
 
+  // Real-time synchronization when user is on the Shop page
+  useEffect(() => {
+    if (!isShopPage) return;
+    const timer = setTimeout(() => {
+      const trimmed = searchVal.trim();
+      const currentParam = searchParams.get('q') || '';
+      if (trimmed !== currentParam) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (trimmed) {
+          params.set('q', trimmed);
+        } else {
+          params.delete('q');
+        }
+        const qs = params.toString();
+        router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchVal, isShopPage, searchParams, router]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = searchVal.trim();
+    const params = new URLSearchParams(searchParams.toString());
     if (trimmed) {
-      router.push(`/shop?q=${encodeURIComponent(trimmed)}`);
+      params.set('q', trimmed);
     } else {
-      router.push('/shop');
+      params.delete('q');
     }
+    const qs = params.toString();
+    router.push(`/shop${qs ? `?${qs}` : ''}`);
   };
 
   const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
