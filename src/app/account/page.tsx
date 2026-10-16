@@ -797,6 +797,15 @@ function AccountContent() {
 
       <section className="pp on" id="v-pg">
         <div className="ac-portal-wrap">
+          <div style={{ marginBottom: '20px' }}>
+            <Link href="/shop" className="cx-back-btn" aria-label="Back to shop">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Back to shop</span>
+            </Link>
+          </div>
+
           {authLoading ? (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
               <p style={{ color: '#71717a', fontSize: '15px' }}>Loading driver profile...</p>

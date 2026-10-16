@@ -24,6 +24,14 @@ export default function WishlistPage() {
     <div className="in-shop">
       <section className="pp on" id="v-pg">
         <div className="wrap" id="pgIn">
+          <div style={{ marginBottom: '18px' }}>
+            <Link href="/shop" className="cx-back-btn" aria-label="Back to shop">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Back to shop</span>
+            </Link>
+          </div>
           <h1 className="disp pg-t">Your favourites</h1>
 
           {catalogStatus !== 'ready' ? (

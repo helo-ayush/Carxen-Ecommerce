@@ -827,6 +827,49 @@ nav.main a.active {
   }
 }
 
+/* Universal Back Button Navigation */
+.cx-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--steel, #5d5d64);
+  text-decoration: none;
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 99px;
+  padding: 6px 14px 6px 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all .2s ease;
+  width: fit-content;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cx-back-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  transition: transform .2s ease, stroke .2s ease;
+  flex-shrink: 0;
+}
+
+.cx-back-btn:hover {
+  color: var(--ink, #0e0e0f);
+  border-color: var(--ink, #0e0e0f);
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(-2px);
+}
+
+.cx-back-btn:hover svg {
+  transform: translateX(-2px);
+  stroke: var(--red, #e2231a);
+}
+
 .hd-tools {
   display: flex;
   align-items: center;

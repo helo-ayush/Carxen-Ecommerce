@@ -568,14 +568,19 @@ function ProductDetailContent({ product }: { product: Product }) {
   return (
     <div className="ps-page-wrapper">
       <div className="ps-inner-wrap">
-        {/* Dynamic Breadcrumbs: Main / [category] / [product name] */}
-        <nav className="ps-breadcrumb" aria-label="Breadcrumb">
-          <Link href="/">Main</Link>
-          <span className="ps-bc-sep">/</span>
-          <Link href={`/shop?cat=${product.c}`}>{product.c}</Link>
-          <span className="ps-bc-sep">/</span>
-          <span className="ps-bc-current">{product.n}</span>
-        </nav>
+        {/* Back navigation to products */}
+        <div style={{ marginBottom: '24px' }}>
+          <Link
+            href={product.c ? `/shop?cat=${encodeURIComponent(product.c)}` : '/shop'}
+            className="cx-back-btn"
+            aria-label="Back to products"
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Back to products</span>
+          </Link>
+        </div>
 
         {/* ------------------------------------------------------------------
             TOP HERO SECTION: 2-COLUMN GRID (LEFT GALLERY, RIGHT DETAILS)
