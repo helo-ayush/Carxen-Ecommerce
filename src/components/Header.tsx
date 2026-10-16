@@ -164,8 +164,8 @@ function HeaderContent() {
               <Link href="/#reviews">Reviews</Link>
             </nav>
           ) : (
-            /* SHOP / STORE PAGES: Interactive Vehicle Fitment Chip + Expanded Search */
-            <div className="hd-shop-center">
+            /* SHOP / STORE PAGES: Centered Search Bar */
+            <div className="hd-center-search">
               <form className="hd-search hd-search-expanded" onSubmit={handleSearchSubmit}>
                 <svg viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7" />
@@ -194,18 +194,6 @@ function HeaderContent() {
                   </button>
                 )}
               </form>
-
-              <Link
-                href="/account?tab=garage"
-                className="hd-vehicle-chip"
-                title={`Active Vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m} · Click to manage vehicles in My Garage`}
-              >
-                <span className="hd-vehicle-dot" />
-                <span className="hd-vehicle-name">
-                  {activeCar.y} {activeCar.b} {activeCar.m}
-                </span>
-                <span className="hd-vehicle-badge">Change</span>
-              </Link>
             </div>
           )}
 
@@ -213,6 +201,27 @@ function HeaderContent() {
           <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
             {!isLandingPage && (
               <>
+                <Link
+                  href="/account?tab=garage"
+                  className="tool vehicle-tool"
+                  id="vehBtn"
+                  aria-label={`Change vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m}`}
+                >
+                  <svg viewBox="0 0 24 24">
+                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                    <circle cx="7" cy="17" r="2" />
+                    <path d="M9 17h6" />
+                    <circle cx="17" cy="17" r="2" />
+                  </svg>
+                  <span className="veh-status-dot" />
+                  <div className="veh-hover-tooltip" role="tooltip">
+                    <span className="veh-tt-title">Change Vehicle</span>
+                    <span className="veh-tt-sub">
+                      <span className="veh-tt-dot" />
+                      <span>{activeCar.y} {activeCar.b} {activeCar.m}</span>
+                    </span>
+                  </div>
+                </Link>
                 <Link href="/wishlist" className="tool fav" id="favBtn" aria-label="Favourites">
                   <svg viewBox="0 0 24 24">
                     <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
