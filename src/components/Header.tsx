@@ -21,6 +21,7 @@ function HeaderContent() {
   const [isRibbonHidden, setIsRibbonHidden] = useState(false);
   const [searchVal, setSearchVal] = useState(currentQuery);
   const [cartBump, setCartBump] = useState(false);
+  const [favBump, setFavBump] = useState(false);
 
   useEffect(() => {
     setSearchVal(currentQuery);
@@ -89,6 +90,14 @@ function HeaderContent() {
       return () => clearTimeout(timer);
     }
   }, [cartCount]);
+
+  useEffect(() => {
+    if (fav.length > 0) {
+      setFavBump(true);
+      const timer = setTimeout(() => setFavBump(false), 450);
+      return () => clearTimeout(timer);
+    }
+  }, [fav.length]);
 
   // Real-time synchronization when user is on the Shop page
   useEffect(() => {
@@ -222,12 +231,12 @@ function HeaderContent() {
                     </span>
                   </div>
                 </Link>
-                <Link href="/wishlist" className="tool fav" id="favBtn" aria-label="Favourites">
+                <Link href="/wishlist" className={`tool fav ${favBump ? 'bump' : ''}`} id="favBtn" aria-label="Favourites">
                   <svg viewBox="0 0 24 24">
                     <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
                   </svg>
                   <span className="lbl">Favourites</span>
-                  <span className={`badge-n ${fav.length > 0 ? 'on' : ''}`} id="favN">
+                  <span className={`badge-n ${fav.length > 0 ? 'on' : ''} ${favBump ? 'bump' : ''}`} id="favN">
                     {fav.length}
                   </span>
                 </Link>

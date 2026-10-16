@@ -112,6 +112,7 @@ function ProductDetailContent({ product }: { product: Product }) {
   }, [product]);
 
   const [activeThumbIndex, setActiveThumbIndex] = useState(0);
+  const [isFavPopping, setIsFavPopping] = useState(false);
 
   // Exact same color options used in ProductCard & initial listing
   const colorOptions = useMemo(() => {
@@ -703,8 +704,14 @@ function ProductDetailContent({ product }: { product: Product }) {
 
               <button
                 type="button"
-                className={`ps-wishlist-btn ${isFav(product.id) ? 'ps-fav-active' : ''}`}
-                onClick={() => toggleFav(product.id)}
+                className={`ps-wishlist-btn ${isFav(product.id) ? 'ps-fav-active' : ''} ${isFavPopping ? 'pop' : ''}`}
+                onClick={() => {
+                  if (!isFav(product.id)) {
+                    setIsFavPopping(true);
+                    setTimeout(() => setIsFavPopping(false), 700);
+                  }
+                  toggleFav(product.id);
+                }}
                 aria-label={isFav(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 <Heart

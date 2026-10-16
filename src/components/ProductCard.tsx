@@ -76,8 +76,14 @@ export function ProductCard({
     setTimeout(() => setIsAdding(false), 800);
   };
 
+  const [isPopping, setIsPopping] = useState(false);
+
   const handleFavClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isFav) {
+      setIsPopping(true);
+      setTimeout(() => setIsPopping(false), 700);
+    }
     onToggleFav(product.id);
   };
 
@@ -133,7 +139,7 @@ export function ProductCard({
 
         {/* Top-Right Heart Wishlist Button */}
         <button
-          className={`ref-hrt ${isFav ? 'on' : ''}`}
+          className={`ref-hrt ${isFav ? 'on' : ''} ${isPopping ? 'pop' : ''}`}
           onClick={handleFavClick}
           aria-label={isFav ? 'Remove from wishlist' : 'Add to wishlist'}
           type="button"

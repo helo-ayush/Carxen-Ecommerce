@@ -1,0 +1,397 @@
+/* Wishlist / Favourites Page Design System */
+
+.wl-page-wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+.wl-top-nav {
+  margin-bottom: 22px;
+}
+
+/* Header Area with Subtle Heading Text */
+.wl-header-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.wl-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steel, #5d5d64);
+  margin-bottom: 8px;
+}
+
+.wl-eyebrow svg {
+  color: var(--red, #e2231a);
+  fill: var(--red, #e2231a);
+}
+
+.wl-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wl-title {
+  font-family: var(--sans, sans-serif);
+  font-size: clamp(26px, 3.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--ink, #0e0e0f);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.wl-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-family: var(--mono, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  background: rgba(226, 35, 26, 0.08);
+  color: var(--red, #e2231a);
+  border: 1px solid rgba(226, 35, 26, 0.22);
+}
+
+.wl-subtitle {
+  font-size: 13.5px;
+  color: var(--steel, #5d5d64);
+  line-height: 1.5;
+  margin-top: 8px;
+  max-width: 600px;
+}
+
+.wl-subtitle strong {
+  color: var(--ink, #0e0e0f);
+  font-weight: 600;
+}
+
+/* Actions Toolbar */
+.wl-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wl-btn-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--steel, #5d5d64);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wl-btn-clear:hover {
+  color: var(--red, #e2231a);
+  border-color: rgba(226, 35, 26, 0.3);
+  background: rgba(226, 35, 26, 0.04);
+}
+
+.wl-btn-move-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--red, #e2231a);
+  color: #ffffff;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(226, 35, 26, 0.28);
+  transition: all 0.2s ease;
+}
+
+.wl-btn-move-all:hover {
+  background: #c91d15;
+  box-shadow: 0 4px 16px rgba(226, 35, 26, 0.42);
+  transform: translateY(-1px);
+}
+
+.wl-separator {
+  height: 1px;
+  background: var(--line, #dcdbd5);
+  margin: 18px 0 26px;
+  opacity: 0.8;
+}
+
+/* Fitment & Valuation Card */
+.wl-info-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 14px;
+  padding: 14px 20px;
+  margin-bottom: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.wl-fitment-col {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wl-car-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(226, 35, 26, 0.08);
+  color: var(--red, #e2231a);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.wl-fitment-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+}
+
+.wl-green-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2ecc71;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.8);
+}
+
+.wl-fitment-desc {
+  font-size: 12px;
+  color: var(--steel, #5d5d64);
+  margin-top: 2px;
+}
+
+.wl-fitment-desc a {
+  color: var(--red, #e2231a);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.wl-fitment-desc a:hover {
+  text-decoration: underline;
+}
+
+.wl-valuation-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-left: 20px;
+  border-left: 1px solid var(--line, #dcdbd5);
+}
+
+@media (max-width: 640px) {
+  .wl-valuation-col {
+    padding-left: 0;
+    border-left: none;
+    align-items: flex-start;
+  }
+}
+
+.wl-val-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute, #8d8d93);
+}
+
+.wl-val-price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink, #0e0e0f);
+}
+
+/* Empty State Card */
+.wl-empty-card {
+  max-width: 540px;
+  margin: 36px auto;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 20px;
+  padding: 44px 32px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.wl-empty-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(226, 35, 26, 0.06);
+  border: 1px solid rgba(226, 35, 26, 0.18);
+  display: grid;
+  place-items: center;
+  color: var(--red, #e2231a);
+  margin: 0 auto 18px;
+}
+
+.wl-empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink, #0e0e0f);
+  margin-bottom: 8px;
+}
+
+.wl-empty-text {
+  font-size: 13.5px;
+  color: var(--steel, #5d5d64);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.wl-empty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wl-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: var(--red, #e2231a);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(226, 35, 26, 0.3);
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.wl-btn-primary:hover {
+  background: #c91d15;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(226, 35, 26, 0.45);
+}
+
+.wl-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  color: var(--ink, #0e0e0f);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wl-btn-secondary:hover {
+  border-color: var(--ink);
+  background: #f4f3ef;
+}
+
+/* Recommended Section */
+.wl-recom-wrap {
+  margin-top: 52px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line, #dcdbd5);
+}
+
+.wl-recom-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.wl-recom-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute, #8d8d93);
+  margin-bottom: 4px;
+}
+
+.wl-recom-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink, #0e0e0f);
+  margin: 0;
+}
+
+.wl-recom-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--red, #e2231a);
+  text-decoration: none;
+}
+
+.wl-recom-link:hover {
+  text-decoration: underline;
+}
+
+/* Product Grid Matching Shop Page Card Dimensions */
+.wl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 350px));
+  gap: 16px;
+  justify-content: start;
+}
+
+@media (max-width: 1080px) {
+  .wl-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .wl-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+

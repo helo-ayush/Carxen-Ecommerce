@@ -2741,6 +2741,84 @@ nav.main a.active {
   fill: #ef4444;
 }
 
+/* Animated Heart Pop & Sparkle Burst */
+.ref-hrt.pop,
+.hrt.pop,
+.ps-wishlist-btn.pop {
+  animation: heartButtonPulse 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ref-hrt.pop svg,
+.hrt.pop svg,
+.ps-wishlist-btn.pop svg {
+  animation: heartBurst 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.ref-hrt.pop::after,
+.hrt.pop::after,
+.ps-wishlist-btn.pop::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: heartRing 0.65s ease-out forwards;
+}
+
+.tool.fav.bump svg {
+  animation: heartPulse 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartBurst {
+  0% {
+    transform: scale(0.6);
+  }
+  30% {
+    transform: scale(1.45) rotate(-14deg);
+    fill: #e2231a;
+    stroke: #e2231a;
+  }
+  50% {
+    transform: scale(0.85) rotate(8deg);
+    fill: #e2231a;
+  }
+  75% {
+    transform: scale(1.15) rotate(-3deg);
+    fill: #e2231a;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    fill: #e2231a;
+    stroke: #e2231a;
+  }
+}
+
+@keyframes heartButtonPulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); border-color: rgba(226, 35, 26, 0.4); box-shadow: 0 4px 14px rgba(226, 35, 26, 0.25); }
+  70% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+@keyframes heartRing {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(226, 35, 26, 0.7);
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+    box-shadow: 0 0 0 12px rgba(226, 35, 26, 0);
+  }
+}
+
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); stroke: var(--red); fill: rgba(226, 35, 26, 0.35); }
+  100% { transform: scale(1); }
+}
+
 /* Info Section matching reference */
 .pi,
 .ref-info {
