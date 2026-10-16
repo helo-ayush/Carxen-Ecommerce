@@ -20,6 +20,18 @@ export async function GET(request: Request) {
 
     const meta = (customer.metadata || {}) as Record<string, any>;
 
+    const totalSpent = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const orderPoints = Math.floor(totalSpent / 10);
+    const basePoints = typeof meta.rewardPoints === 'number' ? meta.rewardPoints : 250;
+    const computedPoints = basePoints + orderPoints;
+
+    let computedTier = meta.tier;
+    if (!computedTier) {
+      if (totalSpent >= 50000) computedTier = 'Apex Titanium Member';
+      else if (totalSpent >= 15000) computedTier = 'Apex Gold Member';
+      else computedTier = 'Apex Silver Member';
+    }
+
     const profile = {
       id: customer.id,
       authUserId: customer.authUserId,
@@ -27,8 +39,8 @@ export async function GET(request: Request) {
       email: customer.email || user?.email || '',
       phone: customer.phone || '',
       avatarUrl: meta.avatarUrl || user?.user_metadata?.avatar_url || '',
-      tier: meta.tier || 'Apex Gold Member',
-      rewardPoints: meta.rewardPoints ?? 1450,
+      tier: computedTier,
+      rewardPoints: computedPoints,
       joinedDate:
         meta.joinedDate ||
         (customer.createdAt
@@ -36,7 +48,7 @@ export async function GET(request: Request) {
           : 'Oct 2024'),
       communicationPrefs: meta.communicationPrefs || null,
       gstBilling: meta.gstBilling || null,
-      savedPayments: meta.savedPayments || null,
+      savedPayments: Array.isArray(meta.savedPayments) ? meta.savedPayments : null,
       garageVehicles: Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
         ? meta.garageVehicles
         : [

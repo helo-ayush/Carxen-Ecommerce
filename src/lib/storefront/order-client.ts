@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase/client';
 import type {
   StorefrontCheckoutRequest,
   StorefrontOrderItemSnapshot,
@@ -88,13 +89,33 @@ export async function createStorefrontOrder(
 ): Promise<StorefrontOrderSummary> {
   let response: Response;
 
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      headers['Authorization'] = `Bearer ${data.session.access_token}`;
+    }
+  } catch {}
+
+  try {
+    if (typeof window !== 'undefined') {
+      const demoUser = localStorage.getItem('cx_demo_user');
+      if (demoUser) {
+        const parsed = JSON.parse(demoUser);
+        if (parsed.id) headers['x-demo-user-id'] = parsed.id;
+        if (parsed.email) headers['x-demo-user-email'] = parsed.email;
+      }
+    }
+  } catch {}
+
   try {
     response = await fetch('/api/storefront/orders', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'same-origin',
       cache: 'no-store',
       body: JSON.stringify(checkout),

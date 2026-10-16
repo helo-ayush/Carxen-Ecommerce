@@ -195,8 +195,93 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
     .order('isDefault', { ascending: false })
     .order('createdAt', { ascending: false });
 
-  if (error || !data) return [];
-  return (data as AddressDbRow[]).map(mapAddressDbToDto);
+  if (!error && data && data.length > 0) {
+    return (data as AddressDbRow[]).map(mapAddressDbToDto);
+  }
+
+  // If customer has no addresses in DB, check if customer is demo account
+  const { data: customerRow } = await supabase
+    .from('ecommerce_customers')
+    .select('id, name, email, phone')
+    .eq('id', customerId)
+    .maybeSingle();
+
+  if (customerRow && (customerRow.email === 'aarav.speed@carxen.io' || customerId.includes('demo'))) {
+    const now = new Date().toISOString();
+    const demoAddresses = [
+      {
+        id: `addr_demo_home_${customerId.slice(-6)}`,
+        storeId: STORE_ID,
+        factoryId: FACTORY_ID,
+        customerId: customerId,
+        label: 'Home',
+        addressType: 'SHIPPING',
+        recipientName: customerRow.name || 'Aarav Sharma',
+        phone: customerRow.phone || '+91 98201 44829',
+        line1: 'Flat 402, Pinnacle Horizon, Baner Pashan Link Road',
+        line2: 'Near Orchid School, Baner (Opposite Regent Plaza)',
+        city: 'Pune',
+        state: 'Maharashtra',
+        postalCode: '411045',
+        country: 'India',
+        isDefault: true,
+        metadata: { landmark: 'Opposite Regent Plaza' },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: `addr_demo_office_${customerId.slice(-6)}`,
+        storeId: STORE_ID,
+        factoryId: FACTORY_ID,
+        customerId: customerId,
+        label: 'Office / Studio',
+        addressType: 'SHIPPING',
+        recipientName: customerRow.name || 'Aarav Sharma',
+        phone: customerRow.phone || '+91 98201 44829',
+        line1: '7th Floor, Quadron Business Park, Phase 2, Rajiv Gandhi Infotech Park',
+        line2: 'Hinjewadi',
+        city: 'Pune',
+        state: 'Maharashtra',
+        postalCode: '411057',
+        country: 'India',
+        isDefault: false,
+        metadata: { landmark: 'Next to Tech Mahindra campus' },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: `addr_demo_garage_${customerId.slice(-6)}`,
+        storeId: STORE_ID,
+        factoryId: FACTORY_ID,
+        customerId: customerId,
+        label: 'Garage & Workshop',
+        addressType: 'SHIPPING',
+        recipientName: customerRow.name || 'Aarav Sharma',
+        phone: customerRow.phone || '+91 98201 44829',
+        line1: 'Bay #4, Apex Autoworks & Performance Tuning',
+        line2: 'Old Mumbai-Pune Highway, Tathawade',
+        city: 'Pune',
+        state: 'Maharashtra',
+        postalCode: '411033',
+        country: 'India',
+        isDefault: false,
+        metadata: { landmark: 'Behind Shell Petroleum Station' },
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+
+    const { data: insertedRows, error: seedErr } = await supabase
+      .from('ecommerce_addresses')
+      .insert(demoAddresses)
+      .select();
+
+    if (!seedErr && insertedRows) {
+      return (insertedRows as AddressDbRow[]).map(mapAddressDbToDto);
+    }
+  }
+
+  return [];
 }
 
 function normalizeOrderStatus(status: string): OrderProgressStatus {

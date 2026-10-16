@@ -109,7 +109,9 @@ export default function CheckoutPage() {
     phone: '',
     postalCode: '',
     city: '',
+    state: '',
     addressLine1: '',
+    addressLine2: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -296,7 +298,13 @@ export default function CheckoutPage() {
       }
 
       selectedAddress = {
-        ...newAddress,
+        name: newAddress.name.trim(),
+        phone: newAddress.phone.trim(),
+        addressLine1: newAddress.addressLine1.trim(),
+        addressLine2: newAddress.addressLine2.trim() || undefined,
+        city: newAddress.city.trim(),
+        state: newAddress.state.trim() || 'Maharashtra',
+        postalCode: newAddress.postalCode.trim(),
         country: 'IN',
       };
 
@@ -306,11 +314,12 @@ export default function CheckoutPage() {
           name: newAddress.name.trim(),
           phone: newAddress.phone.trim(),
           addressLine1: newAddress.addressLine1.trim(),
+          addressLine2: newAddress.addressLine2.trim() || undefined,
           city: newAddress.city.trim(),
-          state: 'Maharashtra',
+          state: newAddress.state.trim() || 'Maharashtra',
           postalCode: newAddress.postalCode.trim(),
           country: 'India',
-          isPrimary: false,
+          isPrimary: addresses.length === 0,
         });
       }
     }
@@ -364,9 +373,9 @@ export default function CheckoutPage() {
           phone: selectedAddress.phone || user?.phone || '',
           addressLine1: selectedAddress.addressLine1 || '',
           addressLine2: selectedAddress.addressLine2 || '',
-          city: selectedAddress.city || 'Pune',
-          state: selectedAddress.state || 'Maharashtra',
-          postalCode: selectedAddress.postalCode || '411045',
+          city: selectedAddress.city || '',
+          state: selectedAddress.state || '',
+          postalCode: selectedAddress.postalCode || '',
           country: selectedAddress.country || 'India',
         },
         items: cartEntries.map(({ product, qty }) => ({
@@ -795,12 +804,24 @@ export default function CheckoutPage() {
                               value={newAddress.city}
                               onChange={(e) => setNewAddress((c) => ({ ...c, city: e.target.value }))}
                             />
+                            <input
+                              className="inf-ck-input"
+                              placeholder="State / Region"
+                              value={newAddress.state}
+                              onChange={(e) => setNewAddress((c) => ({ ...c, state: e.target.value }))}
+                            />
                           </div>
                           <input
                             className="inf-ck-input"
                             placeholder="Street Address, Flat, House No."
                             value={newAddress.addressLine1}
                             onChange={(e) => setNewAddress((c) => ({ ...c, addressLine1: e.target.value }))}
+                          />
+                          <input
+                            className="inf-ck-input"
+                            placeholder="Apartment, suite, unit, landmark (optional)"
+                            value={newAddress.addressLine2}
+                            onChange={(e) => setNewAddress((c) => ({ ...c, addressLine2: e.target.value }))}
                           />
                         </div>
                       )}

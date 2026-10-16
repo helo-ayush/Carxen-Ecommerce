@@ -142,8 +142,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Customer detailed state
-  const [addresses, setAddresses] = useState<CustomerAddress[]>(DEFAULT_CUSTOMER_ADDRESSES);
-  const [orders, setOrders] = useState<CustomerOrderHistoryRecord[]>(DEFAULT_ORDER_HISTORY);
+  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
+  const [orders, setOrders] = useState<CustomerOrderHistoryRecord[]>([]);
   const [savedPayments, setSavedPayments] = useState<SavedPaymentMethod[]>(DEFAULT_SAVED_PAYMENTS);
   const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
@@ -200,11 +200,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: u.id,
       name: fullName,
       email: u.email,
-      phone: localProfile.phone || u.user_metadata?.phone || u.phone || '+91 98201 44829',
+      phone: localProfile.phone || u.user_metadata?.phone || u.phone || '',
       avatarUrl: localProfile.avatarUrl || u.user_metadata?.avatar_url || '',
       joinedDate: localProfile.joinedDate || (u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Oct 2024'),
       tier: localProfile.tier || 'Apex Gold Member',
-      rewardPoints: localProfile.rewardPoints ?? 1450,
+      rewardPoints: localProfile.rewardPoints ?? 250,
     };
   };
 
@@ -244,11 +244,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             id: data.profile.authUserId || data.profile.id,
             name: data.profile.name || prev?.name || 'Driver',
             email: data.profile.email || prev?.email || '',
-            phone: data.profile.phone || prev?.phone || '+91 98201 44829',
+            phone: data.profile.phone || prev?.phone || '',
             avatarUrl: data.profile.avatarUrl ?? prev?.avatarUrl ?? '',
             joinedDate: data.profile.joinedDate || prev?.joinedDate || 'Oct 2024',
             tier: data.profile.tier || prev?.tier || 'Apex Gold Member',
-            rewardPoints: data.profile.rewardPoints ?? prev?.rewardPoints ?? 1450,
+            rewardPoints: data.profile.rewardPoints ?? prev?.rewardPoints ?? 250,
           }));
 
           if (data.profile.communicationPrefs) {
@@ -256,6 +256,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           if (data.profile.gstBilling) {
             setGstBilling(data.profile.gstBilling);
+          }
+          if (Array.isArray(data.profile.savedPayments)) {
+            setSavedPayments(data.profile.savedPayments);
           }
           if (Array.isArray(data.profile.garageVehicles) && data.profile.garageVehicles.length > 0) {
             setGarageVehicles(data.profile.garageVehicles);
@@ -265,11 +268,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (Array.isArray(data.addresses) && data.addresses.length > 0) {
+        if (Array.isArray(data.addresses)) {
           setAddresses(data.addresses);
         }
 
-        if (Array.isArray(data.orders) && data.orders.length > 0) {
+        if (Array.isArray(data.orders)) {
           setOrders(data.orders);
         }
       }
@@ -750,38 +753,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Saved Payment Methods CRUD
-  const addSavedPayment = (pm: Omit<SavedPaymentMethod, 'id'>) => {
+  const addSavedPayment = async (pm: Omit<SavedPaymentMethod, 'id'>) => {
     const newId = `pm_${Date.now()}`;
+    let nextList: SavedPaymentMethod[] = [];
     setSavedPayments((prev) => {
       let updated = prev;
       if (pm.isDefault || prev.length === 0) {
         updated = prev.map((p) => ({ ...p, isDefault: false }));
       }
-      return [{ id: newId, ...pm, isDefault: pm.isDefault || prev.length === 0 }, ...updated];
+      nextList = [{ id: newId, ...pm, isDefault: pm.isDefault || prev.length === 0 }, ...updated];
+      return nextList;
     });
     showToast('Payment method saved');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ savedPayments: nextList }),
+      });
+    } catch (err) {
+      console.warn('Backend saved payments sync error:', err);
+    }
   };
 
-  const deleteSavedPayment = (id: string) => {
+  const deleteSavedPayment = async (id: string) => {
+    let nextList: SavedPaymentMethod[] = [];
     setSavedPayments((prev) => {
       const target = prev.find((p) => p.id === id);
       const remaining = prev.filter((p) => p.id !== id);
       if (target?.isDefault && remaining.length > 0) {
         remaining[0].isDefault = true;
       }
+      nextList = remaining;
       return remaining;
     });
     showToast('Payment method removed');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ savedPayments: nextList }),
+      });
+    } catch (err) {
+      console.warn('Backend saved payments delete sync error:', err);
+    }
   };
 
-  const setDefaultPayment = (id: string) => {
-    setSavedPayments((prev) =>
-      prev.map((p) => ({
+  const setDefaultPayment = async (id: string) => {
+    let nextList: SavedPaymentMethod[] = [];
+    setSavedPayments((prev) => {
+      nextList = prev.map((p) => ({
         ...p,
         isDefault: p.id === id,
-      }))
-    );
+      }));
+      return nextList;
+    });
     showToast('Default payment method set');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ savedPayments: nextList }),
+      });
+    } catch (err) {
+      console.warn('Backend saved payments default sync error:', err);
+    }
   };
 
   const updateCommunicationPrefs = async (prefs: Partial<CommunicationPreferences>) => {

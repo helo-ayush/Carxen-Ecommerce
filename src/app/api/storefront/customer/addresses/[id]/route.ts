@@ -3,6 +3,8 @@ import {
   getAuthenticatedCustomer,
   loadCustomerAddresses,
   mapAddressDbToDto,
+  STORE_ID,
+  FACTORY_ID,
 } from '@/lib/server/customer';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
@@ -49,36 +51,83 @@ export async function PUT(request: Request, { params }: RouteParams) {
         .eq('customerId', customer.id);
     }
 
-    // Build update payload
-    const updateData: Record<string, any> = {
-      updatedAt: now,
-    };
-    if (label !== undefined) updateData.label = label;
-    if (name !== undefined) updateData.recipientName = name.trim();
-    if (phone !== undefined) updateData.phone = phone.trim();
-    if (addressLine1 !== undefined) updateData.line1 = addressLine1.trim();
-    if (addressLine2 !== undefined) updateData.line2 = addressLine2 ? addressLine2.trim() : null;
-    if (city !== undefined) updateData.city = city.trim();
-    if (state !== undefined) updateData.state = state.trim();
-    if (postalCode !== undefined) updateData.postalCode = postalCode.trim();
-    if (country !== undefined) updateData.country = country.trim();
-    if (isPrimary !== undefined) updateData.isDefault = Boolean(isPrimary);
-    if (landmark !== undefined) updateData.metadata = { landmark: landmark ? landmark.trim() : null };
-
-    const { data: updated, error: updateErr } = await supabase
+    // Check if target address exists in database
+    const { data: existing } = await supabase
       .from('ecommerce_addresses')
-      .update(updateData)
+      .select('id')
       .eq('id', id)
       .eq('customerId', customer.id)
-      .select()
-      .single();
+      .maybeSingle();
 
-    if (updateErr) {
-      console.error('Failed to update address:', updateErr);
-      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    let savedRow;
+
+    if (existing) {
+      // Build update payload
+      const updateData: Record<string, any> = {
+        updatedAt: now,
+      };
+      if (label !== undefined) updateData.label = label;
+      if (name !== undefined) updateData.recipientName = name.trim();
+      if (phone !== undefined) updateData.phone = phone.trim();
+      if (addressLine1 !== undefined) updateData.line1 = addressLine1.trim();
+      if (addressLine2 !== undefined) updateData.line2 = addressLine2 ? addressLine2.trim() : null;
+      if (city !== undefined) updateData.city = city.trim();
+      if (state !== undefined) updateData.state = state.trim();
+      if (postalCode !== undefined) updateData.postalCode = postalCode.trim();
+      if (country !== undefined) updateData.country = country.trim();
+      if (isPrimary !== undefined) updateData.isDefault = Boolean(isPrimary);
+      if (landmark !== undefined) updateData.metadata = { landmark: landmark ? landmark.trim() : null };
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('ecommerce_addresses')
+        .update(updateData)
+        .eq('id', id)
+        .eq('customerId', customer.id)
+        .select()
+        .single();
+
+      if (updateErr) {
+        console.error('Failed to update address:', updateErr);
+        return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      }
+      savedRow = updated;
+    } else {
+      // Address did not exist in DB yet — insert it (UPSERT)
+      const newAddressRow = {
+        id,
+        storeId: STORE_ID,
+        factoryId: FACTORY_ID,
+        customerId: customer.id,
+        label: label || 'Home',
+        addressType: 'SHIPPING',
+        recipientName: name?.trim() || customer.name || 'Recipient',
+        phone: phone?.trim() || customer.phone || '',
+        line1: addressLine1?.trim() || '',
+        line2: addressLine2?.trim() || null,
+        city: city?.trim() || 'Pune',
+        state: state?.trim() || 'Maharashtra',
+        postalCode: postalCode?.trim() || '',
+        country: country?.trim() || 'India',
+        isDefault: isPrimary !== undefined ? Boolean(isPrimary) : true,
+        metadata: landmark ? { landmark: landmark.trim() } : {},
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('ecommerce_addresses')
+        .insert(newAddressRow)
+        .select()
+        .single();
+
+      if (insertErr) {
+        console.error('Failed to insert new address via PUT:', insertErr);
+        return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      }
+      savedRow = inserted;
     }
 
-    return NextResponse.json({ success: true, address: mapAddressDbToDto(updated) });
+    return NextResponse.json({ success: true, address: mapAddressDbToDto(savedRow) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to update address';
     console.error('Customer address PUT error:', err);

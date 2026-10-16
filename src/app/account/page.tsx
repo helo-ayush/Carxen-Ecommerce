@@ -181,11 +181,11 @@ function AccountContent() {
   });
 
   const name = user?.name || 'Driver';
-  const email = user?.email || 'driver@carxen.io';
-  const phone = user?.phone || '+91 98201 44829';
+  const email = user?.email || '';
+  const phone = user?.phone || '';
   const avatarUrl = user?.avatarUrl;
   const tier = user?.tier || 'Apex Gold Member';
-  const points = user?.rewardPoints ?? 1450;
+  const points = user?.rewardPoints ?? 250;
   const initials = getInitials(name);
 
   const primaryAddress = addresses.find((a) => a.isPrimary) || addresses[0];
@@ -547,7 +547,7 @@ function AccountContent() {
       <div>${order.shippingAddress.name}</div>
       <div>${order.shippingAddress.addressLine1}${order.shippingAddress.addressLine2 ? ', ' + order.shippingAddress.addressLine2 : ''}</div>
       <div>${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.postalCode}</div>
-      <div>Phone: ${order.shippingAddress.phone || '+91 98201 44829'}</div>
+      <div>Phone: ${order.shippingAddress.phone || user?.phone || 'On file'}</div>
     </div>
     <div class="details-box">
       <b>Dispatch & Tracking Details:</b>
@@ -920,21 +920,39 @@ function AccountContent() {
                         <span>•</span>
                         <span>
                           <Phone size={13} style={{ color: '#71717a' }} />
-                          {phone}{' '}
-                          <button
-                            type="button"
-                            onClick={openEditProfile}
-                            style={{
-                              color: '#e2231a',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              marginLeft: '2px',
-                              textDecoration: 'underline',
-                            }}
-                          >
-                            Edit
-                          </button>
+                          {phone ? (
+                            <>
+                              {phone}{' '}
+                              <button
+                                type="button"
+                                onClick={openEditProfile}
+                                style={{
+                                  color: '#e2231a',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  marginLeft: '2px',
+                                  textDecoration: 'underline',
+                                }}
+                              >
+                                Edit
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={openEditProfile}
+                              style={{
+                                color: '#e2231a',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              Add Phone Number
+                            </button>
+                          )}
                         </span>
                       </div>
 
@@ -1529,7 +1547,7 @@ function AccountContent() {
                   </div>
 
                   {/* Primary Address */}
-                  {primaryAddress && (
+                  {primaryAddress ? (
                     <div style={{ marginBottom: '20px' }}>
                       <div style={{ fontSize: '11px', fontWeight: 600, color: '#e2231a', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <MapPin size={12} />
@@ -1572,6 +1590,33 @@ function AccountContent() {
                           </button>
                         </div>
                       </div>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        background: '#fff',
+                        border: '1px dashed #d4d4d8',
+                        borderRadius: '12px',
+                        padding: '32px 20px',
+                        textAlign: 'center',
+                        marginBottom: '24px',
+                      }}
+                    >
+                      <MapPin size={32} style={{ color: '#a1a1aa', margin: '0 auto 10px' }} />
+                      <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#09090b', marginBottom: '4px' }}>
+                        No Delivery Addresses Saved
+                      </h4>
+                      <p style={{ fontSize: '13px', color: '#71717a', marginBottom: '16px', maxWidth: '420px', margin: '0 auto 16px' }}>
+                        Add your primary delivery location to ensure precision shipping on all your automotive orders.
+                      </p>
+                      <button
+                        type="button"
+                        className="ac-btn-red"
+                        onClick={handleOpenAddAddress}
+                        style={{ height: '36px', fontSize: '13px', margin: '0 auto' }}
+                      >
+                        <Plus size={14} /> Add Primary Address
+                      </button>
                     </div>
                   )}
 
