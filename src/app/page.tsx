@@ -1147,21 +1147,45 @@ export default function HomePage() {
                   </Badge>
                 </div>
                 <h2 className="disp">
-                  {ctaConfig?.title ? (
-                    ctaConfig.title
-                  ) : (
-                    <>
-                      <span className="mask rv in">
-                        <span>Don&apos;t just</span>
-                      </span>
-                      <span className="mask rv in" style={{ ['--d' as any]: '.1s' }}>
-                        <span className="o">drive.</span>
-                      </span>
-                      <span className="mask rv in" style={{ ['--d' as any]: '.2s' }}>
-                        <span>Elevate it.</span>
-                      </span>
-                    </>
-                  )}
+                  {(() => {
+                    const rawTitle = ctaConfig?.title;
+                    if (rawTitle && rawTitle.toLowerCase().includes('elevate')) {
+                      const match = rawTitle.match(/^(.*?)(?:drive\.?)\s*(elevate\s*it\.?)$/i);
+                      if (match) {
+                        return (
+                          <>
+                            <span className="mask rv in" style={{ display: 'block' }}>
+                              <span>{match[1].trim() || "Don't just"}</span>
+                            </span>
+                            <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.1s' }}>
+                              <span>drive.</span>
+                            </span>
+                            <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.2s' }}>
+                              <span style={{ color: 'var(--red, #e2231a)' }}>{match[2]}</span>
+                            </span>
+                          </>
+                        );
+                      }
+                    }
+
+                    if (rawTitle && rawTitle !== "Don't just drive. Elevate it.") {
+                      return rawTitle;
+                    }
+
+                    return (
+                      <>
+                        <span className="mask rv in" style={{ display: 'block' }}>
+                          <span>Don&apos;t just</span>
+                        </span>
+                        <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.1s' }}>
+                          <span>drive.</span>
+                        </span>
+                        <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.2s' }}>
+                          <span style={{ color: 'var(--red, #e2231a)' }}>Elevate it.</span>
+                        </span>
+                      </>
+                    );
+                  })()}
                 </h2>
                 <div className="perks rv in">
                   {ctaConfig?.perks && ctaConfig.perks.length > 0 ? (
