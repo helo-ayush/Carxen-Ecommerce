@@ -208,6 +208,14 @@ function HeaderContent() {
 
           {/* Tools: search, wishlist, cart, profile only on shop page; landing page has 'Shop now' button */}
           <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
+            {isLandingPage && (
+              <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-4-4" />
+                </svg>
+              </Link>
+            )}
             {!isLandingPage && (
               <>
                 <Link

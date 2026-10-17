@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { SvgDefs } from '@/components/SvgDefs';
@@ -11,11 +11,24 @@ import { ScrollProgress } from '@/components/ScrollProgress';
 import { BackToTop } from '@/components/BackToTop';
 import { Toast } from '@/components/Toast';
 import { Preloader } from '@/components/Preloader';
+import { BottomNav } from '@/components/BottomNav';
+import { PwaSupport } from '@/components/PwaSupport';
 
 export const metadata: Metadata = {
   title: 'CARXEN — Engineered for Every Drive | Premium Car Accessories',
   description:
     'CARXEN: premium seat covers, all-weather floor mats, steering covers and cabin comfort. Precision fit for 100+ vehicle models.',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#e2231a',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -41,6 +54,8 @@ export default function RootLayout({
           <CartDrawer />
           <QuickViewModal />
           <Toast />
+          <PwaSupport />
+          <BottomNav />
           <BackToTop />
         </AppProvider>
       </body>

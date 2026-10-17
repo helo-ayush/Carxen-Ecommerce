@@ -41,6 +41,8 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 84px;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -49,8 +51,16 @@ body {
   color: var(--ink);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  max-width: 100%;
+  overflow-x: clip;
   min-height: 100vh;
+  position: relative;
+}
+
+@supports not (overflow-x: clip) {
+  html, body {
+    overflow-x: hidden;
+  }
 }
 
 body.lock {
@@ -4865,13 +4875,17 @@ footer {
   background: var(--paper);
   z-index: 800;
   transform: translateX(102%);
-  transition: transform .55s var(--mech);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform .55s var(--mech), visibility .55s;
   display: flex;
   flex-direction: column;
 }
 
 .drawer.on {
   transform: none;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .dh {
@@ -7814,12 +7828,22 @@ footer {
 
 .shop-layout {
   display: grid;
-  grid-template-columns: 270px 1fr;
+  grid-template-columns: 270px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
   max-width: 1380px;
   margin: 0 auto;
   padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.shop-products-column {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Sidebar Filter Card */
@@ -7921,6 +7945,10 @@ footer {
   gap: 16px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .shop-category-pills {
@@ -7928,6 +7956,9 @@ footer {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .shop-category-pill {
@@ -8014,7 +8045,9 @@ footer {
 
 @media (max-width: 1024px) {
   .shop-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
   }
   .shop-sidebar-card {
     display: none;
@@ -8030,19 +8063,412 @@ footer {
     border-radius: 0 18px 18px 0;
   }
   .shop-category-pills {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     flex-wrap: nowrap;
     padding-bottom: 6px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .shop-category-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .shop-category-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .shop-top-bar {
     flex-direction: column;
     align-items: stretch;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
   .shop-sort-wrap {
     margin-left: 0;
     justify-content: flex-end;
+    width: 100%;
+    max-width: 100%;
   }
+}
+
+/* ========================================================
+   CARXEN responsive app shell
+   ======================================================== */
+.mobile-search-access,
+.mobile-filter-close {
+  display: none;
+}
+
+.shop-filter-heading-actions,
+.shop-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobile-filter-drawer-actions {
+  display: none;
+}
+
+.cx-bottom-nav {
+  display: none;
+}
+
+.cx-install-prompt {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(390px, calc(100vw - 36px));
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 18px 48px rgba(14, 14, 15, .18);
+  animation: cxPromptIn .45s var(--ease);
+}
+
+@keyframes cxPromptIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cx-install-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(226, 35, 26, .1);
+  color: var(--red);
+}
+
+.cx-install-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cx-install-copy strong { font-size: 13px; }
+.cx-install-copy span { color: var(--steel); }
+.cx-install-copy b { color: var(--ink); }
+
+.cx-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.cx-install-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cx-install-dismiss {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--steel);
+  border-radius: 50%;
+}
+
+.cx-install-dismiss:hover { background: var(--bg2); color: var(--ink); }
+
+@media (max-width: 900px) {
+  body:has(.cx-bottom-nav) {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .cx-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 500;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -10px 28px rgba(14, 14, 15, .08);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+
+  .cx-bottom-nav-item {
+    min-width: 0;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 12px;
+    color: var(--steel);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .cx-bottom-nav-item.active {
+    color: var(--red);
+    background: rgba(226, 35, 26, .07);
+  }
+
+  .cx-bottom-nav-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+  }
+
+  .cx-bottom-nav-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+  }
+
+  .cx-bottom-nav-badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    min-width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    padding: 0 4px;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 800;
+  }
+
+  .top-nav-shell { position: sticky; top: 0; }
+  .top-nav-shell header { position: relative; }
+  .hd {
+    min-height: 64px;
+    height: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .logo-img { height: 32px; max-width: 132px; }
+  .hd-tools { gap: 1px; }
+  .hd-tools .tool { width: 42px; height: 42px; }
+  .mobile-search-access { display: flex; }
+  .hd-center-search {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 2px 0 3px;
+    box-sizing: border-box;
+  }
+  .hd-center-search .hd-search { max-width: 100%; width: 100% !important; height: 40px; box-sizing: border-box; }
+  .hd-search { height: 40px; }
+  .sn { display: none; }
+
+  .shop-layout {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .shop-sidebar-card { display: none; }
+  .shop-sidebar-card.open {
+    display: block;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 800;
+    width: min(350px, 92vw);
+    height: 100svh;
+    overflow-y: auto;
+    border-radius: 0 18px 18px 0;
+    padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+    box-shadow: 12px 0 38px rgba(14, 14, 15, .2);
+    animation: cxDrawerIn .35s var(--ease);
+  }
+  @keyframes cxDrawerIn { from { transform: translateX(-100%); } to { transform: none; } }
+  .mobile-filter-btn-bar { display: flex !important; align-items: center; }
+  .mobile-filter-drawer-actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px -16px -18px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, .96);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .mobile-filter-drawer-actions .btn { flex: 1; justify-content: center; height: 44px; padding-inline: 12px; }
+  .mobile-filter-reset-action { min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--steel); font-size: 12px; font-weight: 700; }
+  .mobile-filter-close { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--steel); }
+  .mobile-filter-close:hover { background: var(--bg2); color: var(--ink); }
+
+  .shop-category-pills {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-sizing: border-box;
+  }
+  .shop-category-pills::-webkit-scrollbar { display: none; }
+  .shop-category-pill { flex: 0 0 auto; min-height: 42px; padding: 8px 14px; white-space: nowrap; }
+  .shop-top-bar { align-items: stretch; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .shop-sort-wrap { justify-content: space-between; margin-left: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .shop-sort-select { min-height: 42px; }
+}
+
+@media (max-width: 640px) {
+  :root { --pad: 14px; }
+  .ann {
+    font-size: 9px;
+    line-height: 1.35;
+    padding: 6px 12px;
+    max-height: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .ann-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 8px;
+    flex-wrap: wrap;
+    max-width: 100%;
+    text-align: center;
+  }
+  .ann-badge { flex-shrink: 0; font-size: 8.5px; padding: 2px 7px; }
+  .ann-text { min-width: 0; max-width: 100%; word-break: break-word; font-size: 9.5px; }
+  .ann-link { display: none; }
+  .hd { padding-inline: 14px; max-width: 100%; box-sizing: border-box; }
+  .logo-img { height: 29px; max-width: 118px; }
+  .hd-tools .tool { width: 40px; height: 40px; }
+  .hd-tools .vehicle-tool { display: none; }
+  .tool.fav { display: flex; }
+  .tool .badge-n { top: 0; right: 0; }
+  .in-shop .hd-center-search { padding-bottom: 4px; }
+
+  .shop-hero-banner { min-height: 180px; width: 100%; max-width: 100%; overflow: hidden; }
+  .shop-hero-bg { background-position: 68% center; }
+  .shop-hero-overlay { background: linear-gradient(90deg, rgba(6, 8, 12, .96), rgba(6, 8, 12, .68)); }
+  .shop-hero-content { padding: 24px 14px; max-width: 100%; box-sizing: border-box; }
+  .shop-hero-title { max-width: 100%; font-size: clamp(22px, 7vw, 30px); line-height: 1.2; word-break: break-word; overflow-wrap: break-word; }
+  .shop-hero-subtitle { max-width: 100%; font-size: 12px; word-break: break-word; }
+  .shop-main-section { padding: 16px 0 34px; width: 100%; max-width: 100%; overflow-x: clip; }
+  .shop-layout { grid-template-columns: minmax(0, 1fr) !important; padding-inline: 12px; gap: 14px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .shop-top-bar { align-items: stretch; gap: 10px; min-width: 0; width: 100%; max-width: 100%; }
+  .shop-category-pills {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-sizing: border-box;
+  }
+  .shop-category-pills::-webkit-scrollbar { display: none; }
+  .shop-category-pill { flex: 0 0 auto; min-height: 40px; padding: 7px 13px; font-size: 12px; white-space: nowrap; }
+  .shop-sort-wrap { justify-content: space-between; margin-left: 0; gap: 6px; width: 100%; max-width: 100%; }
+  .sort-label { font-size: 12px; }
+  .shop-sort-select { width: 100%; min-height: 40px; padding-left: 12px; font-size: 12px; }
+  .active-filters-bar { padding: 8px 10px; gap: 6px; max-width: 100%; flex-wrap: wrap; }
+  .active-filter-reset { margin-left: 0; }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  .ref-card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .ref-media { height: 135px !important; }
+  .ref-hrt { width: 34px !important; height: 34px !important; top: 4px !important; right: 4px !important; }
+  .ref-hrt svg { width: 14px !important; height: 14px !important; }
+  .ref-badge { max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ref-info { padding: 8px 8px 10px !important; min-width: 0; }
+  .ref-title { font-size: 12.5px !important; word-break: break-word; }
+  .ref-btn { min-height: 38px; height: 38px !important; font-size: 12px !important; }
+  .ref-price-row { flex-wrap: wrap; gap: 4px; }
+  .ref-swatches { flex-wrap: wrap; gap: 3px; }
+
+  .wl-page-wrap { padding-inline: 14px; padding-bottom: 20px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .wl-header-bar { align-items: stretch; gap: 14px; width: 100%; max-width: 100%; }
+  .wl-title { font-size: 27px; }
+  .wl-title-row { align-items: flex-start; flex-wrap: wrap; gap: 7px; width: 100%; max-width: 100%; }
+  .wl-subtitle { font-size: 12px; }
+  .wl-actions-group { width: 100%; }
+  .wl-actions-group button { flex: 1; justify-content: center; min-height: 44px; }
+  .wl-info-card { align-items: flex-start; padding: 14px; margin-bottom: 18px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .wl-fitment-col { align-items: flex-start; gap: 10px; width: 100%; max-width: 100%; }
+  .wl-fitment-title { align-items: flex-start; font-size: 12px; line-height: 1.35; }
+  .wl-fitment-desc { font-size: 11px; line-height: 1.45; }
+  .wl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 100%; }
+  .wl-recom-head { align-items: flex-start; gap: 12px; width: 100%; max-width: 100%; }
+  .wl-recom-title { font-size: 16px; }
+  .wl-recom-link { white-space: nowrap; }
+  .cx-install-prompt { right: 10px; bottom: calc(84px + env(safe-area-inset-bottom)); width: calc(100vw - 20px); }
+}
+
+@media (max-width: 374px) {
+  .hd-tools .tool { width: 36px; }
+  .logo-img { max-width: 104px; }
+  .grid, .wl-grid { grid-template-columns: 1fr !important; }
+  .ref-media { height: 165px !important; }
+  .cx-bottom-nav-item { font-size: 9px; }
+  .shop-hero-title { font-size: 20px; }
+  .shop-hero-content { padding: 18px 10px; }
+  .shop-layout { padding-inline: 8px; }
 }
 
 

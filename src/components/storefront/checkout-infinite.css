@@ -886,3 +886,44 @@
   background: #f4f3ef;
   border-color: #0e0e10;
 }
+
+@media (max-width: 640px) {
+  .inf-ck-main { padding: 10px 10px 24px; }
+  .inf-ck-shell { margin-bottom: 0; padding: 14px 12px 22px; border-radius: 18px; }
+  .inf-ck-top-bar { align-items: flex-start; flex-direction: column; gap: 14px; padding-bottom: 16px; margin-bottom: 18px; }
+  .inf-ck-logo img { height: 24px; }
+  .inf-ck-stepper { width: 100%; justify-content: space-between; gap: 4px; }
+  .inf-ck-step { min-width: 0; gap: 5px; font-size: 10px; }
+  .inf-ck-step > span:last-child { max-width: 70px; line-height: 1.2; }
+  .inf-ck-step-chevron { width: 12px; flex: none; }
+  .inf-ck-step-badge { width: 22px; height: 22px; flex: none; }
+  .inf-ck-grid { gap: 20px; }
+  .inf-ck-left-col { gap: 16px; }
+  .inf-ck-card, .inf-ck-confirm-card { padding: 14px; border-radius: 14px; }
+  .inf-ck-pay-card-header { padding: 14px; gap: 8px; }
+  .inf-ck-radio-label { gap: 8px; font-size: 13px; }
+  .inf-ck-badges { gap: 3px; transform: scale(.86); transform-origin: right center; }
+  .inf-ck-badge-pill { font-size: 9px; }
+  .inf-ck-card-body { padding: 0 14px 16px; padding-top: 14px; }
+  .inf-ck-input { height: 44px; font-size: 16px; }
+  .inf-ck-field label { font-size: 11px; }
+  .inf-ck-ship-summary { align-items: flex-start; padding: 12px 14px; }
+  .inf-ck-ship-summary > button { min-height: 40px; padding: 0 8px; }
+  .inf-ck-right-col { position: static; gap: 12px; }
+  .inf-ck-items-list { max-height: none; }
+  .inf-ck-item { gap: 8px; align-items: flex-start; }
+  .inf-ck-item-thumb-wrap { width: 54px; height: 54px; }
+  .inf-ck-item-stepper { height: 32px; }
+  .inf-ck-item-stepper button { width: 30px; }
+  .inf-ck-item-price { min-width: 62px; font-size: 12px; }
+  .inf-ck-promo-row { align-items: stretch; }
+  .inf-ck-promo-btn { padding-inline: 14px; }
+  .inf-ck-confirm-title { font-size: 22px; }
+  .inf-ck-confirm-subtitle { font-size: 12.5px; }
+  .inf-ck-confirm-actions { flex-direction: column; align-items: stretch; }
+  .inf-ck-btn-primary, .inf-ck-btn-secondary { justify-content: center; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inf-ck-confetti-canvas { display: none; }
+}

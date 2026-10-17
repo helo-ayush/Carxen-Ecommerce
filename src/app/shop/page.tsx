@@ -114,6 +114,12 @@ function ShopContent() {
     setDealsOnly(dealsParam);
   }, [dealsParam]);
 
+  useEffect(() => {
+    if (!isFilterOpen) return;
+    document.body.classList.add('lock');
+    return () => document.body.classList.remove('lock');
+  }, [isFilterOpen]);
+
   const handleCategorySelect = (k: string) => {
     setCategory(k);
     const params = new URLSearchParams(searchParams.toString());
@@ -251,6 +257,16 @@ function ShopContent() {
     dealsOnly ||
     Boolean(searchQuery.trim());
 
+  const activeFilterCount = [
+    category !== 'all',
+    fitType !== 'all',
+    priceTier !== 'all',
+    ratingFilter,
+    seriesFilter !== 'all',
+    dealsOnly,
+    Boolean(searchQuery.trim()),
+  ].filter(Boolean).length;
+
   const resetAllFilters = () => {
     setCategory('all');
     setFitType('all');
@@ -350,26 +366,33 @@ function ShopContent() {
           )}
 
           {/* LEFT COLUMN: FILTERS CARD */}
-          <aside className={`shop-sidebar-card ${isFilterOpen ? 'open' : ''}`} aria-label="Product filters">
+          <aside className={`shop-sidebar-card ${isFilterOpen ? 'open' : ''}`} aria-label="Product filters" role={isFilterOpen ? 'dialog' : undefined} aria-modal={isFilterOpen || undefined}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <h2 className="shop-filter-title" style={{ margin: 0, fontSize: '18px' }}>Filters</h2>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#e2231a',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  Reset
-                </button>
-              )}
+              <div className="shop-filter-heading-actions">
+                <h2 className="shop-filter-title" style={{ margin: 0, fontSize: '18px' }}>Filters</h2>
+                <div className="shop-filter-actions">
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={resetAllFilters}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#e2231a',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button type="button" className="mobile-filter-close" onClick={() => setIsFilterOpen(false)} aria-label="Close filters">
+                    <X size={17} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Section 1: Search Tags */}
@@ -582,6 +605,10 @@ function ShopContent() {
                 </div>
               )}
             </div>
+            <div className="mobile-filter-drawer-actions">
+              <button type="button" className="btn dark" onClick={() => setIsFilterOpen(false)}>Apply filters</button>
+              <button type="button" className="mobile-filter-reset-action" onClick={resetAllFilters}>Reset</button>
+            </div>
           </aside>
 
           {/* RIGHT COLUMN: MAIN CONTENT */}
@@ -637,7 +664,7 @@ function ShopContent() {
                 }}
               >
                 <SlidersHorizontal style={{ width: 14, height: 14 }} />
-                <span>Filters {hasActiveFilters ? '•' : ''}</span>
+                <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}</span>
               </button>
             </div>
 

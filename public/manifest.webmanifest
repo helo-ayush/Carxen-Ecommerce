@@ -1,0 +1,14 @@
+{
+  "name": "CARXEN — Premium Car Accessories",
+  "short_name": "CARXEN",
+  "description": "Precision-fit car accessories engineered for every drive.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#e2231a",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "1479x509", "type": "image/png", "purpose": "any" }
+  ]
+}
