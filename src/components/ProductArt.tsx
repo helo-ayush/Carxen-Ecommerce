@@ -8,10 +8,16 @@ interface ProductArtProps {
 }
 
 export function ProductArt({ product, className, style }: ProductArtProps) {
-  if (product.image) {
+  const imgSrc =
+    product.n?.toLowerCase().includes('quilted seat bench') ||
+    product.image?.includes('photo-1486006920555')
+      ? '/quilted-seat-bench.jpg'
+      : product.image;
+
+  if (imgSrc) {
     return (
       <img
-        src={product.image}
+        src={imgSrc}
         alt={product.n}
         className={className}
         style={{ objectFit: 'cover', width: '100%', height: '100%', borderRadius: 'inherit', ...style }}

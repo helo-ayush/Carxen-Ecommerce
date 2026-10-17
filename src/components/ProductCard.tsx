@@ -114,9 +114,12 @@ export function ProductCard({
 
   // Single subtle badge matching UI reference (never stacked, never stretched)
   const badge = (() => {
-    if (product.nw) return { type: 'new', label: 'New' };
+    if (isCustomFitBadge && fitText && product.c === 'mats' && (product.id === 2 || !product.o)) {
+      return { type: 'fit', label: fitText };
+    }
     if (discountPercent > 0) return { type: 'sale', label: 'Sale' };
-    if (product.spot || product.top) return { type: 'best', label: 'Best Seller' };
+    if (product.top || product.spot) return { type: 'best', label: 'Best Seller' };
+    if (product.nw) return { type: 'new', label: 'New' };
     if (isCustomFitBadge && fitText) return { type: 'fit', label: fitText };
     return null;
   })();

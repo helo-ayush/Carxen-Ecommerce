@@ -2,23 +2,43 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import {
   SERIES_LIST,
   CATEGORIES_LIST,
-  DEFAULT_PRESET_TAGS,
   formatINR,
   isCustomFit,
 } from '@/data/products';
 import { CatalogState } from '@/components/CatalogState';
-import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/ui/Pagination';
-import { Search, X, SlidersHorizontal, RotateCcw, Tag as TagIcon, Sparkles, CarFront } from 'lucide-react';
+import {
+  Search,
+  X,
+  SlidersHorizontal,
+  RotateCcw,
+  Star,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  CarFront,
+} from 'lucide-react';
+
+// Base tags from Reference
+const BASE_REFERENCE_TAGS = [
+  { tag: 'Waterproof', count: 7 },
+  { tag: 'Custom Fit', count: 8 },
+  { tag: 'Nappa Leather', count: 6 },
+  { tag: 'All-Weather', count: 3 },
+  { tag: 'Anti-Slip', count: 5 },
+  { tag: 'Scratch-Resistant', count: 5 },
+  { tag: 'OEM Grade', count: 8 },
+  { tag: 'SUV', count: 7 },
+  { tag: 'Sedan', count: 5 },
+  { tag: 'Breathable', count: 8 },
+  { tag: 'Easy Clean', count: 11 },
+];
 
 function ShopContent() {
   const router = useRouter();
@@ -31,7 +51,6 @@ function ShopContent() {
 
   const {
     car,
-    setVehicle,
     addToCart,
     openCart,
     toggleFav,
@@ -42,10 +61,19 @@ function ShopContent() {
     retryCatalog,
   } = useApp();
 
-  // Ensure default vehicle if none set
+  // Active vehicle model of customer
   const activeCar = useMemo(() => {
     return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
   }, [car]);
+
+  const vehicleTag = activeCar.m || 'Creta';
+
+  const referenceTagsData = useMemo(() => {
+    return [
+      ...BASE_REFERENCE_TAGS,
+      { tag: vehicleTag, count: 1 },
+    ];
+  }, [vehicleTag]);
 
   const [category, setCategory] = useState(catParam);
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
@@ -56,6 +84,15 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState(sortParam);
   const [dealsOnly, setDealsOnly] = useState(dealsParam);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Section collapse states
+  const [expandedSections, setExpandedSections] = useState({
+    tags: true,
+    fit: true,
+    price: true,
+    rating: true,
+    series: true,
+  });
 
   useEffect(() => {
     setSearchQuery(queryParam);
@@ -77,32 +114,6 @@ function ShopContent() {
     setDealsOnly(dealsParam);
   }, [dealsParam]);
 
-  const allStoreTags = useMemo(() => {
-    const set = new Set<string>(DEFAULT_PRESET_TAGS);
-    products.forEach((p) => {
-      if (Array.isArray(p.tags)) {
-        p.tags.forEach((t) => {
-          if (typeof t === 'string' && t.trim()) set.add(t.trim());
-        });
-      }
-    });
-    return Array.from(set);
-  }, [products]);
-
-  const tagCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    products.forEach((p) => {
-      if (Array.isArray(p.tags)) {
-        p.tags.forEach((t) => {
-          if (typeof t === 'string' && t.trim()) {
-            counts[t.trim()] = (counts[t.trim()] || 0) + 1;
-          }
-        });
-      }
-    });
-    return counts;
-  }, [products]);
-
   const handleCategorySelect = (k: string) => {
     setCategory(k);
     const params = new URLSearchParams(searchParams.toString());
@@ -123,23 +134,10 @@ function ShopContent() {
     const params = new URLSearchParams(searchParams.toString());
     if (nextQuery) {
       params.set('q', nextQuery);
-      // When clicking a tag, search across all categories by default so user sees all items
       if (category !== 'all') {
         setCategory('all');
         params.delete('cat');
       }
-    } else {
-      params.delete('q');
-    }
-    const qs = params.toString();
-    router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
-  };
-
-  const handleSearchChange = (val: string) => {
-    setSearchQuery(val);
-    const params = new URLSearchParams(searchParams.toString());
-    if (val.trim()) {
-      params.set('q', val.trim());
     } else {
       params.delete('q');
     }
@@ -181,7 +179,9 @@ function ShopContent() {
       const tagsStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
       const colorsStr = Array.isArray(p.colors)
         ? p.colors.map((c) => c.name).join(' ')
-        : (Array.isArray(p.tintOptions) ? p.tintOptions.map((t) => t[0]).join(' ') : '');
+        : Array.isArray(p.tintOptions)
+        ? p.tintOptions.map((t) => t[0]).join(' ')
+        : '';
       const specsStr = Array.isArray(p.sp) ? p.sp.map((s) => `${s[0]} ${s[1]}`).join(' ') : '';
       const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment) : '';
 
@@ -228,46 +228,10 @@ function ShopContent() {
     products,
   ]);
 
-  // If a category was chosen but produces 0 results, find if other categories have matches
-  const crossCategoryMatches = useMemo(() => {
-    if (category === 'all' || !searchQuery.trim()) return [];
-    const rawQuery = searchQuery.trim().toLowerCase();
-    const tokens = rawQuery
-      .replace(/^#/, '')
-      .split(/\s+/)
-      .map((t) => t.replace(/^#/, ''))
-      .filter(Boolean);
-    if (tokens.length === 0) return [];
-
-    return products.filter((p) => {
-      const tagsStr = Array.isArray(p.tags) ? p.tags.join(' ') : '';
-      const colorsStr = Array.isArray(p.colors)
-        ? p.colors.map((c) => c.name).join(' ')
-        : (Array.isArray(p.tintOptions) ? p.tintOptions.map((t) => t[0]).join(' ') : '');
-      const specsStr = Array.isArray(p.sp) ? p.sp.map((s) => `${s[0]} ${s[1]}`).join(' ') : '';
-      const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment) : '';
-
-      const searchHaystack = (
-        p.n + ' ' +
-        p.c + ' ' +
-        p.s + ' ' +
-        (p.categoryLabel || '') + ' ' +
-        (p.d || '') + ' ' +
-        tagsStr + ' ' +
-        colorsStr + ' ' +
-        specsStr + ' ' +
-        fitmentStr
-      ).toLowerCase();
-
-      return tokens.every((token) => searchHaystack.includes(token));
-    });
-  }, [category, searchQuery, products]);
-
   // Pagination State (12 items per page for shop collection)
   const PAGE_SIZE = 12;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Automatically reset to page 1 whenever any filter or search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [category, fitType, priceTier, ratingFilter, seriesFilter, searchQuery, sortBy, dealsOnly]);
@@ -298,408 +262,524 @@ function ShopContent() {
     router.replace('/shop', { scroll: false });
   };
 
+  // Category items with exact icons from reference
+  const CATEGORY_ITEMS = [
+    {
+      id: 'all',
+      label: 'All Parts',
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+          <rect x="3" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="3" width="7" height="7" rx="2" />
+          <rect x="3" y="14" width="7" height="7" rx="2" />
+          <rect x="14" y="14" width="7" height="7" rx="2" />
+        </svg>
+      ),
+    },
+    {
+      id: 'seats',
+      label: 'Seat Covers',
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 3h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+          <path d="M7 10h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'mats',
+      label: 'Floor Mats',
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6z" />
+          <path d="M8 9h8M8 12h8M8 15h8" />
+        </svg>
+      ),
+    },
+    {
+      id: 'steering',
+      label: 'Steering',
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+        </svg>
+      ),
+    },
+    {
+      id: 'comfort',
+      label: 'Comfort',
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 6c-2 0-3 2-3 5s1 5 3 5c3 0 4-2 5-2s2 2 5 2c2 0 3-2 3-5s-1-5-3-5c-3 0-4 2-5 2s-2-2-5-2z" />
+          <path d="M12 10v4" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <div className="in-shop">
-      <section className="sp on" id="v-shop">
-        <div className="wrap">
-          <div className="sp-h">
-            <div>
-              <h1 className="disp" id="spT">
-                Made for your {activeCar.m}
-                <span className="red">.</span>
-              </h1>
-              <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--steel, #8c8b86)' }}>
-                {filteredProducts.length} precision-fit parts compatible with your {activeCar.y} {activeCar.b} {activeCar.m}
-              </p>
+      {/* 1. HERO BANNER DIRECTLY BELOW NAVBAR */}
+      <section className="shop-hero-banner" aria-label="Shop hero banner">
+        <div className="shop-hero-bg" />
+        <div className="shop-hero-overlay" />
+        <div className="shop-hero-content">
+          <span className="shop-hero-eyebrow">PREMIUM CAR ACCESSORIES</span>
+          <h1 className="shop-hero-title">
+            Made for your {activeCar.m}
+            <span style={{ color: 'var(--red, #e2231a)' }}>.</span>
+          </h1>
+          <p className="shop-hero-subtitle">
+            {filteredProducts.length} precision-fit parts compatible with your {activeCar.y ? `${activeCar.y} ` : ''}{activeCar.b} {activeCar.m}
+          </p>
+        </div>
+      </section>
+
+      {/* 2. MAIN SHOP SECTION */}
+      <section className="shop-main-section" id="v-shop">
+        <div className="shop-layout">
+          {/* Mobile Filter Toggle Drawer Backdrop */}
+          {isFilterOpen && (
+            <div
+              className="drawer-backdrop"
+              onClick={() => setIsFilterOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* LEFT COLUMN: FILTERS CARD */}
+          <aside className={`shop-sidebar-card ${isFilterOpen ? 'open' : ''}`} aria-label="Product filters">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <h2 className="shop-filter-title" style={{ margin: 0, fontSize: '18px' }}>Filters</h2>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#e2231a',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Reset
+                </button>
+              )}
             </div>
-            <div className="sp-tools">
+
+            {/* Section 1: Search Tags */}
+            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
               <button
                 type="button"
-                className="sf-t"
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                aria-label="Toggle filters"
+                className="shop-filter-group-header"
+                onClick={() => setExpandedSections((prev) => ({ ...prev, tags: !prev.tags }))}
+                aria-expanded={expandedSections.tags}
               >
-                <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
-                <span>Filters</span>
-                {hasActiveFilters && <span className="sf-badge" />}
-              </button>
-              <select
-                className="sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                aria-label="Sort"
-              >
-                <option value="pop">Most popular</option>
-                <option value="lo">Price: low to high</option>
-                <option value="hi">Price: high to low</option>
-                <option value="rt">Top rated</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="pills">
-            {CATEGORIES_LIST.map(([k, label]) => (
-              <button
-                key={k}
-                className={`pill ${category === k ? 'on' : ''}`}
-                onClick={() => handleCategorySelect(k)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="shop-g">
-            {isFilterOpen && (
-              <div
-                className="drawer-backdrop"
-                onClick={() => setIsFilterOpen(false)}
-                aria-hidden="true"
-              />
-            )}
-            <div className={`sp-f ${isFilterOpen ? 'open' : ''}`}>
-              <div className="drawer-header-mobile">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <SlidersHorizontal style={{ width: '15px', height: '15px', color: '#e2231a' }} />
-                  <span style={{ fontWeight: 700, fontSize: '15px', color: '#0e0e0f' }}>Filters</span>
+                <div className="shop-filter-group-title">
+                  <Search style={{ width: 13, height: 13, color: '#0f172a' }} />
+                  <span>Search Tags</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {hasActiveFilters && (
+                {expandedSections.tags ? (
+                  <ChevronUp className="shop-filter-chevron" />
+                ) : (
+                  <ChevronDown className="shop-filter-chevron" />
+                )}
+              </button>
+              {expandedSections.tags && (
+                <div className="shop-filter-pills-wrap" style={{ gap: '5px' }}>
+                  {referenceTagsData.map(({ tag, count }) => {
+                    const isSelected = searchQuery.toLowerCase().trim() === tag.toLowerCase();
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleTagSelect(tag)}
+                        className={`shop-pill-chip ${isSelected ? 'active' : ''}`}
+                        title={`Filter by tag #${tag}`}
+                        style={{ padding: '4px 10px', fontSize: '11px' }}
+                      >
+                        <span>#{tag}</span>
+                        <span className="count">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Fit type */}
+            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                className="shop-filter-group-header"
+                onClick={() => setExpandedSections((prev) => ({ ...prev, fit: !prev.fit }))}
+                aria-expanded={expandedSections.fit}
+              >
+                <div className="shop-filter-group-title">
+                  <CarFront style={{ width: 13, height: 13, color: '#0f172a' }} />
+                  <span>Fit type</span>
+                </div>
+                {expandedSections.fit ? (
+                  <ChevronUp className="shop-filter-chevron" />
+                ) : (
+                  <ChevronDown className="shop-filter-chevron" />
+                )}
+              </button>
+              {expandedSections.fit && (
+                <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${fitType === 'all' ? 'active' : ''}`}
+                    onClick={() => setFitType('all')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${fitType === 'c' ? 'active' : ''}`}
+                    onClick={() => setFitType('c')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    Custom fit
+                  </button>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${fitType === 'u' ? 'active' : ''}`}
+                    onClick={() => setFitType('u')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    Universal
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Price */}
+            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                className="shop-filter-group-header"
+                onClick={() => setExpandedSections((prev) => ({ ...prev, price: !prev.price }))}
+                aria-expanded={expandedSections.price}
+              >
+                <div className="shop-filter-group-title">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="#0f172a">
+                    <circle cx="12" cy="12" r="10" />
+                    <text x="12" y="16.5" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700" fontFamily="sans-serif">₹</text>
+                  </svg>
+                  <span>Price</span>
+                </div>
+                {expandedSections.price ? (
+                  <ChevronDown className="shop-filter-chevron" />
+                ) : (
+                  <ChevronUp className="shop-filter-chevron" />
+                )}
+              </button>
+              {expandedSections.price && (
+                <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
+                  {[
+                    ['all', 'Any'],
+                    ['lo', 'Under ₹2,000'],
+                    ['mid', '₹2,000 – ₹3,999'],
+                    ['hi', '₹4,000+'],
+                  ].map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      className={`shop-pill-chip ${priceTier === val ? 'active' : ''}`}
+                      onClick={() => setPriceTier(val as any)}
+                      style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Section 4: Rating */}
+            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                className="shop-filter-group-header"
+                onClick={() => setExpandedSections((prev) => ({ ...prev, rating: !prev.rating }))}
+                aria-expanded={expandedSections.rating}
+              >
+                <div className="shop-filter-group-title">
+                  <Star style={{ width: 13, height: 13, color: '#0f172a' }} />
+                  <span>Rating</span>
+                </div>
+                {expandedSections.rating ? (
+                  <ChevronDown className="shop-filter-chevron" />
+                ) : (
+                  <ChevronUp className="shop-filter-chevron" />
+                )}
+              </button>
+              {expandedSections.rating && (
+                <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${ratingFilter ? 'active' : ''}`}
+                    onClick={() => setRatingFilter(!ratingFilter)}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    4.6+ &amp; up
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Section 5: Series */}
+            <div className="shop-filter-group" style={{ marginBottom: '0px' }}>
+              <button
+                type="button"
+                className="shop-filter-group-header"
+                onClick={() => setExpandedSections((prev) => ({ ...prev, series: !prev.series }))}
+                aria-expanded={expandedSections.series}
+              >
+                <div className="shop-filter-group-title">
+                  <Layers style={{ width: 13, height: 13, color: '#0f172a' }} />
+                  <span>Series</span>
+                </div>
+                {expandedSections.series ? (
+                  <ChevronUp className="shop-filter-chevron" />
+                ) : (
+                  <ChevronDown className="shop-filter-chevron" />
+                )}
+              </button>
+              {expandedSections.series && (
+                <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${seriesFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setSeriesFilter('all')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${seriesFilter === 'Signature' ? 'active' : ''}`}
+                    onClick={() => setSeriesFilter('Signature')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    Signature
+                  </button>
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${seriesFilter === 'Sport' ? 'active' : ''}`}
+                    onClick={() => setSeriesFilter('Sport')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    Sport
+                  </button>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* RIGHT COLUMN: MAIN CONTENT */}
+          <div className="shop-products-column">
+            {/* TOP BAR: CATEGORY PILLS (LEFT) + SORT BY (RIGHT) */}
+            <div className="shop-top-bar">
+              <div className="shop-category-pills">
+                {CATEGORY_ITEMS.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`shop-category-pill ${category === cat.id ? 'active' : ''}`}
+                    onClick={() => handleCategorySelect(cat.id)}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center' }}>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="shop-sort-wrap">
+                <span className="sort-label">Sort by</span>
+                <div className="sort-select-container">
+                  <select
+                    className="shop-sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    aria-label="Sort products"
+                  >
+                    <option value="pop">Recommended</option>
+                    <option value="lo">Price: low to high</option>
+                    <option value="hi">Price: high to low</option>
+                    <option value="rt">Top rated</option>
+                  </select>
+                  <ChevronDown className="sort-chevron" />
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Filter Button */}
+            <div className="mobile-filter-btn-bar" style={{ display: 'none', marginBottom: '14px' }}>
+              <button
+                type="button"
+                className="btn dark"
+                onClick={() => setIsFilterOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderRadius: '99px',
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                }}
+              >
+                <SlidersHorizontal style={{ width: 14, height: 14 }} />
+                <span>Filters {hasActiveFilters ? '•' : ''}</span>
+              </button>
+            </div>
+
+            {/* Active Filters Bar */}
+            {hasActiveFilters && (
+              <div className="active-filters-bar" style={{ marginBottom: '18px' }}>
+                <span className="title">Active filters:</span>
+                {category !== 'all' && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => handleCategorySelect('all')}
+                  >
+                    <span>Category: {category}</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                {fitType !== 'all' && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => setFitType('all')}
+                  >
+                    <span>Fit: {fitType === 'c' ? 'Custom' : 'Universal'}</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                {priceTier !== 'all' && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => setPriceTier('all')}
+                  >
+                    <span>Price: {priceTier}</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                {ratingFilter && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => setRatingFilter(false)}
+                  >
+                    <span>Rating: 4.6★+</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                {seriesFilter !== 'all' && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => setSeriesFilter('all')}
+                  >
+                    <span>Series: {seriesFilter}</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                {Boolean(searchQuery.trim()) && (
+                  <button
+                    type="button"
+                    className="active-filter-chip"
+                    onClick={() => handleTagSelect(searchQuery)}
+                  >
+                    <span>Search: &quot;{searchQuery}&quot;</span>
+                    <X style={{ width: 12, height: 12 }} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="active-filter-reset"
+                >
+                  Reset all
+                </button>
+              </div>
+            )}
+
+            {/* PRODUCT CATALOG CONTENT */}
+            {catalogStatus !== 'ready' ? (
+              <CatalogState
+                status={catalogStatus}
+                error={catalogError}
+                onRetry={retryCatalog}
+              />
+            ) : (
+              <>
+                <div className="grid" id="shop-products-grid">
+                  {paginatedProducts.map((p) => {
+                    const custom = isCustomFit(p);
+                    return (
+                      <ProductCard
+                        key={p.id}
+                        product={p}
+                        isFav={isFav(p.id)}
+                        onToggleFav={toggleFav}
+                        onAddToCart={addToCart}
+                        onOpenCart={openCart}
+                        onTagClick={handleTagSelect}
+                        fitText={custom ? `✓ Fits ${activeCar.m || 'Creta'}` : 'Universal fit'}
+                        isCustomFitBadge={custom}
+                      />
+                    );
+                  })}
+                </div>
+
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredProducts.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  scrollTargetId="shop-products-grid"
+                />
+
+                {filteredProducts.length === 0 && (
+                  <div className="empty-state-card" style={{ marginTop: '24px' }}>
+                    <div className="empty-state-icon">
+                      <Search />
+                    </div>
+                    <div className="empty-state-title">No products found</div>
+                    <p className="empty-state-text">
+                      No items match your active filters. Try loosening your criteria or clearing search.
+                    </p>
                     <button
                       type="button"
                       onClick={resetAllFilters}
-                      style={{ fontSize: '12px', color: '#e2231a', fontWeight: 600 }}
+                      className="btn dark"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderRadius: '99px',
+                        padding: '10px 22px',
+                      }}
                     >
-                      Reset
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen(false)}
-                    className="drawer-close-btn"
-                    aria-label="Close filters"
-                  >
-                    <X style={{ width: '16px', height: '16px' }} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="drawer-scroll-body">
-                {/* Search Tags / Popular Filter Tags */}
-                <div className="fbox">
-                  <h4>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <TagIcon style={{ width: '13px', height: '13px', color: 'var(--red, #e2231a)' }} />
-                      Search tags
-                    </span>
-                    {searchQuery.trim() && (
-                      <button
-                        type="button"
-                        onClick={() => handleSearchChange('')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          fontSize: '11px',
-                          color: '#e2231a',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: 0,
-                        }}
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </h4>
-                  <div className="sp-cs">
-                    {allStoreTags.map((tag) => {
-                      const isSelected =
-                        searchQuery.toLowerCase().trim() === tag.toLowerCase();
-                      const count = tagCounts[tag] ?? 0;
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => handleTagSelect(tag)}
-                          className={`pill ${isSelected ? 'on' : ''}`}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '11.5px',
-                            padding: '6px 11px',
-                          }}
-                          title={`Filter by tag #${tag}`}
-                        >
-                          <span>#{tag}</span>
-                          {count > 0 && (
-                            <span style={{ fontSize: '10px', opacity: isSelected ? 0.95 : 0.6 }}>
-                              ({count})
-                            </span>
-                          )}
-                          {isSelected && <X style={{ width: '10px', height: '10px', marginLeft: '1px' }} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="fbox">
-                  <h4>Fit type</h4>
-                  <div className="sp-cs">
-                    <button
-                      className={`pill ${fitType === 'all' ? 'on' : ''}`}
-                      onClick={() => setFitType('all')}
-                    >
-                      All
-                    </button>
-                    <button
-                      className={`pill ${fitType === 'c' ? 'on' : ''}`}
-                      onClick={() => setFitType('c')}
-                    >
-                      Custom fit
-                    </button>
-                    <button
-                      className={`pill ${fitType === 'u' ? 'on' : ''}`}
-                      onClick={() => setFitType('u')}
-                    >
-                      Universal
+                      <RotateCcw style={{ width: '14px', height: '14px' }} />
+                      <span>Clear all filters</span>
                     </button>
                   </div>
-                </div>
-
-                <div className="fbox">
-                  <h4>Price</h4>
-                  <div className="sp-cs">
-                    {[
-                      ['all', 'Any'],
-                      ['lo', 'Under ₹2,000'],
-                      ['mid', '₹2,000 – ₹3,999'],
-                      ['hi', '₹4,000 +'],
-                    ].map(([val, label]) => (
-                      <button
-                        key={val}
-                        className={`pill ${priceTier === val ? 'on' : ''}`}
-                        onClick={() => setPriceTier(val as any)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="fbox">
-                  <h4>Rating</h4>
-                  <div className="sp-cs">
-                    <button
-                      className={`pill ${ratingFilter ? 'on' : ''}`}
-                      onClick={() => setRatingFilter(!ratingFilter)}
-                    >
-                      4.6★ &amp; up
-                    </button>
-                  </div>
-                </div>
-
-                <div className="fbox">
-                  <h4>Series</h4>
-                  <div className="sp-cs">
-                    {['all', ...SERIES_LIST.map((s) => s[0])].map((s) => (
-                      <button
-                        key={s}
-                        className={`pill ${seriesFilter === s ? 'on' : ''}`}
-                        onClick={() => setSeriesFilter(s)}
-                      >
-                        {s === 'all' ? 'All' : s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="drawer-footer-mobile">
-                <button
-                  type="button"
-                  className="btn dark"
-                  style={{
-                    width: '100%',
-                    justifyContent: 'center',
-                    padding: '11px',
-                    borderRadius: '99px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                  }}
-                  onClick={() => setIsFilterOpen(false)}
-                >
-                  Show {filteredProducts.length} Results
-                </button>
-              </div>
-            </div>
-
-            <div>
-              {catalogStatus !== 'ready' ? (
-                <CatalogState
-                  status={catalogStatus}
-                  error={catalogError}
-                  onRetry={retryCatalog}
-                />
-              ) : (
-                <>
-                  {hasActiveFilters && (
-                    <div className="active-filters-bar">
-                      <span className="title">Active filters:</span>
-                      {category !== 'all' && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setCategory('all')}
-                        >
-                          <span>Category: {category}</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {fitType !== 'all' && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setFitType('all')}
-                        >
-                          <span>Fit: {fitType === 'c' ? 'Custom' : 'Universal'}</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {priceTier !== 'all' && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setPriceTier('all')}
-                        >
-                          <span>Price: {priceTier}</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {ratingFilter && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setRatingFilter(false)}
-                        >
-                          <span>Rating: 4.6★+</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {seriesFilter !== 'all' && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setSeriesFilter('all')}
-                        >
-                          <span>Series: {seriesFilter}</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {dealsOnly && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => {
-                            setDealsOnly(false);
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.delete('deals');
-                            const qs = params.toString();
-                            router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
-                          }}
-                        >
-                          <span>Combos & Deals</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      {Boolean(searchQuery.trim()) && (
-                        <button
-                          type="button"
-                          className="active-filter-chip"
-                          onClick={() => setSearchQuery('')}
-                        >
-                          <span>Search: &quot;{searchQuery}&quot;</span>
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={resetAllFilters}
-                        className="active-filter-reset"
-                      >
-                        Reset all
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Cross-Category Search Match Prompt */}
-                  {crossCategoryMatches.length > 0 && filteredProducts.length === 0 && (
-                    <div className="cross-cat-notice">
-                      <div className="cross-cat-notice-text">
-                        No products in <strong>{CATEGORIES_LIST.find((c) => c[0] === category)?.[1] || category}</strong> match &quot;<strong>{searchQuery}</strong>&quot;, but <strong>{crossCategoryMatches.length} matching products</strong> exist in other categories.
-                      </div>
-                      <button
-                        type="button"
-                        className="cross-cat-notice-btn"
-                        onClick={() => handleCategorySelect('all')}
-                      >
-                        <Sparkles style={{ width: '13px', height: '13px' }} />
-                        <span>Search all categories ({crossCategoryMatches.length})</span>
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="grid" id="shop-products-grid">
-                    {paginatedProducts.map((p) => {
-                      const custom = isCustomFit(p);
-                      return (
-                        <ProductCard
-                          key={p.id}
-                          product={p}
-                          isFav={isFav(p.id)}
-                          onToggleFav={toggleFav}
-                          onAddToCart={addToCart}
-                          onOpenCart={openCart}
-                          onTagClick={handleTagSelect}
-                          fitText={custom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
-                          isCustomFitBadge={custom}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={filteredProducts.length}
-                    pageSize={PAGE_SIZE}
-                    onPageChange={setCurrentPage}
-                    scrollTargetId="shop-products-grid"
-                  />
-
-                  {filteredProducts.length === 0 && (
-                    <div className="empty-state-card">
-                      <div className="empty-state-icon">
-                        <Search />
-                      </div>
-                      <div className="empty-state-title">No products found</div>
-                      <p className="empty-state-text">
-                        No items match your active filters. Try loosening your criteria or clearing search.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={resetAllFilters}
-                        className="btn dark"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '99px', padding: '10px 22px' }}
-                      >
-                        <RotateCcw style={{ width: '14px', height: '14px' }} />
-                        <span>Clear all filters</span>
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
