@@ -2669,16 +2669,17 @@ nav.main a.active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5px 8.5px;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.01em;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  line-height: 14px;
-  width: fit-content;
-  max-width: fit-content;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  line-height: 1;
+  width: auto;
+  max-width: 100%;
   white-space: nowrap;
 }
 
@@ -3281,13 +3282,26 @@ nav.main a.active {
   .pm-badges {
     top: 6px !important;
     left: 6px !important;
+    max-width: calc(100% - 44px) !important;
+    z-index: 3 !important;
   }
 
   .ref-badge {
-    font-size: 9px !important;
-    padding: 2px 6px !important;
-    line-height: 12px !important;
-    border-radius: 6px !important;
+    height: 20px !important;
+    padding: 0 8px !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+    text-transform: none !important;
   }
 
   .ref-hrt,
@@ -7961,6 +7975,13 @@ footer {
   box-sizing: border-box;
 }
 
+.shop-category-pills::after {
+  content: '';
+  flex: 0 0 16px;
+  height: 1px;
+  display: none;
+}
+
 .shop-category-pill {
   background: var(--paper, #ffffff);
   border: 1px solid var(--line, #dcdbd5);
@@ -8068,12 +8089,32 @@ footer {
     min-width: 0;
     overflow-x: auto;
     flex-wrap: nowrap;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
+    padding-right: 4px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(14, 14, 16, 0.22) transparent;
+    cursor: grab;
+    user-select: none;
+  }
+  .shop-category-pills:active {
+    cursor: grabbing;
   }
   .shop-category-pills::-webkit-scrollbar {
-    display: none;
+    display: block;
+    height: 3px;
+  }
+  .shop-category-pills::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 99px;
+  }
+  .shop-category-pills::-webkit-scrollbar-thumb {
+    background: rgba(14, 14, 16, 0.22);
+    border-radius: 99px;
+  }
+  .shop-category-pills::after {
+    display: block;
   }
   .shop-category-pill {
     flex-shrink: 0;
@@ -8349,13 +8390,35 @@ footer {
     min-width: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding-bottom: 5px;
+    padding-bottom: 8px;
+    padding-right: 4px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(14, 14, 16, 0.22) transparent;
+    cursor: grab;
+    user-select: none;
     box-sizing: border-box;
   }
-  .shop-category-pills::-webkit-scrollbar { display: none; }
-  .shop-category-pill { flex: 0 0 auto; min-height: 42px; padding: 8px 14px; white-space: nowrap; }
+  .shop-category-pills:active {
+    cursor: grabbing;
+  }
+  .shop-category-pills::-webkit-scrollbar {
+    display: block;
+    height: 3px;
+  }
+  .shop-category-pills::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 99px;
+  }
+  .shop-category-pills::-webkit-scrollbar-thumb {
+    background: rgba(14, 14, 16, 0.22);
+    border-radius: 99px;
+  }
+  .shop-category-pills::after {
+    display: block;
+  }
+  .shop-category-pill { flex: 0 0 auto; min-height: 36px; padding: 7px 13px; font-size: 12.5px; white-space: nowrap; }
   .shop-top-bar { align-items: stretch; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
   .shop-sort-wrap { justify-content: space-between; margin-left: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
   .shop-sort-select { min-height: 42px; }
@@ -8407,13 +8470,43 @@ footer {
     min-width: 0;
     overflow-x: auto;
     flex-wrap: nowrap;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
+    padding-right: 4px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(14, 14, 16, 0.22) transparent;
     box-sizing: border-box;
+    gap: 6px;
+    cursor: grab;
+    user-select: none;
   }
-  .shop-category-pills::-webkit-scrollbar { display: none; }
-  .shop-category-pill { flex: 0 0 auto; min-height: 40px; padding: 7px 13px; font-size: 12px; white-space: nowrap; }
+  .shop-category-pills:active {
+    cursor: grabbing;
+  }
+  .shop-category-pills::-webkit-scrollbar {
+    display: block;
+    height: 3px;
+  }
+  .shop-category-pills::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 99px;
+  }
+  .shop-category-pills::-webkit-scrollbar-thumb {
+    background: rgba(14, 14, 16, 0.22);
+    border-radius: 99px;
+  }
+  .shop-category-pills::after {
+    display: block;
+  }
+  .shop-category-pill {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 6.5px 12px;
+    font-size: 12px;
+    gap: 6px;
+    white-space: nowrap;
+  }
   .shop-sort-wrap { justify-content: space-between; margin-left: 0; gap: 6px; width: 100%; max-width: 100%; }
   .sort-label { font-size: 12px; }
   .shop-sort-select { width: 100%; min-height: 40px; padding-left: 12px; font-size: 12px; }
@@ -8435,7 +8528,7 @@ footer {
   .ref-media { height: 135px !important; }
   .ref-hrt { width: 34px !important; height: 34px !important; top: 4px !important; right: 4px !important; }
   .ref-hrt svg { width: 14px !important; height: 14px !important; }
-  .ref-badge { max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ref-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ref-info { padding: 8px 8px 10px !important; min-width: 0; }
   .ref-title { font-size: 12.5px !important; word-break: break-word; }
   .ref-btn { min-height: 38px; height: 38px !important; font-size: 12px !important; }

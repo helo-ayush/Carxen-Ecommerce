@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
@@ -93,6 +93,41 @@ function ShopContent() {
     rating: true,
     series: true,
   });
+
+  // Short vehicle model name for concise, beautiful badges on mobile and desktop
+  const shortCarModel = useMemo(() => {
+    const m = (activeCar.m || 'Creta').trim();
+    const parts = m.split(' ').filter(Boolean);
+    if (parts.length > 0 && /^\d{4}$/.test(parts[0])) {
+      return parts[2] || parts[1] || parts[0];
+    }
+    return parts[0] || m;
+  }, [activeCar.m]);
+
+  // Smooth mouse drag-to-scroll for horizontal category pills
+  const pillsRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+
+  const handlePillsMouseDown = (e: React.MouseEvent) => {
+    if (!pillsRef.current) return;
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX - pillsRef.current.offsetLeft;
+    scrollLeftRef.current = pillsRef.current.scrollLeft;
+  };
+
+  const handlePillsMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !pillsRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - pillsRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    pillsRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handlePillsMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
 
   useEffect(() => {
     setSearchQuery(queryParam);
@@ -615,7 +650,14 @@ function ShopContent() {
           <div className="shop-products-column">
             {/* TOP BAR: CATEGORY PILLS (LEFT) + SORT BY (RIGHT) */}
             <div className="shop-top-bar">
-              <div className="shop-category-pills">
+              <div
+                className="shop-category-pills"
+                ref={pillsRef}
+                onMouseDown={handlePillsMouseDown}
+                onMouseMove={handlePillsMouseMove}
+                onMouseUp={handlePillsMouseUpOrLeave}
+                onMouseLeave={handlePillsMouseUpOrLeave}
+              >
                 {CATEGORY_ITEMS.map((cat) => (
                   <button
                     key={cat.id}
@@ -763,7 +805,7 @@ function ShopContent() {
                         onAddToCart={addToCart}
                         onOpenCart={openCart}
                         onTagClick={handleTagSelect}
-                        fitText={custom ? `✓ Fits ${activeCar.m || 'Creta'}` : 'Universal fit'}
+                        fitText={custom ? `✓ Fits ${shortCarModel}` : 'Universal'}
                         isCustomFitBadge={custom}
                       />
                     );
