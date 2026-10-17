@@ -318,8 +318,9 @@ function ShopContent() {
     {
       id: 'all',
       label: 'All Parts',
+      shortLabel: 'All',
       icon: (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
           <rect x="3" y="3" width="7" height="7" rx="2" />
           <rect x="14" y="3" width="7" height="7" rx="2" />
           <rect x="3" y="14" width="7" height="7" rx="2" />
@@ -330,8 +331,9 @@ function ShopContent() {
     {
       id: 'seats',
       label: 'Seat Covers',
+      shortLabel: 'Seats',
       icon: (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 3h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
           <path d="M7 10h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z" />
         </svg>
@@ -340,8 +342,9 @@ function ShopContent() {
     {
       id: 'mats',
       label: 'Floor Mats',
+      shortLabel: 'Mats',
       icon: (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6z" />
           <path d="M8 9h8M8 12h8M8 15h8" />
         </svg>
@@ -350,8 +353,9 @@ function ShopContent() {
     {
       id: 'steering',
       label: 'Steering',
+      shortLabel: 'Steering',
       icon: (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="9" />
           <circle cx="12" cy="12" r="3" />
           <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
@@ -361,8 +365,9 @@ function ShopContent() {
     {
       id: 'comfort',
       label: 'Comfort',
+      shortLabel: 'Comfort',
       icon: (
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M7 6c-2 0-3 2-3 5s1 5 3 5c3 0 4-2 5-2s2 2 5 2c2 0 3-2 3-5s-1-5-3-5c-3 0-4 2-5 2s-2-2-5-2z" />
           <path d="M12 10v4" />
         </svg>
@@ -650,23 +655,18 @@ function ShopContent() {
           <div className="shop-products-column">
             {/* TOP BAR: CATEGORY PILLS (LEFT) + SORT BY (RIGHT) */}
             <div className="shop-top-bar">
-              <div
-                className="shop-category-pills"
-                ref={pillsRef}
-                onMouseDown={handlePillsMouseDown}
-                onMouseMove={handlePillsMouseMove}
-                onMouseUp={handlePillsMouseUpOrLeave}
-                onMouseLeave={handlePillsMouseUpOrLeave}
-              >
+              <div className="shop-category-pills">
                 {CATEGORY_ITEMS.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     className={`shop-category-pill ${category === cat.id ? 'active' : ''}`}
                     onClick={() => handleCategorySelect(cat.id)}
+                    title={cat.label}
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center' }}>{cat.icon}</span>
-                    <span>{cat.label}</span>
+                    <span className="shop-category-icon">{cat.icon}</span>
+                    <span className="shop-cat-label-full">{cat.label}</span>
+                    <span className="shop-cat-label-short">{cat.shortLabel || cat.label}</span>
                   </button>
                 ))}
               </div>

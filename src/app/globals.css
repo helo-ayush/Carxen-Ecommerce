@@ -7998,6 +7998,21 @@ footer {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
+.shop-category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shop-cat-label-full {
+  display: inline;
+}
+
+.shop-cat-label-short {
+  display: none;
+}
+
 .shop-category-pill:hover {
   border-color: #c9c8c0;
   background: var(--bg2, #ebeae4);
@@ -8465,47 +8480,68 @@ footer {
   .shop-layout { grid-template-columns: minmax(0, 1fr) !important; padding-inline: 12px; gap: 14px; width: 100%; max-width: 100%; box-sizing: border-box; }
   .shop-top-bar { align-items: stretch; gap: 10px; min-width: 0; width: 100%; max-width: 100%; }
   .shop-category-pills {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 8px;
-    padding-right: 4px;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(14, 14, 16, 0.22) transparent;
-    box-sizing: border-box;
-    gap: 6px;
-    cursor: grab;
-    user-select: none;
-  }
-  .shop-category-pills:active {
-    cursor: grabbing;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    flex-wrap: nowrap !important;
+    padding: 0 !important;
+    margin: 0 0 10px 0 !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box !important;
+    cursor: default !important;
+    user-select: auto !important;
   }
   .shop-category-pills::-webkit-scrollbar {
-    display: block;
-    height: 3px;
-  }
-  .shop-category-pills::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 99px;
-  }
-  .shop-category-pills::-webkit-scrollbar-thumb {
-    background: rgba(14, 14, 16, 0.22);
-    border-radius: 99px;
+    display: none !important;
   }
   .shop-category-pills::after {
-    display: block;
+    display: none !important;
   }
   .shop-category-pill {
-    flex: 0 0 auto;
-    min-height: 34px;
-    padding: 6.5px 12px;
-    font-size: 12px;
-    gap: 6px;
-    white-space: nowrap;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 3px !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    gap: 3.5px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    flex: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  }
+  .shop-category-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+  .shop-category-icon svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .shop-cat-label-full {
+    display: none !important;
+  }
+  .shop-cat-label-short {
+    display: inline !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
   .shop-sort-wrap { justify-content: space-between; margin-left: 0; gap: 6px; width: 100%; max-width: 100%; }
   .sort-label { font-size: 12px; }
@@ -8562,6 +8598,9 @@ footer {
   .shop-hero-title { font-size: 20px; }
   .shop-hero-content { padding: 18px 10px; }
   .shop-layout { padding-inline: 8px; }
+  .shop-category-pills { gap: 3px !important; margin-bottom: 8px !important; }
+  .shop-category-pill { min-height: 34px !important; height: 34px !important; font-size: 10px !important; padding: 0 2px !important; gap: 2.5px !important; }
+  .shop-category-icon svg { width: 12px !important; height: 12px !important; }
 }
 
 
