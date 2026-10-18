@@ -8328,6 +8328,19 @@ footer {
 
   .top-nav-shell { position: sticky; top: 0; }
   .top-nav-shell header { position: relative; }
+  /* Prevent offer strip layout collapsing & touch-scroll jitter on mobile/tablet */
+  .top-nav-shell.ribbon-hidden .ann,
+  .ann.ann-hidden {
+    max-height: 60px !important;
+    height: auto !important;
+    min-height: unset !important;
+    padding: 6px 12px !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
   .hd {
     min-height: 64px;
     height: auto;
@@ -8445,7 +8458,7 @@ footer {
     font-size: 9px;
     line-height: 1.35;
     padding: 6px 12px;
-    max-height: none;
+    max-height: 60px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;

@@ -39,8 +39,22 @@ function HeaderContent() {
           const currentScrollY = window.scrollY;
           setIsScrolled(currentScrollY > 20);
 
+          // On mobile screens (<= 768px), keep the offer strip static and stable.
+          // Disabling auto-hide on mobile completely eliminates touch-scroll layout jitter,
+          // scroll anchoring feedback loops, and height bouncing.
+          if (window.innerWidth <= 768) {
+            if (isHidden) {
+              isHidden = false;
+              setIsRibbonHidden(false);
+            }
+            accumulatedDelta = 0;
+            lastScrollY = currentScrollY;
+            ticking = false;
+            return;
+          }
+
           // 1. Safe zone near the top: always keep the ribbon visible
-          if (currentScrollY <= 60) {
+          if (currentScrollY <= 80) {
             if (isHidden) {
               isHidden = false;
               setIsRibbonHidden(false);
@@ -59,14 +73,14 @@ function HeaderContent() {
           }
           accumulatedDelta += diff;
 
-          // 2. Downward scroll: require at least 35px continuous downward scroll past 100px
-          if (accumulatedDelta > 35 && currentScrollY > 100 && !isHidden) {
+          // 2. Downward scroll: require at least 50px continuous downward scroll past 120px
+          if (accumulatedDelta > 50 && currentScrollY > 120 && !isHidden) {
             isHidden = true;
             setIsRibbonHidden(true);
             accumulatedDelta = 0;
           }
-          // 3. Upward scroll: require at least 25px continuous upward scroll to reveal
-          else if (accumulatedDelta < -25 && isHidden) {
+          // 3. Upward scroll: require at least 40px continuous upward scroll to reveal
+          else if (accumulatedDelta < -40 && isHidden) {
             isHidden = false;
             setIsRibbonHidden(false);
             accumulatedDelta = 0;
@@ -79,8 +93,19 @@ function HeaderContent() {
       }
     };
 
+    const handleResize = () => {
+      if (window.innerWidth <= 768 && isHidden) {
+        isHidden = false;
+        setIsRibbonHidden(false);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
