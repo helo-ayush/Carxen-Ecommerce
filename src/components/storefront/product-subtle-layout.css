@@ -1456,3 +1456,509 @@
   color: var(--steel, #5d5d64);
 }
 
+/* --------------------------------------------------------------------------
+   SIDEBAR QUICK HIGHLIGHTS & JUMP BUTTONS
+   -------------------------------------------------------------------------- */
+.ps-sidebar-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 14px;
+}
+
+.ps-sidebar-highlight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--bg, #f4f3ef);
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-quick-specs-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ps-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink, #0e0e0f);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ps-jump-btn:hover {
+  background: var(--bg2, #ebeae4);
+  border-color: var(--ink, #0e0e0f);
+  color: var(--red, #e2231a);
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   PRODUCT INFORMATION & TECHNICAL DEEP-DIVE HUB
+   -------------------------------------------------------------------------- */
+.ps-info-hub-section {
+  margin: 44px 0 36px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 24px;
+  padding: 32px 36px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  scroll-margin-top: 90px;
+}
+
+@media (max-width: 768px) {
+  .ps-info-hub-section {
+    padding: 20px 16px;
+    border-radius: 18px;
+    margin: 30px 0 24px;
+  }
+}
+
+.ps-info-hub-header {
+  margin-bottom: 24px;
+}
+
+.ps-info-hub-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--red, #e2231a);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ps-info-hub-title {
+  font-size: clamp(20px, 2.8vw, 26px);
+  font-weight: 800;
+  color: var(--ink, #0e0e0f);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.ps-info-hub-subtitle {
+  font-size: 13.5px;
+  color: var(--steel, #5d5d64);
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+/* Nav Tabs */
+.ps-info-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line, #dcdbd5);
+  padding-bottom: 12px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ps-info-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.ps-info-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--steel, #5d5d64);
+  background: var(--bg, #f4f3ef);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ps-info-tab-btn:hover {
+  background: var(--bg2, #ebeae4);
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-info-tab-btn.active {
+  background: var(--ink, #0e0e0f);
+  color: #ffffff;
+  border-color: var(--ink, #0e0e0f);
+  box-shadow: 0 4px 14px rgba(14, 14, 15, 0.15);
+}
+
+.ps-info-tab-btn .ps-tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(226, 35, 26, 0.15);
+  color: #ff5449;
+}
+
+.ps-info-tab-btn.active .ps-tab-badge {
+  background: var(--red, #e2231a);
+  color: #ffffff;
+}
+
+/* Tab Panels */
+.ps-info-panel {
+  animation: psFadeIn 0.25s ease-out;
+}
+
+@keyframes psFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Specifications Table Grid */
+.ps-specs-table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .ps-specs-table-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ps-spec-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px;
+  background: var(--bg, #f4f3ef);
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ps-spec-card:hover {
+  border-color: #c7c6bf;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+}
+
+.ps-spec-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--steel, #5d5d64);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.ps-spec-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Installation Guide */
+.ps-install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: #fbfbf9;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+
+.ps-install-banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ps-install-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-install-chip.difficulty-easy {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.ps-install-chip.difficulty-moderate {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.ps-install-chip.difficulty-pro {
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.ps-install-video-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--red, #e2231a);
+  color: #ffffff;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.ps-install-video-btn:hover {
+  background: var(--red2, #b91a12);
+  transform: translateY(-1px);
+}
+
+.ps-install-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.ps-install-step-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.ps-install-step-card:hover {
+  border-color: #b4b3aa;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.ps-install-step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ink, #0e0e0f);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.ps-install-step-body {
+  flex: 1;
+}
+
+.ps-install-step-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+  margin-bottom: 4px;
+}
+
+.ps-install-step-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--steel, #5d5d64);
+}
+
+.ps-install-pro-tips {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  background: rgba(226, 35, 26, 0.04);
+  border: 1px solid rgba(226, 35, 26, 0.2);
+  border-radius: 14px;
+}
+
+.ps-install-pro-tips-icon {
+  color: var(--red, #e2231a);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ps-install-pro-tips-text {
+  font-size: 12.5px;
+  color: var(--ink, #0e0e0f);
+  line-height: 1.5;
+}
+
+/* Feature Highlights Grid */
+.ps-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.ps-feature-box {
+  padding: 18px 20px;
+  background: var(--bg, #f4f3ef);
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ps-feature-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  display: grid;
+  place-items: center;
+  color: var(--red, #e2231a);
+}
+
+.ps-feature-box-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-feature-box-desc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--steel, #5d5d64);
+}
+
+/* Vehicle Fitment Card */
+.ps-fitment-hub-card {
+  padding: 24px;
+  background: #fbfbf9;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ps-fitment-matched-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #86efac;
+  border-radius: 14px;
+}
+
+.ps-fitment-matched-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ps-fitment-check-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ps-fitment-car-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-fitment-car-sub {
+  font-size: 12px;
+  color: #15803d;
+  font-weight: 600;
+}
+
+.ps-fitment-change-link {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--red, #e2231a);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Package Contents */
+.ps-package-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.ps-package-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg, #f4f3ef);
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 14px;
+}
+
+.ps-package-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #0e0e0f);
+}
+
+.ps-package-qty-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: #ffffff;
+  border: 1px solid var(--line, #dcdbd5);
+  border-radius: 999px;
+  color: var(--steel, #5d5d64);
+  white-space: nowrap;
+}
+

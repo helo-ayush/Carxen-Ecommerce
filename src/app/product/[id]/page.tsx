@@ -40,6 +40,20 @@ import {
   Pencil,
   Lock,
   ShieldCheck,
+  Wrench,
+  Clock,
+  Sparkles,
+  Layers,
+  Car,
+  Shield,
+  FileText,
+  PackageCheck,
+  PlayCircle,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Award,
+  Info,
 } from 'lucide-react';
 
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -82,6 +96,157 @@ export default function ProductDetailPage() {
   }
 
   return <ProductDetailContent key={product.id} product={product} />;
+}
+
+// ---------------------------------------------------------------------------
+// HELPER FUNCTIONS FOR PRODUCT SPECIFICATIONS, INSTALLATION & FITMENT
+// ---------------------------------------------------------------------------
+
+function getInstallationDetails(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
+  const category = product.c;
+  const difficulty = product.installation?.difficulty || (category === 'steering' ? 'Moderate (5-10 mins)' : 'Easy (DIY)');
+  const time = product.installation?.time || (category === 'seats' ? '25 - 35 mins' : category === 'mats' ? '10 - 15 mins' : '15 mins');
+  const videoUrl = product.installation?.videoUrl;
+
+  let steps = product.installation?.steps;
+  if (!steps || steps.length === 0) {
+    if (category === 'seats') {
+      steps = [
+        'Unbox and lay out all seat sections on a clean surface to verify driver, passenger, and rear bench orientation.',
+        'Slide the lower cushion cover over the front seat base, aligning side bolsters and smoothing fabric toward corners.',
+        'Push the center elastic straps and round retaining discs through the seat crease between the backrest and bottom cushion.',
+        'Secure the heavy-duty metal S-hooks to non-moving structural points underneath the vehicle seat frame.',
+        'Slip the backrest cover over the seatback, press the ergonomic contour lining flat against the lumbar curve, and fasten the headrest loop fasteners.',
+        'Repeat for the passenger and rear seats. Allow 24 hours of normal usage for the memory-lined contours to settle flush with zero creasing.',
+      ];
+    } else if (category === 'mats') {
+      steps = [
+        'Remove any old factory or aftermarket floor mats and thoroughly vacuum the cabin footwells.',
+        'Align the driver-side mat over the pedal area, ensuring the reinforced heel-pad sits directly under the accelerator and brake pedals with zero pedal interference.',
+        'Engage the OEM floor twist-lock pegs or anchor grommets on the floor pan to ensure 100% anti-slip security while driving.',
+        'Position the front passenger mat flush against the footwell contours, fire-wall angle, and side kick-panels.',
+        'Install the rear row continuous mat, tucking the center transmission hump bridge under the rear center console for seamless edge-to-edge protection.',
+      ];
+    } else if (category === 'steering') {
+      steps = [
+        'Park vehicle on level ground, turn off the engine, and ensure the steering wheel is locked straight.',
+        'Warm the cover slightly (leave in sunlight for 5-10 minutes or gently warm with a hairdryer) to maximize leatherette flexibility.',
+        'Align the top center marker / contrast seam of the cover with the 12 o\'clock position on the steering wheel rim.',
+        'Work downward on both sides simultaneously, firmly stretching the high-friction anti-slip rubber lining around the rim.',
+        'Roll the bottom edge over the lower spoke. Check all seams to verify full rim wrap and firm, non-twist grip.',
+      ];
+    } else {
+      steps = [
+        'Unbox the accessory and inspect components against the included package contents checklist.',
+        'Wipe down the intended cabin mounting surface with a clean microfiber cloth to remove dust and oils.',
+        'Position the accessory and secure with the integrated quick-lock buckle straps or non-marking anchors.',
+        'Adjust height or orientation for personalized driving ergonomics and verify firm stability before driving.',
+      ];
+    }
+  }
+
+  return { difficulty, time, steps, videoUrl };
+}
+
+function getPackageContents(product: Product) {
+  const category = product.c;
+  if (category === 'seats') {
+    return [
+      { name: 'Front Driver Seat Cover (Base & Backrest)', qty: '1 Set' },
+      { name: 'Front Passenger Seat Cover (Base & Backrest)', qty: '1 Set' },
+      { name: 'Rear Row Bench & Split Backrest Covers', qty: '1 Set' },
+      { name: 'Contoured Headrest Protective Sleeves', qty: '4 - 5 Pcs' },
+      { name: 'Heavy-Duty Metal S-Hooks & Locking Retaining Discs', qty: '1 Hardware Pack' },
+      { name: 'CARXEN 2-Year Official Warranty Certificate', qty: '1 Pc' },
+    ];
+  }
+  if (category === 'mats') {
+    return [
+      { name: 'Driver-Side Precision Mat with Heavy-Duty Heel Pad', qty: '1 Pc' },
+      { name: 'Front Passenger-Side Precision Contoured Mat', qty: '1 Pc' },
+      { name: 'Continuous Rear Row Floor Mat with Transmission Hump Bridge', qty: '1 Full Piece' },
+      { name: 'Anti-Skid Retention Clips & Edge Locks', qty: '1 Set' },
+      { name: 'Waterproof Maintenance & Care Card', qty: '1 Pc' },
+    ];
+  }
+  if (category === 'steering') {
+    return [
+      { name: 'Precision-Fit Ergonomic Steering Wheel Cover', qty: '1 Pc' },
+      { name: 'Anti-Slip Odorless Natural Rubber Core', qty: 'Integrated' },
+      { name: 'Fitting Guide & Authenticity QR Card', qty: '1 Pc' },
+    ];
+  }
+  return [
+    { name: `${product.n} Unit`, qty: '1 Pc' },
+    { name: 'High-Tensile Elastic Quick-Lock Anchor Straps', qty: '1 Set' },
+    { name: 'CARXEN Quality Inspection Certificate & Warranty Card', qty: '1 Pc' },
+  ];
+}
+
+function getEnrichedSpecifications(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
+  const custom = product.customFit !== false;
+  const existingSpecs = new Map<string, string>();
+  if (Array.isArray(product.sp)) {
+    for (const [k, v] of product.sp) {
+      if (k && v) existingSpecs.set(k.trim(), String(v).trim());
+    }
+  }
+
+  if (!existingSpecs.has('Vehicle Compatibility')) {
+    existingSpecs.set(
+      'Vehicle Compatibility',
+      custom ? `${activeCar.y} ${activeCar.b} ${activeCar.m} (${activeCar.f}) · Laser Mapped` : 'Universal Multi-Vehicle Fit'
+    );
+  }
+  if (!existingSpecs.has('Product Series') && product.s) {
+    existingSpecs.set('Product Series', `CARXEN ${product.s} Series`);
+  }
+  if (!existingSpecs.has('Fitment Type')) {
+    existingSpecs.set('Fitment Type', custom ? 'Custom 3D Laser-Scanned Contours' : 'Universal Stretch-Fit');
+  }
+  if (!existingSpecs.has('Water Resistance')) {
+    existingSpecs.set('Water Resistance', '100% Water, Mud & Spill Resistant');
+  }
+  if (!existingSpecs.has('Cleaning & Care')) {
+    existingSpecs.set('Cleaning & Care', 'Wipe clean with damp microfiber cloth · Mild car shampoo safe');
+  }
+  if (!existingSpecs.has('Warranty')) {
+    existingSpecs.set('Warranty', '2-Year CARXEN Comprehensive Manufacturer Warranty');
+  }
+  if (!existingSpecs.has('Country of Origin')) {
+    existingSpecs.set('Country of Origin', 'India');
+  }
+
+  return Array.from(existingSpecs.entries());
+}
+
+function getFeatureHighlights(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
+  const custom = product.customFit !== false;
+
+  return [
+    {
+      title: custom ? `Laser-Mapped ${activeCar.m} Fitment` : 'Universal Multi-Vehicle Fitment',
+      desc: custom
+        ? `Precision-engineered using 3D laser scanners for exact contours of the ${activeCar.b} ${activeCar.m} cabin with zero creasing or loose edges.`
+        : 'Engineered with flexible multi-anchor stretch tensioners to fit seamlessly across most passenger cars, sedans, and SUVs.',
+      icon: 'laser',
+    },
+    {
+      title: 'Automotive-Grade Premium Upholstery',
+      desc: 'Crafted with multi-layer high-density memory composite and breathable synthetic leatherette that resists UV cracking and daily friction.',
+      icon: 'shield',
+    },
+    {
+      title: 'All-Weather & Spill Defense',
+      desc: 'Hydrophobic coating ensures water, hot coffee, mud, and everyday dirt roll off without staining factory upholstery.',
+      icon: 'sparkles',
+    },
+    {
+      title: 'Easy DIY Installation',
+      desc: 'No drilling, vehicle modification, or specialized tools needed. Equipped with quick-clip anchors and clear illustrated steps.',
+      icon: 'wrench',
+    },
+  ];
 }
 
 function ProductDetailContent({ product }: { product: Product }) {
@@ -141,8 +306,31 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('Delivery in 2 — 4 business days · Express Shipping available');
-  const [showFullDesc, setShowFullDesc] = useState(false);
-  const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'fitment' | 'install'>('desc');
+  const [activeInfoTab, setActiveInfoTab] = useState<'specs' | 'install' | 'desc' | 'fitment' | 'box'>('specs');
+
+  const handleScrollToInfoTab = (tabKey: 'specs' | 'install' | 'desc' | 'fitment' | 'box') => {
+    setActiveInfoTab(tabKey);
+    const el = document.getElementById('product-details-hub');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const installationDetails = useMemo(() => {
+    return getInstallationDetails(product, activeCar);
+  }, [product, activeCar]);
+
+  const packageContents = useMemo(() => {
+    return getPackageContents(product);
+  }, [product]);
+
+  const enrichedSpecs = useMemo(() => {
+    return getEnrichedSpecifications(product, activeCar);
+  }, [product, activeCar]);
+
+  const featureHighlights = useMemo(() => {
+    return getFeatureHighlights(product, activeCar);
+  }, [product, activeCar]);
 
   // Review reply interface for nested conversation thread
   interface ReviewReply {
@@ -784,74 +972,316 @@ function ProductDetailContent({ product }: { product: Product }) {
               </div>
             </div>
 
-            {/* Description & Expandable Specs */}
+            {/* Description & Quick Highlights */}
             <div className="ps-desc-section">
-              <h3 className="ps-desc-heading">Description:</h3>
+              <h3 className="ps-desc-heading">Description & Highlights:</h3>
               <p className="ps-desc-text">
                 {product.d ||
                   'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
               </p>
-              <button
-                type="button"
-                className="ps-desc-toggle"
-                onClick={() => setShowFullDesc(!showFullDesc)}
-              >
-                {showFullDesc ? 'Hide specifications ▲' : 'See full description ▼'}
-              </button>
 
-              {/* Expandable Tabs for Specifications, Fitment, Installation */}
-              {showFullDesc && (
-                <div style={{ marginTop: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '16px', padding: '16px' }}>
-                  <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
-                    <TabsList style={{ width: '100%', justifyContent: 'flex-start', overflowX: 'auto' }}>
-                      <TabsTrigger value="desc">Overview</TabsTrigger>
-                      <TabsTrigger value="specs">Specifications</TabsTrigger>
-                      <TabsTrigger value="fitment">Fitment</TabsTrigger>
-                      <TabsTrigger value="install">Installation</TabsTrigger>
-                    </TabsList>
+              {/* Quick Feature Badges */}
+              <div className="ps-sidebar-highlights">
+                <span className="ps-sidebar-highlight-pill">
+                  <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
+                  <span>{custom ? `Exact Fit: ${activeCar.m}` : 'Universal Fit'}</span>
+                </span>
+                <span className="ps-sidebar-highlight-pill">
+                  <Wrench size={13} style={{ color: 'var(--red, #e2231a)' }} />
+                  <span>{installationDetails.difficulty} · {installationDetails.time}</span>
+                </span>
+                <span className="ps-sidebar-highlight-pill">
+                  <ShieldCheck size={13} style={{ color: '#16a34a' }} />
+                  <span>2-Year Warranty</span>
+                </span>
+              </div>
 
-                    <TabsContent value="desc" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64', lineHeight: '1.6' }}>
-                      <p>{product.d}</p>
-                      <p style={{ marginTop: '8px', color: '#16a34a', fontWeight: 600 }}>
-                        ✓ Backed by CARXEN 2-year warranty and 30-day hassle-free returns.
-                      </p>
-                    </TabsContent>
-
-                    <TabsContent value="specs" style={{ paddingTop: '8px' }}>
-                      {product.sp && product.sp.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-                          {product.sp.map(([key, val], idx) => (
-                            <div key={idx} style={{ padding: '8px 12px', background: 'var(--bg, #f4f3ef)', borderRadius: '8px', fontSize: '12px' }}>
-                              <span style={{ color: '#8d8d93', display: 'block' }}>{key}</span>
-                              <b style={{ color: '#0e0e0f' }}>{val}</b>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '12px', color: '#5d5d64' }}>Model-specific technical specifications certificate included.</p>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="fitment" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64' }}>
-                      <p>
-                        {custom
-                          ? `Custom-cut precision for your ${activeCar.y} ${activeCar.b} ${activeCar.m} (${activeCar.f}) from laser-mapped templates.`
-                          : `Universal fit. Engineered for your ${activeCar.m} and most passenger cars.`}
-                      </p>
-                    </TabsContent>
-
-                    <TabsContent value="install" style={{ paddingTop: '8px', fontSize: '12px', color: '#5d5d64' }}>
-                      <p>1. Unbox components onto clean cabin surface.</p>
-                      <p>2. Align contour straps with headrest and seat base anchors.</p>
-                      <p>3. Fasten precision clips. No tools required (15 min average).</p>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
+              {/* Quick jump to full specifications and installation hub */}
+              <div className="ps-quick-specs-jump">
+                <button
+                  type="button"
+                  className="ps-jump-btn"
+                  onClick={() => handleScrollToInfoTab('specs')}
+                >
+                  <FileText size={13} />
+                  <span>Full Specifications ↓</span>
+                </button>
+                <button
+                  type="button"
+                  className="ps-jump-btn"
+                  onClick={() => handleScrollToInfoTab('install')}
+                >
+                  <Wrench size={13} />
+                  <span>Installation Method ↓</span>
+                </button>
+                <button
+                  type="button"
+                  className="ps-jump-btn"
+                  onClick={() => handleScrollToInfoTab('fitment')}
+                >
+                  <Car size={13} />
+                  <span>Fitment Guide ↓</span>
+                </button>
+              </div>
             </div>
 
             {/* Note: Store/Manufacturer card has been removed as requested */}
           </div>
+        </section>
+
+        {/* ------------------------------------------------------------------
+            DEDICATED PRODUCT INFORMATION, SPECS & INSTALLATION METHOD HUB
+            ------------------------------------------------------------------ */}
+        <section className="ps-info-hub-section" id="product-details-hub">
+          {/* Section Header */}
+          <div className="ps-info-hub-header">
+            <div className="ps-info-hub-tag">
+              <Award size={13} />
+              <span>CARXEN ENGINEERING SPECIFICATION</span>
+            </div>
+            <h2 className="ps-info-hub-title">Product Details & Technical Hub</h2>
+            <p className="ps-info-hub-subtitle">
+              Comprehensive engineering specifications, step-by-step DIY installation instructions, vehicle fitment verification, and package contents for your {product.n}.
+            </p>
+          </div>
+
+          {/* Interactive Nav Tabs */}
+          <div className="ps-info-tabs-bar" role="tablist" aria-label="Product details navigation">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeInfoTab === 'specs'}
+              className={`ps-info-tab-btn ${activeInfoTab === 'specs' ? 'active' : ''}`}
+              onClick={() => setActiveInfoTab('specs')}
+            >
+              <FileText size={15} />
+              <span>Specifications</span>
+              <span className="ps-tab-badge">{enrichedSpecs.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeInfoTab === 'install'}
+              className={`ps-info-tab-btn ${activeInfoTab === 'install' ? 'active' : ''}`}
+              onClick={() => setActiveInfoTab('install')}
+            >
+              <Wrench size={15} />
+              <span>How to Install</span>
+              <span className="ps-tab-badge">{installationDetails.steps.length} Steps</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeInfoTab === 'desc'}
+              className={`ps-info-tab-btn ${activeInfoTab === 'desc' ? 'active' : ''}`}
+              onClick={() => setActiveInfoTab('desc')}
+            >
+              <Sparkles size={15} />
+              <span>Description & Highlights</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeInfoTab === 'fitment'}
+              className={`ps-info-tab-btn ${activeInfoTab === 'fitment' ? 'active' : ''}`}
+              onClick={() => setActiveInfoTab('fitment')}
+            >
+              <Car size={15} />
+              <span>Vehicle Fitment</span>
+              <span className="ps-tab-badge">Verified</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeInfoTab === 'box'}
+              className={`ps-info-tab-btn ${activeInfoTab === 'box' ? 'active' : ''}`}
+              onClick={() => setActiveInfoTab('box')}
+            >
+              <PackageCheck size={15} />
+              <span>What&apos;s in the Box</span>
+            </button>
+          </div>
+
+          {/* TAB 1: SPECIFICATIONS */}
+          {activeInfoTab === 'specs' && (
+            <div className="ps-info-panel" role="tabpanel">
+              <div className="ps-specs-table-grid">
+                {enrichedSpecs.map(([specKey, specVal], idx) => (
+                  <div key={idx} className="ps-spec-card">
+                    <span className="ps-spec-label">{specKey}</span>
+                    <span className="ps-spec-val">{specVal}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: INSTALLATION METHOD */}
+          {activeInfoTab === 'install' && (
+            <div className="ps-info-panel" role="tabpanel">
+              {/* Installation Meta Banner */}
+              <div className="ps-install-banner">
+                <div className="ps-install-banner-meta">
+                  <div className={`ps-install-chip ${
+                    installationDetails.difficulty.toLowerCase().includes('easy')
+                      ? 'difficulty-easy'
+                      : installationDetails.difficulty.toLowerCase().includes('pro')
+                      ? 'difficulty-pro'
+                      : 'difficulty-moderate'
+                  }`}>
+                    <Wrench size={13} />
+                    <span>Difficulty: {installationDetails.difficulty}</span>
+                  </div>
+                  <div className="ps-install-chip">
+                    <Clock size={13} style={{ color: 'var(--steel, #5d5d64)' }} />
+                    <span>Estimated Time: {installationDetails.time}</span>
+                  </div>
+                  <div className="ps-install-chip">
+                    <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
+                    <span>No Vehicle Modification Required</span>
+                  </div>
+                </div>
+
+                {installationDetails.videoUrl && (
+                  <a
+                    href={installationDetails.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ps-install-video-btn"
+                  >
+                    <PlayCircle size={15} />
+                    <span>Watch Video Tutorial</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+
+              {/* Step-by-Step Instructions */}
+              <div className="ps-install-steps-list">
+                {installationDetails.steps.map((stepText, idx) => {
+                  const cleanText = stepText.replace(/^Step\s*\d+:\s*/i, '');
+                  return (
+                    <div key={idx} className="ps-install-step-card">
+                      <div className="ps-install-step-num">
+                        {String(idx + 1).padStart(2, '0')}
+                      </div>
+                      <div className="ps-install-step-body">
+                        <h4 className="ps-install-step-title">Step {idx + 1}</h4>
+                        <p className="ps-install-step-desc">{cleanText}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pro Tips Callout */}
+              <div className="ps-install-pro-tips">
+                <AlertCircle size={18} className="ps-install-pro-tips-icon" />
+                <div className="ps-install-pro-tips-text">
+                  <strong>Pro Tip for Best Fitting:</strong> For custom leatherette contours and custom-molded mats, ensure the cabin surface is thoroughly vacuumed and dry before installation. Allow 24 to 48 hours of normal cabin use for the internal high-density memory composite and tension clips to settle completely flush against your {activeCar.b} {activeCar.m} upholstery.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: DESCRIPTION & HIGHLIGHTS */}
+          {activeInfoTab === 'desc' && (
+            <div className="ps-info-panel" role="tabpanel">
+              <div style={{ maxWidth: '820px', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '8px' }}>
+                  Detailed Description
+                </h3>
+                <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
+                  {product.d ||
+                    'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
+                </p>
+              </div>
+
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '12px' }}>
+                Engineering Highlights
+              </h3>
+              <div className="ps-features-grid">
+                {featureHighlights.map((feat, idx) => (
+                  <div key={idx} className="ps-feature-box">
+                    <div className="ps-feature-icon-wrap">
+                      {feat.icon === 'laser' && <Car size={18} />}
+                      {feat.icon === 'shield' && <Shield size={18} />}
+                      {feat.icon === 'sparkles' && <Sparkles size={18} />}
+                      {feat.icon === 'wrench' && <Wrench size={18} />}
+                    </div>
+                    <h4 className="ps-feature-box-title">{feat.title}</h4>
+                    <p className="ps-feature-box-desc">{feat.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: VEHICLE FITMENT */}
+          {activeInfoTab === 'fitment' && (
+            <div className="ps-info-panel" role="tabpanel">
+              <div className="ps-fitment-hub-card">
+                <div className="ps-fitment-matched-row">
+                  <div className="ps-fitment-matched-left">
+                    <div className="ps-fitment-check-circle">
+                      <Check size={18} />
+                    </div>
+                    <div>
+                      <div className="ps-fitment-car-title">
+                        {custom ? '100% Guaranteed Exact Fit' : 'Universal Multi-Vehicle Fit'}
+                      </div>
+                      <div className="ps-fitment-car-sub">
+                        Configured for {activeCar.y} {activeCar.b} {activeCar.m} ({activeCar.f})
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link href="/account?tab=garage" className="ps-fitment-change-link">
+                    Change Vehicle in Garage &rarr;
+                  </Link>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+                  <div style={{ padding: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <Award size={16} style={{ color: 'var(--red, #e2231a)' }} />
+                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Laser 3D Scanned</span>
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--steel, #5d5d64)', lineHeight: '1.5' }}>
+                      Digitally mapped directly from OEM {activeCar.b} chassis molds to deliver zero bunching and glove-like tension.
+                    </p>
+                  </div>
+
+                  <div style={{ padding: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <ShieldCheck size={16} style={{ color: '#16a34a' }} />
+                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Fitment Guarantee</span>
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--steel, #5d5d64)', lineHeight: '1.5' }}>
+                      If this accessory does not fit your {activeCar.b} {activeCar.m} cabin as described, we provide instant replacement or 100% refund.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: PACKAGE CONTENTS */}
+          {activeInfoTab === 'box' && (
+            <div className="ps-info-panel" role="tabpanel">
+              <div className="ps-package-grid">
+                {packageContents.map((item, idx) => (
+                  <div key={idx} className="ps-package-item-card">
+                    <div className="ps-package-item-left">
+                      <PackageCheck size={16} style={{ color: 'var(--red, #e2231a)', flexShrink: 0 }} />
+                      <span>{item.name}</span>
+                    </div>
+                    <span className="ps-package-qty-badge">{item.qty}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ------------------------------------------------------------------
