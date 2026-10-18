@@ -1,0 +1,610 @@
+/* ==========================================================================
+   CARXEN LUXE CART DRAWER STYLES
+   ========================================================================== */
+
+/* Scrim / Backdrop */
+.cx-cart-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 14, 15, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 750;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cx-cart-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slide-over Drawer Container */
+.cx-cart-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100vw);
+  background: #ffffff;
+  z-index: 800;
+  transform: translateX(102%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.16);
+  color: var(--ink, #0e0e0f);
+}
+
+.cx-cart-drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   DRAWER HEADER
+   -------------------------------------------------------------------------- */
+.cx-cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line, #ebeae5);
+  flex-shrink: 0;
+}
+
+.cx-cart-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cx-cart-header-title {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink, #0e0e0f);
+  margin: 0;
+}
+
+.cx-cart-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  background: #f4f3ef;
+  color: #48484f;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid #ebe9e2;
+}
+
+.cx-cart-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f8f8f6;
+  border: 1px solid #ebe9e2;
+  color: #55555c;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cx-cart-close-btn:hover {
+  background: #ebeae4;
+  color: #0e0e0f;
+  transform: rotate(90deg);
+}
+
+/* --------------------------------------------------------------------------
+   FREE SHIPPING PROGRESS BANNER
+   -------------------------------------------------------------------------- */
+.cx-cart-shipping-banner {
+  padding: 13px 22px 15px;
+  background: #fafaf8;
+  border-bottom: 1px solid var(--line, #ebeae5);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.cx-cart-shipping-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #3b3b42;
+  font-weight: 500;
+}
+
+.cx-cart-shipping-icon-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.cx-cart-shipping-highlight {
+  font-weight: 700;
+  color: var(--ink, #0e0e0f);
+}
+
+.cx-cart-shipping-unlocked-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  background: #e6f7ec;
+  color: #0f7638;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.cx-cart-progress-track {
+  height: 6px;
+  background: #e7e6e0;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cx-cart-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e2231a 0%, #ff4d42 100%);
+  border-radius: 999px;
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cx-cart-progress-fill.unlocked {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+/* --------------------------------------------------------------------------
+   DRAWER BODY (SCROLLABLE)
+   -------------------------------------------------------------------------- */
+.cx-cart-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cx-cart-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cx-cart-body::-webkit-scrollbar-thumb {
+  background: #dcdbd5;
+  border-radius: 999px;
+}
+
+/* --------------------------------------------------------------------------
+   CART ITEM CARD
+   -------------------------------------------------------------------------- */
+.cx-cart-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #ebeae5;
+  border-radius: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.cx-cart-card:hover {
+  border-color: #d8d7cf;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.cx-cart-card-thumb {
+  width: 76px;
+  height: 76px;
+  aspect-ratio: 1;
+  background: #f7f6f2;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #f0efe9;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+
+.cx-cart-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.cx-cart-card:hover .cx-cart-card-thumb img {
+  transform: scale(1.05);
+}
+
+.cx-cart-card-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cx-cart-card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cx-cart-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e0e0f;
+  line-height: 1.35;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.15s ease;
+}
+
+.cx-cart-card-title:hover {
+  color: #e2231a;
+}
+
+.cx-cart-card-item-total {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0e0e0f;
+  white-space: nowrap;
+}
+
+.cx-cart-card-meta {
+  font-size: 12px;
+  color: #71717a;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cx-cart-card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+/* Stepper Pill */
+.cx-cart-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #f8f8f6;
+  border: 1px solid #e5e4de;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cx-cart-stepper-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: #44444a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cx-cart-stepper-btn:hover {
+  background: #e9e8e2;
+  color: #0e0e0f;
+}
+
+.cx-cart-stepper-value {
+  width: 26px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0e0e0f;
+}
+
+/* Remove button */
+.cx-cart-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: #8e8e93;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.cx-cart-remove-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* --------------------------------------------------------------------------
+   FREQUENTLY ADDED COMPACT SECTION (UPSELL)
+   -------------------------------------------------------------------------- */
+.cx-cart-upsells {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: #fbfbf9;
+  border: 1px dashed #dcdbd5;
+  border-radius: 14px;
+}
+
+.cx-cart-upsells-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3f3f46;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cx-cart-upsells-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.cx-cart-upsell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #ebeae5;
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.cx-cart-upsell-item:hover {
+  border-color: #dcdbd5;
+}
+
+.cx-cart-upsell-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+  background: #f4f4f0;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ebe9e2;
+}
+
+.cx-cart-upsell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cx-cart-upsell-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cx-cart-upsell-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0e0e0f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cx-cart-upsell-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #55555c;
+  margin-top: 1px;
+}
+
+.cx-cart-upsell-add-btn {
+  padding: 5px 11px;
+  background: #0e0e0f;
+  color: #ffffff;
+  border: none;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.cx-cart-upsell-add-btn:hover {
+  background: #e2231a;
+}
+
+/* --------------------------------------------------------------------------
+   EMPTY CART STATE
+   -------------------------------------------------------------------------- */
+.cx-cart-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 20px 32px;
+  margin: auto 0;
+}
+
+.cx-cart-empty-icon-wrap {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #f7f6f2;
+  border: 1px solid #ebeae5;
+  display: grid;
+  place-items: center;
+  color: #8e8e93;
+  margin-bottom: 18px;
+}
+
+.cx-cart-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0e0e0f;
+  margin-bottom: 8px;
+}
+
+.cx-cart-empty-desc {
+  font-size: 13.5px;
+  color: #6a6a72;
+  line-height: 1.5;
+  max-width: 290px;
+  margin-bottom: 24px;
+}
+
+.cx-cart-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #0e0e0f;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.cx-cart-empty-btn:hover {
+  background: #e2231a;
+  box-shadow: 0 4px 14px rgba(226, 35, 26, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   DRAWER FOOTER & CHECKOUT
+   -------------------------------------------------------------------------- */
+.cx-cart-footer {
+  padding: 18px 22px 22px;
+  background: #ffffff;
+  border-top: 1px solid var(--line, #ebeae5);
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+}
+
+.cx-cart-summary-table {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.cx-cart-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: #5d5d64;
+}
+
+.cx-cart-summary-row.total {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0e0e0f;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid #f0efe9;
+}
+
+.cx-cart-checkout-btn {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #e2231a 0%, #c41810 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(226, 35, 26, 0.28);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cx-cart-checkout-btn:hover {
+  background: linear-gradient(135deg, #ed2920 0%, #d11e15 100%);
+  box-shadow: 0 6px 20px rgba(226, 35, 26, 0.38);
+  transform: translateY(-1px);
+}
+
+.cx-cart-checkout-btn:active {
+  transform: translateY(0);
+}
+
+.cx-cart-checkout-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.cx-cart-checkout-btn:hover svg {
+  transform: translateX(3px);
+}
+
+.cx-cart-trust-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: #8e8e93;
+}
+
+.cx-cart-payment-methods {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a1a1aa;
+}
+
+.cx-cart-payment-pill {
+  padding: 1px 6px;
+  background: #f7f6f2;
+  border-radius: 4px;
+  border: 1px solid #ebeae5;
+}
