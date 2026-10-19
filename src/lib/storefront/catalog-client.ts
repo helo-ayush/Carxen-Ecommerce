@@ -46,6 +46,7 @@ function isStorefrontProductsResponse(value: unknown): value is StorefrontProduc
 
 export async function loadCatalogProducts(
   signal?: AbortSignal,
+  customHeaders?: Record<string, string>,
 ): Promise<StorefrontProductsResponse> {
   let response: Response;
 
@@ -53,7 +54,7 @@ export async function loadCatalogProducts(
     response = await fetch('/api/storefront/products', {
       method: 'GET',
       cache: 'no-store',
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...(customHeaders || {}) },
       signal,
     });
   } catch (error) {

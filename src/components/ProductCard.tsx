@@ -35,8 +35,15 @@ export function ProductCard({
   const [isAdding, setIsAdding] = useState(false);
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
 
+  const isB2B = typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0;
+  const effectivePrice = isB2B ? product.wholesalePrice! : product.p;
+  const comparePrice = isB2B ? (product.o || product.p) : (product.o && product.o > product.p ? product.o : 0);
+  const resaleMargin = isB2B && comparePrice > 0
+    ? Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)
+    : 0;
+
   const discountPercent =
-    product.o && product.o > product.p
+    !isB2B && product.o && product.o > product.p
       ? Math.round(((product.o - product.p) / product.o) * 100)
       : 0;
 
@@ -69,7 +76,8 @@ export function ProductCard({
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsAdding(true);
-    onAddToCart(product.id, 1);
+    const qty = isB2B ? (product.b2bMoq || 5) : 1;
+    onAddToCart(product.id, qty);
     if (onOpenCart) {
       onOpenCart();
     }
@@ -215,12 +223,24 @@ export function ProductCard({
           {/* Bottom row: Price on the left, matching swatches on the right (eliminating dead space) */}
           <div className="ref-bottom-row">
             <div className="ref-price-row">
-              <span className="ref-price-now">{formatINR(product.p)}</span>
-              {product.o && product.o > product.p && (
-                <span className="ref-price-old">{formatINR(product.o)}</span>
+              <span className="ref-price-now">{formatINR(effectivePrice)}</span>
+              {isB2B ? (
+                <span className="text-[10px] text-emerald-500 font-semibold ml-1">
+                  wholesale (excl. GST)
+                </span>
+              ) : (
+                product.o && product.o > product.p && (
+                  <span className="ref-price-old">{formatINR(product.o)}</span>
+                )
               )}
-              {discountPercent > 0 && (
-                <span className="ref-price-discount">-{discountPercent}%</span>
+              {isB2B && resaleMargin > 0 ? (
+                <span className="ref-price-discount" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                  {resaleMargin}% margin
+                </span>
+              ) : (
+                discountPercent > 0 && (
+                  <span className="ref-price-discount">-{discountPercent}%</span>
+                )
               )}
             </div>
 
@@ -262,7 +282,7 @@ export function ProductCard({
                   <circle cx="18" cy="20" r="1" />
                   <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
-                <span>Add to Cart</span>
+                <span>{isB2B ? `Add MOQ (${product.b2bMoq || 5} units)` : 'Add to Cart'}</span>
               </>
             )}
           </button>

@@ -38,6 +38,7 @@ export interface EcommerceProductRow {
   specifications: unknown;
   tintOptions: unknown;
   fitment: unknown;
+  installation?: unknown;
   isCustomFit: boolean;
   status: string;
   publishedAt: string | null;
@@ -45,9 +46,10 @@ export interface EcommerceProductRow {
   images?: unknown;
   tags?: unknown;
   colors?: unknown;
-  installation?: unknown;
   isCombo?: boolean;
   comboItems?: unknown;
+  wholesalePrice?: number | string | null;
+  b2bMoq?: number | string | null;
 }
 
 export class CatalogConfigurationError extends Error {
@@ -99,9 +101,10 @@ const PRODUCT_COLUMNS = [
   'images',
   'tags',
   'colors',
-  'installation',
   'isCombo',
   'comboItems',
+  'wholesalePrice',
+  'b2bMoq',
 ].join(', ');
 
 const CATEGORY_KEYS = ['seats', 'mats', 'steering', 'comfort'] as const;
@@ -265,7 +268,11 @@ function getFallbackTags(category: ProductCategory, isCustomFit: boolean, name: 
   return ['OEM Grade', 'Easy Clean', 'Scratch-Resistant'];
 }
 
-function mapProductRow(row: EcommerceProductRow): Product | null {
+function mapProductRow(
+  row: EcommerceProductRow,
+  isWholesale?: boolean,
+  wholesaleTier?: 'tier1' | 'tier2'
+): Product | null {
   const id = asFiniteNumber(row.publicId) ?? 1;
   const name = asNonEmptyString(row.name) || 'CarXen Accessory';
   const category = asCategory(row.categoryKey);
@@ -338,10 +345,34 @@ function mapProductRow(row: EcommerceProductRow): Product | null {
     isCombo: Boolean(row.isCombo),
     comboItems: Array.isArray(row.comboItems) ? (row.comboItems as any) : undefined,
     customFit: isCustomFit,
+    ...(isWholesale ? (() => {
+      const parsedWholesale = asFiniteNumber(row.wholesalePrice);
+      const wsPrice = parsedWholesale !== null && parsedWholesale > 0
+        ? parsedWholesale
+        : Math.round(price * 0.6);
+      const parsedMoq = asFiniteNumber(row.b2bMoq);
+      const moq = parsedMoq !== null && parsedMoq > 0 ? parsedMoq : 5;
+      const basePriceExGst = Math.round(wsPrice / 1.18);
+      const gstAmount = wsPrice - basePriceExGst;
+
+      return {
+        wholesalePrice: wsPrice,
+        b2bMoq: moq,
+        taxBreakdown: {
+          gstPercent: 18,
+          basePriceExGst,
+          gstAmount,
+        },
+        wholesaleTier: wholesaleTier || 'tier1',
+      };
+    })() : {}),
   };
 }
 
-export async function getStorefrontProducts(): Promise<StorefrontProductsResponse> {
+export async function getStorefrontProducts(options?: {
+  isWholesale?: boolean;
+  wholesaleTier?: 'tier1' | 'tier2';
+}): Promise<StorefrontProductsResponse> {
   const { supabaseUrl, supabaseAnonKey, storeSlug } = getCatalogConfig();
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -383,7 +414,7 @@ export async function getStorefrontProducts(): Promise<StorefrontProductsRespons
 
   const rows = (productRows || []) as unknown as EcommerceProductRow[];
   const products = rows
-    .map(mapProductRow)
+    .map((row) => mapProductRow(row, options?.isWholesale, options?.wholesaleTier))
     .filter((product): product is Product => product !== null);
 
   return {

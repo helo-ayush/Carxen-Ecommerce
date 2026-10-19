@@ -263,6 +263,7 @@ function ProductDetailContent({ product }: { product: Product }) {
     orders,
     isVerifiedBuyer,
     totalProductsBought,
+    isWholesaleApproved,
   } = useApp();
 
   const activeCar = useMemo(() => {
@@ -303,7 +304,28 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
   const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
 
-  const [quantity, setQuantity] = useState(1);
+  const b2bMoq = product.b2bMoq || 5;
+  const effectiveWholesalePrice =
+    typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0
+      ? product.wholesalePrice
+      : Math.round(product.p * 0.6);
+  const wholesaleSavingsMargin = Math.max(
+    5,
+    Math.round(
+      (((product.o || Math.round(product.p * 1.35)) - effectiveWholesalePrice) /
+        (product.o || Math.round(product.p * 1.35))) *
+        100
+    )
+  );
+
+  const [quantity, setQuantity] = useState(isWholesaleApproved ? b2bMoq : 1);
+
+  useEffect(() => {
+    if (isWholesaleApproved) {
+      setQuantity((prev) => (prev < b2bMoq ? b2bMoq : prev));
+    }
+  }, [isWholesaleApproved, b2bMoq]);
+
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('Delivery in 2 — 4 business days · Express Shipping available');
   const [activeInfoTab, setActiveInfoTab] = useState<'specs' | 'install' | 'desc' | 'fitment' | 'box'>('specs');
@@ -912,18 +934,88 @@ function ProductDetailContent({ product }: { product: Product }) {
             <h1 className="ps-product-title">{product.n}</h1>
 
             {/* Big Price Display */}
-            <div className="ps-price-display">
-              <span className="ps-current-price">{formatINR(product.p)}</span>
-              {product.o && (
-                <>
-                  <span className="ps-original-price">{formatINR(product.o)}</span>
-                  <span className="ps-discount-pill">−{discountPercent}%</span>
-                </>
-              )}
-            </div>
+            {isWholesaleApproved ? (
+              <div className="ps-price-display" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                  <span className="ps-current-price">{formatINR(effectiveWholesalePrice)}</span>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
+                    Wholesale Price (excl. 18% GST)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888', flexWrap: 'wrap' }}>
+                  <span>Retail MRP: <span style={{ textDecoration: 'line-through' }}>{formatINR(product.o || Math.round(product.p * 1.35))}</span></span>
+                  <span>·</span>
+                  <span className="text-emerald-400 font-semibold">Resale Margin: ~{wholesaleSavingsMargin}%</span>
+                  <span>·</span>
+                  <span className="text-zinc-300 font-medium bg-zinc-800/80 border border-zinc-700/60 px-2 py-0.5 rounded text-xs">
+                    Min. Units (MOQ): {b2bMoq}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="ps-price-display">
+                <span className="ps-current-price">{formatINR(product.p)}</span>
+                {product.o && (
+                  <>
+                    <span className="ps-original-price">{formatINR(product.o)}</span>
+                    <span className="ps-discount-pill">−{discountPercent}%</span>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* CTA Action Buttons: Add to Cart (outline) + Buy it now (Carxen Red) + Wishlist */}
             <div className="ps-cta-row" ref={mainCtaRef}>
+              {isWholesaleApproved && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    background: '#18181b',
+                    height: '46px',
+                    padding: '0 4px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(b2bMoq, q - 1))}
+                    style={{
+                      width: '32px',
+                      height: '100%',
+                      color: '#fff',
+                      fontSize: '18px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span style={{ padding: '0 10px', fontWeight: 600, color: '#fff', fontSize: '14px', minWidth: '32px', textAlign: 'center' }}>
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    style={{
+                      width: '32px',
+                      height: '100%',
+                      color: '#fff',
+                      fontSize: '18px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
                 className="ps-btn-add-cart"
@@ -932,7 +1024,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   openCart();
                 }}
               >
-                Add to Cart
+                {isWholesaleApproved ? `Add ${quantity} units to Cart` : 'Add to Cart'}
               </button>
 
               <button
@@ -1992,8 +2084,12 @@ function ProductDetailContent({ product }: { product: Product }) {
       {/* Sticky Mobile Buy Bar - only visible when scrolled past main CTA to avoid duplicate buttons */}
       <div className={`ps-mobile-sticky-bar ${showStickyBar ? 'ps-sticky-visible' : ''}`}>
         <div>
-          <span style={{ fontSize: '11px', color: '#71717a', display: 'block' }}>Total price</span>
-          <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>{formatINR(product.p)}</b>
+          <span style={{ fontSize: '11px', color: '#71717a', display: 'block' }}>
+            {isWholesaleApproved ? `Wholesale (${quantity} units)` : 'Total price'}
+          </span>
+          <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>
+            {formatINR(isWholesaleApproved ? effectiveWholesalePrice * quantity : product.p)}
+          </b>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -2005,7 +2101,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             className="ps-btn-add-cart"
             style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
           >
-            Add to Cart
+            {isWholesaleApproved ? `Add MOQ (${quantity})` : 'Add to Cart'}
           </button>
           <button
             type="button"

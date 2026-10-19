@@ -37,6 +37,8 @@ export function CartDrawer() {
     removeFromCart,
     addToCart,
     showToast,
+    isWholesaleApproved,
+    b2bProfile,
   } = useApp();
   const router = useRouter();
 
@@ -100,10 +102,17 @@ export function CartDrawer() {
         <div className="cx-cart-header" id="dh">
           <div className="cx-cart-header-title-row">
             <ShoppingBag className="w-5 h-5 text-[#e2231a]" strokeWidth={2.2} />
-            <h2 className="cx-cart-header-title">Your Cart</h2>
+            <h2 className="cx-cart-header-title">
+              {isWholesaleApproved ? 'Wholesale Cart' : 'Your Cart'}
+            </h2>
             <span className="cx-cart-badge">
               {cartCount} {cartCount === 1 ? 'item' : 'items'}
             </span>
+            {isWholesaleApproved && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 px-2 py-0.5 rounded-full ml-1">
+                B2B Tier {b2bProfile?.wholesaleTier === 'tier2' ? '2' : '1'}
+              </span>
+            )}
           </div>
           <button
             className="cx-cart-close-btn"
@@ -160,39 +169,52 @@ export function CartDrawer() {
           ) : cartEntries.length > 0 ? (
             <>
               {/* Product Cards List */}
-              {cartEntries.map(({ product, qty }) => (
-                <div className="cx-cart-card" key={product.id}>
-                  {/* Thumbnail */}
-                  <Link
-                    href={`/product/${product.id}`}
-                    onClick={closeCart}
-                    className="cx-cart-card-thumb"
-                  >
-                    <ProductArt product={product} />
-                  </Link>
+              {cartEntries.map(({ product, qty }) => {
+                const effectivePrice = isWholesaleApproved
+                  ? (typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0 ? product.wholesalePrice : Math.round(product.p * 0.6))
+                  : product.p;
+                const itemTotal = effectivePrice * qty;
 
-                  {/* Card Content */}
-                  <div className="cx-cart-card-content">
-                    <div>
-                      <div className="cx-cart-card-top-row">
-                        <Link
-                          href={`/product/${product.id}`}
-                          onClick={closeCart}
-                          className="cx-cart-card-title"
-                        >
-                          {product.n}
-                        </Link>
-                        <span className="cx-cart-card-item-total">
-                          {formatINR(product.p * qty)}
-                        </span>
-                      </div>
+                return (
+                  <div className="cx-cart-card" key={product.id}>
+                    {/* Thumbnail */}
+                    <Link
+                      href={`/product/${product.id}`}
+                      onClick={closeCart}
+                      className="cx-cart-card-thumb"
+                    >
+                      <ProductArt product={product} />
+                    </Link>
 
-                      <div className="cx-cart-card-meta">
-                        <span>{product.c || 'Precision Fit'}</span>
-                        <span>·</span>
-                        <span>{formatINR(product.p)} each</span>
+                    {/* Card Content */}
+                    <div className="cx-cart-card-content">
+                      <div>
+                        <div className="cx-cart-card-top-row">
+                          <Link
+                            href={`/product/${product.id}`}
+                            onClick={closeCart}
+                            className="cx-cart-card-title"
+                          >
+                            {product.n}
+                          </Link>
+                          <span className="cx-cart-card-item-total">
+                            {formatINR(itemTotal)}
+                          </span>
+                        </div>
+
+                        <div className="cx-cart-card-meta">
+                          <span>{product.c || 'Precision Fit'}</span>
+                          <span>·</span>
+                          <span>
+                            {formatINR(effectivePrice)} {isWholesaleApproved ? 'wholesale' : 'each'}
+                          </span>
+                          {isWholesaleApproved && (
+                            <span className="text-[10px] text-text-tertiary ml-1">
+                              (MOQ {product.b2bMoq || 5})
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
                     {/* Stepper + Remove row */}
                     <div className="cx-cart-card-actions-row">
@@ -228,7 +250,8 @@ export function CartDrawer() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })}
 
               {/* Frequently Added Accessories (Upsell) */}
               {upsellProducts.length > 0 && (
@@ -320,10 +343,21 @@ export function CartDrawer() {
             </div>
 
             <div className="cx-cart-payment-methods">
-              <span className="cx-cart-payment-pill">UPI</span>
-              <span className="cx-cart-payment-pill">Cards</span>
-              <span className="cx-cart-payment-pill">NetBanking</span>
-              <span className="cx-cart-payment-pill">COD</span>
+              {isWholesaleApproved ? (
+                <>
+                  <span className="cx-cart-payment-pill">NEFT / RTGS Wire</span>
+                  <span className="cx-cart-payment-pill">Corporate Card</span>
+                  <span className="cx-cart-payment-pill">Net 15 Terms</span>
+                  <span className="cx-cart-payment-pill">GST ITC Tax Invoice</span>
+                </>
+              ) : (
+                <>
+                  <span className="cx-cart-payment-pill">UPI</span>
+                  <span className="cx-cart-payment-pill">Cards</span>
+                  <span className="cx-cart-payment-pill">NetBanking</span>
+                  <span className="cx-cart-payment-pill">COD</span>
+                </>
+              )}
             </div>
           </div>
         )}

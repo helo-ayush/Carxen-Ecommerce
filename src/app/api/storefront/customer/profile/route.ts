@@ -57,6 +57,21 @@ export async function GET(request: Request) {
             { id: 'veh-3', b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' },
           ],
       activeVehicle: meta.activeVehicle || null,
+      b2bStatus: (customer as any).b2bStatus || 'NONE',
+      businessName: (customer as any).businessName || null,
+      tradeName: (customer as any).tradeName || null,
+      gstin: (customer as any).gstin || null,
+      pan: (customer as any).pan || null,
+      businessType: (customer as any).businessType || null,
+      businessAddress: (customer as any).businessAddress || null,
+      city: (customer as any).city || null,
+      state: (customer as any).state || null,
+      pincode: (customer as any).pincode || null,
+      expectedMonthlyVolume: (customer as any).expectedMonthlyVolume || null,
+      wholesaleTier: (customer as any).wholesaleTier || 'tier1',
+      b2bAppliedAt: (customer as any).b2bAppliedAt || null,
+      b2bReviewedAt: (customer as any).b2bReviewedAt || null,
+      b2bRejectionReason: (customer as any).b2bRejectionReason || null,
     };
 
     return NextResponse.json({

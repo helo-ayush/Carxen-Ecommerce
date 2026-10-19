@@ -6,7 +6,18 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 function HeaderContent() {
-  const { user, fav, cartCount, openCart, openMobileMenu, storefrontConfig, car } = useApp();
+  const {
+    user,
+    fav,
+    cartCount,
+    openCart,
+    openMobileMenu,
+    storefrontConfig,
+    car,
+    isWholesaleApproved,
+    isWholesalePending,
+    b2bProfile,
+  } = useApp();
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
   const pathname = usePathname();
@@ -233,6 +244,28 @@ function HeaderContent() {
 
           {/* Tools: search, wishlist, cart, profile only on shop page; landing page has 'Shop now' button */}
           <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
+            {/* Wholesale Partner Status Badge / Quick Order / B2B Link */}
+            {isWholesaleApproved ? (
+              <div className="wholesale-header-badge">
+                <span className="wholesale-badge-dot" />
+                <span className="wholesale-badge-text">
+                  Wholesale Partner · Active ({b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2' : 'Tier 1'})
+                </span>
+                <Link href="/b2b/quick-order" className="wholesale-badge-link" title="Open Bulk Quick Order Sheet">
+                  Quick Order
+                </Link>
+              </div>
+            ) : isWholesalePending ? (
+              <Link href="/b2b" className="wholesale-pending-badge" title="Wholesale Application Under Review">
+                <span className="wholesale-badge-amber-dot" />
+                <span>Wholesale Under Review</span>
+              </Link>
+            ) : (
+              <Link href="/b2b" className="wholesale-header-link" title="B2B Wholesaler Portal">
+                B2B Wholesale
+              </Link>
+            )}
+
             {isLandingPage && (
               <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">
                 <svg viewBox="0 0 24 24">

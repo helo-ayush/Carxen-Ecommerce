@@ -56,6 +56,23 @@ export interface GarageVehicle {
   isDefault?: boolean;
 }
 
+export interface B2BProfile {
+  status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  businessName?: string;
+  tradeName?: string;
+  gstin?: string;
+  pan?: string;
+  businessType?: string;
+  businessAddress?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  expectedMonthlyVolume?: string;
+  wholesaleTier?: 'tier1' | 'tier2';
+  rejectionReason?: string;
+  appliedAt?: string;
+}
+
 export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
   { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
   { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
@@ -121,6 +138,11 @@ interface AppContextType {
   showToast: (msg: string) => void;
   isVerifiedBuyer: boolean;
   totalProductsBought: number;
+  b2bProfile: B2BProfile | null;
+  isWholesaleApproved: boolean;
+  isWholesalePending: boolean;
+  applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
+  refreshCustomerProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -148,6 +170,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
   const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
+  const [b2bProfile, setB2bProfile] = useState<B2BProfile | null>(null);
+
+  const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
+  const isWholesalePending = b2bProfile?.status === 'PENDING';
 
   const requestCatalog = useCallback(async (signal?: AbortSignal) => {
     setCatalogStatus('loading');
@@ -265,6 +291,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           if (data.profile.activeVehicle) {
             setCar(data.profile.activeVehicle);
+          }
+
+          if (data.profile.b2bStatus) {
+            setB2bProfile({
+              status: data.profile.b2bStatus,
+              businessName: data.profile.businessName || undefined,
+              tradeName: data.profile.tradeName || undefined,
+              gstin: data.profile.gstin || undefined,
+              pan: data.profile.pan || undefined,
+              businessType: data.profile.businessType || undefined,
+              businessAddress: data.profile.businessAddress || undefined,
+              city: data.profile.city || undefined,
+              state: data.profile.state || undefined,
+              pincode: data.profile.pincode || undefined,
+              expectedMonthlyVolume: data.profile.expectedMonthlyVolume || undefined,
+              wholesaleTier: data.profile.wholesaleTier || 'tier1',
+              rejectionReason: data.profile.b2bRejectionReason || undefined,
+              appliedAt: data.profile.b2bAppliedAt || undefined,
+            });
           }
         }
 
@@ -954,24 +999,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addToCart = (productId: number, qty = 1) => {
+    const p = products.find((x) => x.id === productId);
+    const moq = (isWholesaleApproved && p?.b2bMoq) ? p.b2bMoq : 1;
+
     setCart((prev) => {
       const current = prev[productId] || 0;
-      return { ...prev, [productId]: current + qty };
+      const initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      return { ...prev, [productId]: initialQty };
     });
-    const p = products.find((x) => x.id === productId);
-    if (p) showToast(`Added to cart — ${p.n}`);
+    if (p) {
+      showToast(`Added to cart — ${p.n}${isWholesaleApproved ? ` (Min. ${moq} units)` : ''}`);
+    }
   };
 
   const updateCartQty = (productId: number, delta: number) => {
+    const p = products.find((x) => x.id === productId);
+    const moq = (isWholesaleApproved && p?.b2bMoq) ? p.b2bMoq : 1;
+
     setCart((prev) => {
       const current = prev[productId] || 0;
       const next = current + delta;
-      if (next <= 0) {
+      if (next <= 0 || (isWholesaleApproved && next < moq && delta < 0)) {
         const copy = { ...prev };
         delete copy[productId];
         return copy;
       }
-      return { ...prev, [productId]: next };
+      return { ...prev, [productId]: Math.max(next, moq) };
     });
   };
 
@@ -1048,9 +1101,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const cartSubtotal = useMemo(() => {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
       const p = products.find((x) => x.id === Number(idStr));
-      return total + (p ? p.p * qty : 0);
+      if (!p) return total;
+      const effectivePrice = (isWholesaleApproved && p.wholesalePrice) ? p.wholesalePrice : p.p;
+      return total + (effectivePrice * qty);
     }, 0);
-  }, [cart, products]);
+  }, [cart, products, isWholesaleApproved]);
 
   // Total products bought across all non-cancelled orders in customer history
   const totalProductsBought = useMemo(() => {
@@ -1086,6 +1141,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         cartSubtotal,
         isVerifiedBuyer,
         totalProductsBought,
+        b2bProfile,
+        isWholesaleApproved,
+        isWholesalePending,
+        applyForWholesale: async (applicationData: any) => {
+          try {
+            const headers = await getAuthHeaders();
+            const res = await fetch('/api/storefront/b2b/apply', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(applicationData),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              return { success: false, error: data.error || 'Failed to submit application' };
+            }
+            setB2bProfile({
+              status: 'PENDING',
+              businessName: applicationData.businessName,
+              tradeName: applicationData.tradeName,
+              gstin: applicationData.gstin,
+              pan: applicationData.pan,
+              businessType: applicationData.businessType,
+              businessAddress: applicationData.businessAddress,
+              city: applicationData.city,
+              state: applicationData.state,
+              pincode: applicationData.pincode,
+              expectedMonthlyVolume: applicationData.expectedMonthlyVolume,
+              wholesaleTier: 'tier1',
+              appliedAt: new Date().toISOString(),
+            });
+            showToast('Wholesale application submitted for review');
+            return { success: true };
+          } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Network error' };
+          }
+        },
+        refreshCustomerProfile: async () => {
+          await fetchCustomerBackendProfile();
+          const headers = await getAuthHeaders();
+          const response = await loadCatalogProducts(undefined, headers);
+          setProducts(response.products);
+        },
         fav,
         isCartOpen,
         isMobileMenuOpen,

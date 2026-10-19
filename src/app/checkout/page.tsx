@@ -68,6 +68,8 @@ export default function CheckoutPage() {
     addresses,
     saveOrderToHistory,
     addAddress,
+    isWholesaleApproved,
+    b2bProfile,
   } = useApp();
 
   const userName =
@@ -92,7 +94,8 @@ export default function CheckoutPage() {
     addresses.find((a) => a.isPrimary)?.id || addresses[0]?.id || 'new'
   );
   const [shippingSpeed, setShippingSpeed] = useState<'std' | 'exp'>('std');
-  const [paymentOption, setPaymentOption] = useState<'paypal' | 'card' | 'bnpl' | 'cod'>('card');
+  const [paymentOption, setPaymentOption] = useState<'paypal' | 'card' | 'bnpl' | 'cod' | 'wire' | 'credit_terms'>('card');
+  const [buyerGstin, setBuyerGstin] = useState(b2bProfile?.gstin || '');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
   const [saveInfo, setSaveInfo] = useState(true);
@@ -329,6 +332,8 @@ export default function CheckoutPage() {
       paypal: 'UPI',
       bnpl: 'Net banking',
       cod: 'Cash on delivery',
+      wire: 'Net banking',
+      credit_terms: 'Card',
     };
 
     const checkout: StorefrontCheckoutRequest = {
@@ -378,15 +383,20 @@ export default function CheckoutPage() {
           postalCode: selectedAddress.postalCode || '',
           country: selectedAddress.country || 'India',
         },
-        items: cartEntries.map(({ product, qty }) => ({
-          productId: product.id,
-          name: product.n,
-          quantity: qty,
-          unitPrice: product.p,
-          lineSubtotal: product.p * qty,
-          category: product.c,
-          image: product.image || product.images?.[0],
-        })),
+        items: cartEntries.map(({ product, qty }) => {
+          const effectivePrice = isWholesaleApproved && product.wholesalePrice
+            ? product.wholesalePrice
+            : product.p;
+          return {
+            productId: product.id,
+            name: product.n,
+            quantity: qty,
+            unitPrice: effectivePrice,
+            lineSubtotal: effectivePrice * qty,
+            category: product.c,
+            image: product.image || product.images?.[0],
+          };
+        }),
         subtotal: cartSubtotal,
         discountAmount: couponDiscount,
         shippingAmount: shippingCost,
@@ -888,6 +898,31 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
+                    {/* B2B GSTIN Tax Invoice Notice */}
+                    {isWholesaleApproved && (
+                      <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-emerald-800 dark:text-emerald-400">
+                            B2B Wholesaler Tax Invoice (ITC Eligible)
+                          </span>
+                          <span className="font-semibold text-text-tertiary">
+                            Tier {b2bProfile?.wholesaleTier === 'tier2' ? '2 (VIP)' : '1 (Standard)'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <label className="text-text-secondary font-medium">Buyer GSTIN:</label>
+                          <input
+                            type="text"
+                            value={buyerGstin}
+                            onChange={(e) => setBuyerGstin(e.target.value.toUpperCase())}
+                            placeholder="Enter 15-digit GSTIN"
+                            className="rounded-lg border border-border bg-surface px-2 py-1 font-mono uppercase text-xs"
+                            maxLength={15}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="inf-ck-pay-stack">
                       {/* 1. UPI / Instant Pay */}
                       <div
@@ -1088,6 +1123,68 @@ export default function CheckoutPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* 5. Wholesale Bank Wire (RTGS / NEFT) */}
+                      {isWholesaleApproved && (
+                        <>
+                          <div
+                            className={`inf-ck-pay-card ${paymentOption === 'wire' ? 'active' : ''}`}
+                          >
+                            <div
+                              className="inf-ck-pay-card-header"
+                              onClick={() => setPaymentOption('wire')}
+                            >
+                              <div className="inf-ck-radio-label">
+                                <span className="inf-ck-radio-circle" />
+                                <span>Bank Wire Transfer (NEFT / RTGS)</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                                Zero Surcharge
+                              </span>
+                            </div>
+
+                            {paymentOption === 'wire' && (
+                              <div className="inf-ck-card-body">
+                                <div className="rounded-lg bg-surface-2 p-2.5 text-xs text-text-secondary space-y-1">
+                                  <p><strong>Beneficiary:</strong> CarXen Automotive Technologies Pvt Ltd</p>
+                                  <p><strong>Bank:</strong> HDFC Bank Ltd, Industrial Finance</p>
+                                  <p><strong>A/C No:</strong> 50200088192301</p>
+                                  <p><strong>IFSC:</strong> HDFC0000128</p>
+                                  <p className="text-[11px] text-text-tertiary pt-1">
+                                    Quote your order number in the transfer remarks. Immediate dispatch on wire confirmation.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 6. Net 15 Dealer Terms */}
+                          <div
+                            className={`inf-ck-pay-card ${paymentOption === 'credit_terms' ? 'active' : ''}`}
+                          >
+                            <div
+                              className="inf-ck-pay-card-header"
+                              onClick={() => setPaymentOption('credit_terms')}
+                            >
+                              <div className="inf-ck-radio-label">
+                                <span className="inf-ck-radio-circle" />
+                                <span>Net 15 Dealer Credit Terms</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                Verified Dealers
+                              </span>
+                            </div>
+
+                            {paymentOption === 'credit_terms' && (
+                              <div className="inf-ck-card-body">
+                                <p className="text-xs text-text-secondary">
+                                  Payable within 15 days of shipment dispatch. Official GST tax invoice issued upon placement.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Save my info checkbox */}

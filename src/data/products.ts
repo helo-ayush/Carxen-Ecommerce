@@ -52,6 +52,14 @@ export interface Product {
   installation?: ProductInstallation;
   isCombo?: boolean;
   comboItems?: ProductComboItem[];
+  wholesalePrice?: number;
+  b2bMoq?: number;
+  taxBreakdown?: {
+    gstPercent: number;
+    basePriceExGst: number;
+    gstAmount: number;
+  };
+  wholesaleTier?: 'tier1' | 'tier2';
 }
 
 // Product records are loaded from the storefront API. The remaining values are
