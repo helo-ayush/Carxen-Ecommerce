@@ -261,7 +261,11 @@ function HeaderContent() {
                 <span>Wholesale Under Review</span>
               </Link>
             ) : (
-              <Link href="/b2b" className="wholesale-header-link" title="B2B Wholesaler Portal">
+              <Link
+                href={user ? '/b2b' : '/login?redirect=/b2b'}
+                className="wholesale-header-link"
+                title={user ? 'B2B Wholesaler Portal' : 'Sign in to access B2B Wholesaler Portal'}
+              >
                 B2B Wholesale
               </Link>
             )}

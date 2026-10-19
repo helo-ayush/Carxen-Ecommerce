@@ -5,11 +5,32 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { getAvailableCouponsForBuyer, type WholesaleBuyerContext } from '@/lib/storefront/coupons';
+import {
+  Building2,
+  ShieldCheck,
+  FileText,
+  Truck,
+  Lock,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Sparkles,
+  Copy,
+  Check,
+  AlertCircle,
+  Phone,
+  Mail,
+  MapPin,
+  Layers,
+  Percent,
+} from 'lucide-react';
+import './b2b.css';
 
 export default function B2BWholesalePage() {
   const router = useRouter();
   const {
     user,
+    authLoading,
     b2bProfile,
     isWholesaleApproved,
     isWholesalePending,
@@ -25,18 +46,25 @@ export default function B2BWholesalePage() {
     tradeName: b2bProfile?.tradeName || '',
     gstin: b2bProfile?.gstin || '',
     pan: b2bProfile?.pan || '',
-    businessType: b2bProfile?.businessType || 'Dealership / Multi-Brand Workshop',
+    businessType: b2bProfile?.businessType || 'Authorized Dealership',
     businessAddress: b2bProfile?.businessAddress || '',
     city: b2bProfile?.city || '',
     state: b2bProfile?.state || '',
     pincode: b2bProfile?.pincode || '',
-    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume || '₹50k–₹2L',
+    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume || '₹50k–₹2L (Tier 1)',
     notes: '',
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login?redirect=/b2b');
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (user && !formData.name) {
@@ -52,6 +80,12 @@ export default function B2BWholesalePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (!user) {
+      setErrorMessage('You must be signed in to submit a wholesale application.');
+      router.push('/login?redirect=/b2b');
+      return;
+    }
 
     if (!formData.name.trim() || !formData.businessName.trim()) {
       setErrorMessage('Applicant Name and Legal Business Name are required.');
@@ -75,6 +109,12 @@ export default function B2BWholesalePage() {
     }
   };
 
+  const handleCopyCode = (code: string) => {
+    void navigator.clipboard?.writeText(code);
+    setCopiedCoupon(code);
+    setTimeout(() => setCopiedCoupon(null), 2500);
+  };
+
   const buyerContext: WholesaleBuyerContext = useMemo(
     () => ({
       isWholesaleApproved,
@@ -94,178 +134,271 @@ export default function B2BWholesalePage() {
     (c) => c.audience === 'Individual Wholesale Buyer' || c.audience === 'Dealer accounts'
   );
 
-  // 1. APPROVED WHOLESALER VIEW
-  if (isWholesaleApproved) {
+  // --------------------------------------------------------------------------
+  // 0. AUTHENTICATION LOADING
+  // --------------------------------------------------------------------------
+  if (authLoading) {
     return (
-      <div className="b2b-page-container">
-        <div className="b2b-hero-banner approved">
-          <div className="b2b-badge active">
-            <span className="dot pulse" />
-            <span>WHOLESALE PARTNER · ACTIVE ({b2bProfile?.wholesaleTier === 'tier2' ? 'TIER 2' : 'TIER 1'})</span>
+      <div className="b2b-page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="b2b-badge active" style={{ margin: '0 auto 16px' }}>
+            <span className="b2b-dot pulse" />
+            <span>VERIFYING ACCOUNT</span>
           </div>
-          <h1>Welcome, {b2bProfile?.businessName || user?.name || 'Wholesale Partner'}</h1>
-          <p className="b2b-hero-sub">
-            Your B2B Wholesale account is approved. You have full access to SKU wholesale pricing,
-            minimum order quantity (MOQ) rules, and fast bulk ordering.
+          <p style={{ color: 'var(--steel, #71717a)', fontSize: 14 }}>
+            Checking wholesale partner authentication...
           </p>
-
-          <div className="b2b-action-row">
-            <Link href="/b2b/quick-order" className="b2b-btn primary">
-              Open Quick Order Sheet &rarr;
-            </Link>
-            <Link href="/shop" className="b2b-btn secondary">
-              Browse Storefront with B2B Prices
-            </Link>
-          </div>
-
-          <div className="b2b-account-summary-card">
-            <div className="b2b-summary-item">
-              <span className="lbl">Legal Business</span>
-              <span className="val">{b2bProfile?.businessName || '—'}</span>
-            </div>
-            <div className="b2b-summary-item">
-              <span className="lbl">GSTIN</span>
-              <span className="val font-mono">{b2bProfile?.gstin || '—'}</span>
-            </div>
-            <div className="b2b-summary-item">
-              <span className="lbl">Assigned Tier</span>
-              <span className="val">{b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (High Volume)' : 'Tier 1 (Standard)'}</span>
-            </div>
-            <div className="b2b-summary-item">
-              <span className="lbl">Tax Invoicing</span>
-              <span className="val text-success">GST ITC Eligible</span>
-            </div>
-          </div>
-
-          {assignedCoupons.length > 0 && (
-            <div className="b2b-coupons-section" style={{ marginTop: 24, textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--text-primary, #0f172a)' }}>
-                  🏷️ Your Exclusive Wholesale Coupon Codes
-                </h3>
-                <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
-                  Assigned by Owner for {b2bProfile?.businessName || 'Your Dealership'}
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-                {assignedCoupons.map((c) => (
-                  <div
-                    key={c.code}
-                    style={{
-                      border: '1px dashed #f59e0b',
-                      borderRadius: 10,
-                      padding: '14px',
-                      background: 'rgba(245, 158, 11, 0.05)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: 6 }}>
-                          {c.code}
-                        </span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>
-                          {c.type === 'Percentage' ? `${c.value}% OFF` : `₹${c.value.toLocaleString('en-IN')} OFF`}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 12, fontWeight: 600, margin: '8px 0 2px', color: '#1e293b' }}>
-                        {c.name}
-                      </p>
-                      <p style={{ fontSize: 11, margin: 0, color: '#64748b' }}>
-                        {c.description || (c.minimumOrder ? `Valid on wholesale orders above ₹${c.minimumOrder.toLocaleString('en-IN')}` : 'Valid on wholesale orders')}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void navigator.clipboard?.writeText(c.code);
-                          alert(`Coupon code ${c.code} copied!`);
-                        }}
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          padding: '5px 10px',
-                          borderRadius: 6,
-                          border: '1px solid #cbd5e1',
-                          background: '#fff',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Copy Code
-                      </button>
-                      <Link
-                        href="/checkout"
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: '5px 12px',
-                          borderRadius: 6,
-                          background: '#f59e0b',
-                          color: '#fff',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        Use in Checkout &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
-  // 2. PENDING REVIEW VIEW
+  // --------------------------------------------------------------------------
+  // 1. UNLOADED / UNLOGGED-IN GATE SCREEN
+  // --------------------------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="b2b-page-container">
+        <div className="b2b-auth-gate-card">
+          <div className="b2b-auth-icon-wrap">
+            <Lock size={28} />
+          </div>
+          <div className="b2b-badge" style={{ margin: '0 auto 16px' }}>
+            <span className="b2b-dot" />
+            <span>WHOLESALE PORTAL · LOGIN REQUIRED</span>
+          </div>
+          <h1>CarXen B2B Wholesale Portal</h1>
+          <p>
+            Direct factory wholesale pricing, minimum order quantity (MOQ) batch rules, and GST Input Tax Credit (ITC) invoicing are reserved for registered automotive partners.
+          </p>
+
+          <div className="b2b-auth-perks-row">
+            <div className="b2b-auth-perk-pill">
+              <span className="icon">🏷️</span>
+              <span>40%–55% Resale Margin</span>
+            </div>
+            <div className="b2b-auth-perk-pill">
+              <span className="icon">📦</span>
+              <span>Low MOQ Batch Packs</span>
+            </div>
+            <div className="b2b-auth-perk-pill">
+              <span className="icon">📑</span>
+              <span>Full GSTIN Tax Invoices</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Link href="/login?redirect=/b2b" className="b2b-btn primary">
+              Sign In to Your Account &rarr;
+            </Link>
+            <Link href="/login?mode=signup&redirect=/b2b" className="b2b-btn secondary">
+              Register New Account
+            </Link>
+            <Link href="/shop" className="b2b-btn ghost">
+              Browse Retail Shop
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // 2. APPROVED WHOLESALER DASHBOARD
+  // --------------------------------------------------------------------------
+  if (isWholesaleApproved) {
+    return (
+      <div className="b2b-page-container">
+        <div className="b2b-approved-hero">
+          <div className="b2b-badge active" style={{ marginBottom: 16 }}>
+            <span className="b2b-dot pulse" />
+            <span>WHOLESALE PARTNER · ACTIVE ({b2bProfile?.wholesaleTier === 'tier2' ? 'TIER 2 VIP' : 'TIER 1 STANDARD'})</span>
+          </div>
+
+          <h1>Welcome, {b2bProfile?.businessName || user?.name || 'Wholesale Partner'}</h1>
+          <p className="sub">
+            Your B2B Wholesale account is fully active. You have factory-direct wholesale pricing unlocked across the entire catalog, MOQ batch order rules, and direct Quick Order sheet access.
+          </p>
+
+          <div className="b2b-approved-actions">
+            <Link href="/b2b/quick-order" className="b2b-btn primary">
+              Open Bulk Quick Order Sheet &rarr;
+            </Link>
+            <Link href="/shop" className="b2b-btn secondary" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+              Browse Storefront with B2B Rates
+            </Link>
+            <Link href="/account" className="b2b-btn ghost" style={{ color: '#a1a1aa', borderColor: 'rgba(255,255,255,0.1)' }}>
+              View Account Profile
+            </Link>
+          </div>
+
+          <div className="b2b-metrics-grid">
+            <div className="b2b-metric-item">
+              <span className="lbl">Legal Business Entity</span>
+              <span className="val">{b2bProfile?.businessName || '—'}</span>
+            </div>
+            <div className="b2b-metric-item">
+              <span className="lbl">GSTIN Registered</span>
+              <span className="val" style={{ fontFamily: 'monospace' }}>{b2bProfile?.gstin || '—'}</span>
+            </div>
+            <div className="b2b-metric-item">
+              <span className="lbl">Assigned Wholesale Tier</span>
+              <span className="val green">{b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (High Volume)' : 'Tier 1 (Standard)'}</span>
+            </div>
+            <div className="b2b-metric-item">
+              <span className="lbl">Tax Invoicing</span>
+              <span className="val green">GST ITC Eligible</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Exclusive Wholesale Coupons */}
+        {assignedCoupons.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#0e0e0f' }}>
+                  🏷️ Your Assigned Wholesale Discounts & Coupons
+                </h3>
+                <p style={{ fontSize: 12, color: '#71717a', margin: '2px 0 0' }}>
+                  Exclusive dealer codes assigned to {b2bProfile?.businessName || 'your dealership'} by the factory desk.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+              {assignedCoupons.map((c) => (
+                <div
+                  key={c.code}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px dashed #f59e0b',
+                    borderRadius: 14,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.05)',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14, color: '#b45309', background: '#fef3c7', padding: '3px 8px', borderRadius: 6 }}>
+                        {c.code}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>
+                        {c.type === 'Percentage' ? `${c.value}% OFF` : `₹${c.value.toLocaleString('en-IN')} OFF`}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 700, margin: '10px 0 3px', color: '#18181b' }}>
+                      {c.name}
+                    </p>
+                    <p style={{ fontSize: 11.5, margin: 0, color: '#71717a', lineHeight: 1.4 }}>
+                      {c.description || (c.minimumOrder ? `Valid on wholesale orders above ₹${c.minimumOrder.toLocaleString('en-IN')}` : 'Valid on wholesale orders')}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingTop: 10, borderTop: '1px solid #f4f4f5' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode(c.code)}
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        border: '1px solid #d4d4d8',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      {copiedCoupon === c.code ? (
+                        <>
+                          <Check size={13} style={{ color: '#059669' }} />
+                          <span style={{ color: '#059669' }}>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} />
+                          <span>Copy Code</span>
+                        </>
+                      )}
+                    </button>
+                    <Link
+                      href="/checkout"
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        padding: '6px 14px',
+                        borderRadius: 8,
+                        background: '#f59e0b',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Use at Checkout &rarr;
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // 3. PENDING REVIEW VIEW
+  // --------------------------------------------------------------------------
   if (isWholesalePending || justSubmitted) {
     return (
       <div className="b2b-page-container">
-        <div className="b2b-hero-banner pending">
-          <div className="b2b-badge pending">
-            <span className="dot pulse-amber" />
+        <div className="b2b-pending-hero">
+          <div className="b2b-badge pending" style={{ margin: '0 auto 16px' }}>
+            <span className="b2b-dot pulse" />
             <span>APPLICATION UNDER REVIEW</span>
           </div>
-          <h1>Wholesale Application Received</h1>
-          <p className="b2b-hero-sub">
-            Thank you for applying. Your application for <strong>{b2bProfile?.businessName || formData.businessName || 'your dealership'}</strong> has been submitted to the CarXen Veda Owner Review Table.
+
+          <h1>Application Submitted for Review</h1>
+          <p className="sub">
+            Thank you for applying. Your wholesale dealer application for <strong>{b2bProfile?.businessName || formData.businessName || 'your dealership'}</strong> has been routed to the CarXen Veda Owner verification desk.
           </p>
 
-          <div className="b2b-pending-steps">
-            <div className="step done">
-              <div className="step-num">1</div>
-              <div className="step-text">
-                <strong>Application Submitted</strong>
-                <span>Details & GSTIN recorded</span>
+          <div className="b2b-pending-steps-grid">
+            <div className="b2b-pending-step-card done">
+              <div className="b2b-pending-step-num">✓</div>
+              <div className="b2b-pending-step-content">
+                <strong>1. Application Filed</strong>
+                <span>Legal entity details & GSTIN recorded</span>
               </div>
             </div>
-            <div className="step active">
-              <div className="step-num">2</div>
-              <div className="step-text">
-                <strong>Owner Review in Carxen Veda</strong>
-                <span>Verification of business & GSTIN</span>
+            <div className="b2b-pending-step-card active">
+              <div className="b2b-pending-step-num">2</div>
+              <div className="b2b-pending-step-content">
+                <strong>2. Veda Owner Desk Review</strong>
+                <span>GSTIN & wholesale tier matching (24–48h)</span>
               </div>
             </div>
-            <div className="step">
-              <div className="step-num">3</div>
-              <div className="step-text">
-                <strong>Wholesale Mode Unlocked</strong>
-                <span>Direct wholesale prices & bulk order sheet</span>
+            <div className="b2b-pending-step-card">
+              <div className="b2b-pending-step-num">3</div>
+              <div className="b2b-pending-step-content">
+                <strong>3. Wholesale Unlocked</strong>
+                <span>Instant bulk ordering & GST ITC invoices</span>
               </div>
             </div>
           </div>
 
-          <div className="b2b-action-row">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Link href="/shop" className="b2b-btn secondary">
               Browse Storefront (Retail Mode)
             </Link>
             <Link href="/account" className="b2b-btn ghost">
-              View Profile
+              View Customer Profile
             </Link>
           </div>
         </div>
@@ -273,223 +406,69 @@ export default function B2BWholesalePage() {
     );
   }
 
-  // 3. INQUIRY / INFORMATION REQUESTED VIEW
+  // --------------------------------------------------------------------------
+  // 4. INQUIRY / INFORMATION REQUESTED
+  // --------------------------------------------------------------------------
   if (b2bProfile?.status === 'INQUIRY') {
     return (
       <div className="b2b-page-container">
-        <div className="b2b-hero-banner inquiry">
-          <div className="b2b-badge inquiry">
-            <span className="dot pulse-sky" />
-            <span>INFORMATION REQUESTED BY VEDA FACTORY</span>
+        <div className="b2b-pending-hero" style={{ borderColor: '#bae6fd' }}>
+          <div className="b2b-badge inquiry" style={{ margin: '0 auto 16px' }}>
+            <span className="b2b-dot pulse" />
+            <span>ACTION REQUIRED · CLARIFICATION REQUESTED</span>
           </div>
-          <h1>Action Required: Additional Verification Details Needed</h1>
-          <p className="b2b-hero-sub">
-            The CarXen Veda review team has reviewed your application for <strong>{b2bProfile?.businessName || formData.businessName || 'your business'}</strong> and requested clarification:
+          <h1>Additional Verification Details Needed</h1>
+          <p className="sub">
+            The review team reviewed your application for <strong>{b2bProfile?.businessName || formData.businessName || 'your business'}</strong> and requested clarification:
           </p>
 
-          <div className="b2b-inquiry-box">
-            <div className="b2b-inquiry-header">
-              <span className="icon">💬</span>
-              <strong>Inquiry Request from Veda:</strong>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 14, padding: '16px 20px', maxWidth: 640, margin: '0 auto 24px', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', marginBottom: 6 }}>
+              <AlertCircle size={15} />
+              <span>Review Desk Note:</span>
             </div>
-            <p className="b2b-inquiry-text">
-              {b2bProfile.inquiryMessage || b2bProfile.rejectionReason || 'Please provide GST certificate copy, valid trade license, or clarify monthly order volume.'}
+            <p style={{ margin: 0, fontSize: 13.5, color: '#0f172a', lineHeight: 1.5 }}>
+              {b2bProfile.inquiryMessage || b2bProfile.rejectionReason || 'Please clarify business registration details or provide your GST certificate link.'}
             </p>
           </div>
-
-          <p className="b2b-rejection-help">
-            Update your business details or add clarifying notes in the form below and click <strong>Submit Response & Re-verify</strong>.
-          </p>
         </div>
 
-        {/* Application Form pre-filled for easy update */}
-        <div className="b2b-form-card">
-          <div className="b2b-form-header">
-            <h2>Respond to Inquiry & Update Details</h2>
-            <p>Modify any details requested by the factory review team to expedite approval.</p>
-          </div>
+        {/* Prefilled Form */}
+        <div className="b2b-form-card" style={{ maxWidth: 800, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0e0e0f', marginBottom: 4 }}>Respond to Inquiry & Update Information</h2>
+          <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Update requested fields and submit your response directly back to the Veda review table.</p>
 
           {errorMessage && (
-            <div className="b2b-error-banner">
-              <span>{errorMessage}</span>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, marginBottom: 20 }}>
+              {errorMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="b2b-form">
-            {/* Section 1: Contact Details */}
+          <form onSubmit={handleSubmit}>
             <div className="b2b-form-section">
-              <h3 className="b2b-section-title">1. Contact Representative</h3>
-              <div className="b2b-field-grid">
-                <div className="b2b-field">
-                  <label>Contact Person Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Rajesh Sharma"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Business Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="e.g. rajesh@apexmotors.in"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Mobile / WhatsApp *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g. +91 98765 43210"
-                  />
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">1</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Response & Documents</h3>
+                  <p>Provide the explanation or document drive link requested by the reviewer.</p>
                 </div>
               </div>
-            </div>
-
-            {/* Section 2: Business & Legal Details */}
-            <div className="b2b-form-section">
-              <h3 className="b2b-section-title">2. Business Legal Entity</h3>
-              <div className="b2b-field-grid">
-                <div className="b2b-field">
-                  <label>Legal Business Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    placeholder="e.g. Apex Auto Spares LLP"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Trade Name (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.tradeName}
-                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
-                    placeholder="e.g. Apex Performance Garage"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>GSTIN (Goods & Service Tax Number)</label>
-                  <input
-                    type="text"
-                    value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength={15}
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>PAN Number</label>
-                  <input
-                    type="text"
-                    value={formData.pan}
-                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                    placeholder="ABCDE1234F"
-                    maxLength={10}
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Business Type</label>
-                  <select
-                    value={formData.businessType}
-                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-                  >
-                    <option value="Dealership / Multi-Brand Workshop">Dealership / Multi-Brand Workshop</option>
-                    <option value="Auto Accessories Retailer">Auto Accessories Retailer</option>
-                    <option value="Fleet Operator / Commercial">Fleet Operator / Commercial</option>
-                    <option value="Independent Garage / Detailer">Independent Garage / Detailer</option>
-                    <option value="Ecommerce Reseller">Ecommerce Reseller</option>
-                  </select>
-                </div>
-                <div className="b2b-field">
-                  <label>Expected Monthly Order Volume</label>
-                  <select
-                    value={formData.expectedMonthlyVolume}
-                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
-                  >
-                    <option value="Under ₹50k">Under ₹50,000 / mo</option>
-                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / mo (Standard Tier 1)</option>
-                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / mo (High Volume Tier 2)</option>
-                    <option value="Above ₹5L">Above ₹5,00,000 / mo (Enterprise VIP)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Registered Address */}
-            <div className="b2b-form-section">
-              <h3 className="b2b-section-title">3. Business Address & Logistics</h3>
-              <div className="b2b-field-grid">
-                <div className="b2b-field full-width">
-                  <label>Street Address / Workshop Location</label>
-                  <input
-                    type="text"
-                    value={formData.businessAddress}
-                    onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
-                    placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Pune"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>State</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. Maharashtra"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>PIN Code</label>
-                  <input
-                    type="text"
-                    value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    placeholder="e.g. 411019"
-                    maxLength={6}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 4: Notes / Documents */}
-            <div className="b2b-form-section">
-              <h3 className="b2b-section-title">4. Response to Inquiry & Documents</h3>
-              <div className="b2b-field full-width">
-                <label>Clarification / Document Link / Additional Details *</label>
+              <div className="b2b-field full">
+                <label>Clarification / Notes *</label>
                 <textarea
                   rows={3}
                   required
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Provide clarification, drive link to GST cert / electricity bill, or details requested above..."
+                  placeholder="Explain requested details, document Google Drive links, or trade verification..."
                 />
               </div>
             </div>
 
-            <div className="b2b-submit-row">
+            <div className="b2b-submit-block">
               <button type="submit" disabled={submitting} className="b2b-submit-btn">
-                {submitting ? 'Submitting Response...' : 'Submit Inquiry Response & Re-verify'}
+                {submitting ? 'Submitting Clarification...' : 'Submit Inquiry Response & Re-verify'}
               </button>
-              <p className="b2b-terms-notice">
-                Your response will update your application record in CarXen Veda for prompt review.
-              </p>
             </div>
           </form>
         </div>
@@ -497,80 +476,49 @@ export default function B2BWholesalePage() {
     );
   }
 
-  // 4. DECLINED VIEW (WITH OPTION TO RE-APPLY)
+  // --------------------------------------------------------------------------
+  // 5. DECLINED / RE-APPLY VIEW
+  // --------------------------------------------------------------------------
   if (b2bProfile?.status === 'REJECTED') {
     return (
       <div className="b2b-page-container">
-        <div className="b2b-hero-banner rejected">
-          <div className="b2b-badge rejected">
+        <div className="b2b-pending-hero" style={{ borderColor: '#fecaca' }}>
+          <div className="b2b-badge rejected" style={{ margin: '0 auto 16px' }}>
             <span>APPLICATION DECLINED</span>
           </div>
           <h1>Application Update Needed</h1>
-          <p className="b2b-hero-sub">
-            The factory review team could not approve the application at this time:
+          <p className="sub">
+            The review team could not approve the application at this time:
           </p>
           {b2bProfile.rejectionReason && (
-            <div className="b2b-rejection-box">
-              <strong>Decline Reason:</strong> {b2bProfile.rejectionReason}
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 12, padding: '14px 18px', fontSize: 13, maxWidth: 600, margin: '0 auto 20px', textAlign: 'left' }}>
+              <strong>Decline Note:</strong> {b2bProfile.rejectionReason}
             </div>
           )}
-          <p className="b2b-rejection-help">
-            You may revise your business or tax information in the form below and resubmit for verification.
+          <p style={{ fontSize: 13, color: '#71717a' }}>
+            You may correct any business or tax information below and resubmit for verification.
           </p>
         </div>
 
-        {/* Application Form pre-filled for revision */}
-        <div className="b2b-form-card">
-          <div className="b2b-form-header">
-            <h2>Revise & Resubmit Application</h2>
-            <p>Update any incorrect details or provide supplementary verification documents.</p>
-          </div>
+        {/* Re-application form */}
+        <div className="b2b-form-card" style={{ maxWidth: 800, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0e0e0f', marginBottom: 4 }}>Revise & Resubmit Application</h2>
+          <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Ensure your GSTIN, Legal Name, and Workshop Address are accurate.</p>
 
           {errorMessage && (
-            <div className="b2b-error-banner">
-              <span>{errorMessage}</span>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, marginBottom: 20 }}>
+              {errorMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="b2b-form">
+          <form onSubmit={handleSubmit}>
             <div className="b2b-form-section">
-              <h3 className="b2b-section-title">1. Contact Representative</h3>
-              <div className="b2b-field-grid">
-                <div className="b2b-field">
-                  <label>Contact Person Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Rajesh Sharma"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Business Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="e.g. rajesh@apexmotors.in"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Mobile / WhatsApp *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g. +91 98765 43210"
-                  />
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">1</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Legal Business Details</h3>
                 </div>
               </div>
-            </div>
-
-            <div className="b2b-form-section">
-              <h3 className="b2b-section-title">2. Business Legal Entity</h3>
               <div className="b2b-field-grid">
                 <div className="b2b-field">
                   <label>Legal Business Name *</label>
@@ -579,113 +527,29 @@ export default function B2BWholesalePage() {
                     required
                     value={formData.businessName}
                     onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    placeholder="e.g. Apex Auto Spares LLP"
                   />
                 </div>
                 <div className="b2b-field">
-                  <label>Trade Name (Optional)</label>
+                  <label>GSTIN (15 Digits)</label>
                   <input
                     type="text"
-                    value={formData.tradeName}
-                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
-                    placeholder="e.g. Apex Performance Garage"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>GSTIN (Goods & Service Tax Number)</label>
-                  <input
-                    type="text"
+                    maxLength={15}
                     value={formData.gstin}
                     onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength={15}
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>PAN Number</label>
-                  <input
-                    type="text"
-                    value={formData.pan}
-                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                    placeholder="ABCDE1234F"
-                    maxLength={10}
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>Business Type</label>
-                  <select
-                    value={formData.businessType}
-                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-                  >
-                    <option value="Dealership / Multi-Brand Workshop">Dealership / Multi-Brand Workshop</option>
-                    <option value="Auto Accessories Retailer">Auto Accessories Retailer</option>
-                    <option value="Fleet Operator / Commercial">Fleet Operator / Commercial</option>
-                    <option value="Independent Garage / Detailer">Independent Garage / Detailer</option>
-                    <option value="Ecommerce Reseller">Ecommerce Reseller</option>
-                  </select>
-                </div>
-                <div className="b2b-field">
-                  <label>Expected Monthly Order Volume</label>
-                  <select
-                    value={formData.expectedMonthlyVolume}
-                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
-                  >
-                    <option value="Under ₹50k">Under ₹50,000 / mo</option>
-                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / mo (Standard Tier 1)</option>
-                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / mo (High Volume Tier 2)</option>
-                    <option value="Above ₹5L">Above ₹5,00,000 / mo (Enterprise VIP)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="b2b-form-section">
-              <h3 className="b2b-section-title">3. Business Address & Logistics</h3>
-              <div className="b2b-field-grid">
-                <div className="b2b-field full-width">
-                  <label>Street Address / Workshop Location</label>
-                  <input
-                    type="text"
-                    value={formData.businessAddress}
-                    onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
-                    placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Pune"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>State</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. Maharashtra"
-                  />
-                </div>
-                <div className="b2b-field">
-                  <label>PIN Code</label>
-                  <input
-                    type="text"
-                    value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    placeholder="e.g. 411019"
-                    maxLength={6}
                   />
                 </div>
               </div>
             </div>
 
             <div className="b2b-form-section">
-              <h3 className="b2b-section-title">4. Verification Notes</h3>
-              <div className="b2b-field full-width">
-                <label>Correction Explanation or Clarification</label>
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">2</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Corrections & Additional Notes</h3>
+                </div>
+              </div>
+              <div className="b2b-field full">
+                <label>Notes / Proof Link</label>
                 <textarea
                   rows={2}
                   value={formData.notes}
@@ -695,13 +559,10 @@ export default function B2BWholesalePage() {
               </div>
             </div>
 
-            <div className="b2b-submit-row">
+            <div className="b2b-submit-block">
               <button type="submit" disabled={submitting} className="b2b-submit-btn">
                 {submitting ? 'Resubmitting Application...' : 'Resubmit Wholesale Application'}
               </button>
-              <p className="b2b-terms-notice">
-                Your revised application will be reviewed in CarXen Veda.
-              </p>
             </div>
           </form>
         </div>
@@ -709,234 +570,388 @@ export default function B2BWholesalePage() {
     );
   }
 
-  // 4. ONBOARDING & APPLICATION FORM
+  // --------------------------------------------------------------------------
+  // 6. DEFAULT APPLICATION FORM (LOGGED-IN USER APPLYING FOR B2B)
+  // --------------------------------------------------------------------------
   return (
     <div className="b2b-page-container">
-      {/* Hero Section */}
-      <div className="b2b-hero-banner">
-        <div className="b2b-badge">
-          <span>B2B WHOLESALE PORTAL</span>
+      {/* Page Header */}
+      <div className="b2b-apply-header">
+        <div className="b2b-apply-header-top">
+          <div className="b2b-badge">
+            <span className="b2b-dot" />
+            <span>CARXEN B2B WHOLESALE PROGRAM</span>
+          </div>
+          <span style={{ fontSize: 12, color: '#71717a', fontWeight: 600 }}>
+            Fast Verification in 24–48 Hours
+          </span>
         </div>
-        <h1>Direct Factory Sourcing for Dealers & Workshops</h1>
-        <p className="b2b-hero-sub">
-          Apply for a CarXen Wholesale Account. Once reviewed and approved in Carxen Veda, your
-          account switches to wholesale mode with individual SKU wholesale pricing, MOQ batch
-          rules, and GST Input Tax Credit (ITC) invoices.
+        <h1>Direct Factory Sourcing for Dealerships & Garages</h1>
+        <p>
+          Apply for a CarXen Wholesale Account. Once verified by our factory desk, unlock wholesale pricing across all product SKUs, MOQ batch ordering, and GST Input Tax Credit (ITC) tax invoicing.
         </p>
-
-        {/* Benefits Grid */}
-        <div className="b2b-benefits-grid">
-          <div className="b2b-benefit-card">
-            <div className="b2b-benefit-icon">₹</div>
-            <h3>40%–55% Resale Margin</h3>
-            <p>Individual wholesale prices set per SKU directly from our factory floor.</p>
-          </div>
-          <div className="b2b-benefit-card">
-            <div className="b2b-benefit-icon">📦</div>
-            <h3>Minimum Order Units (MOQ)</h3>
-            <p>Enforced minimums per item (e.g. 5 units) so you can stock exactly what moves.</p>
-          </div>
-          <div className="b2b-benefit-card">
-            <div className="b2b-benefit-icon">⚡</div>
-            <h3>Quick Order Sheet</h3>
-            <p>Single-page bulk order table with SKU thumbnails and quantity steppers.</p>
-          </div>
-          <div className="b2b-benefit-card">
-            <div className="b2b-benefit-icon">📑</div>
-            <h3>B2B Tax Invoicing</h3>
-            <p>Full GSTIN tax invoices eligible for Input Tax Credit (ITC) with transfer instructions.</p>
-          </div>
-        </div>
       </div>
 
-      {/* Application Form */}
-      <div className="b2b-form-card">
-        <div className="b2b-form-header">
-          <h2>Wholesale Partner Application</h2>
-          <p>Please enter your legal business and contact information for Veda review.</p>
+      {/* Main Two-Column Layout */}
+      <div className="b2b-apply-grid">
+        {/* Left Sidebar: Value Pillars & Timeline */}
+        <div className="b2b-sidebar">
+          <div className="b2b-sidebar-card">
+            <h3>
+              <Sparkles size={16} style={{ color: '#e2231a' }} />
+              <span>Wholesale Partner Perks</span>
+            </h3>
+
+            <div className="b2b-perks-list">
+              <div className="b2b-perk-item">
+                <div className="b2b-perk-icon">
+                  <Percent size={16} />
+                </div>
+                <div className="b2b-perk-content">
+                  <strong>40%–55% Resale Margin</strong>
+                  <span>Direct SKU wholesale pricing set straight from our manufacturing facility.</span>
+                </div>
+              </div>
+
+              <div className="b2b-perk-item">
+                <div className="b2b-perk-icon">
+                  <Layers size={16} />
+                </div>
+                <div className="b2b-perk-content">
+                  <strong>Minimum Order Units (MOQ)</strong>
+                  <span>Low minimums per item (e.g. 5 units) so you can stock exactly what moves.</span>
+                </div>
+              </div>
+
+              <div className="b2b-perk-item">
+                <div className="b2b-perk-icon">
+                  <FileText size={16} />
+                </div>
+                <div className="b2b-perk-content">
+                  <strong>Full GSTIN Invoicing</strong>
+                  <span>B2B invoices with complete GST breakdown, fully eligible for ITC credit.</span>
+                </div>
+              </div>
+
+              <div className="b2b-perk-item">
+                <div className="b2b-perk-icon">
+                  <Truck size={16} />
+                </div>
+                <div className="b2b-perk-content">
+                  <strong>Priority Factory Dispatch</strong>
+                  <span>Bulk batch orders move through our dedicated dispatch line.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline Card */}
+          <div className="b2b-sidebar-card">
+            <h3>
+              <Clock size={16} style={{ color: '#0e0e0f' }} />
+              <span>How Approval Works</span>
+            </h3>
+
+            <div className="b2b-timeline">
+              <div className="b2b-timeline-step active">
+                <div className="b2b-timeline-dot">1</div>
+                <div className="b2b-timeline-content">
+                  <strong>Submit Application</strong>
+                  <span>Provide business entity and GSTIN details.</span>
+                </div>
+              </div>
+
+              <div className="b2b-timeline-step">
+                <div className="b2b-timeline-dot">2</div>
+                <div className="b2b-timeline-content">
+                  <strong>Factory Review</strong>
+                  <span>Reviewed in CarXen Veda within 24–48 hours.</span>
+                </div>
+              </div>
+
+              <div className="b2b-timeline-step">
+                <div className="b2b-timeline-dot">3</div>
+                <div className="b2b-timeline-content">
+                  <strong>Wholesale Portal Unlocked</strong>
+                  <span>Instant bulk table ordering & tier rates.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Support Box */}
+          <div className="b2b-support-box">
+            <strong>Need Bulk Assistance?</strong>
+            <span>Contact our dealership team directly:</span>
+            <div style={{ marginTop: 6, fontWeight: 700, color: '#0e0e0f' }}>
+              +91 98765 43210 · b2b@carxen.in
+            </div>
+          </div>
         </div>
 
-        {errorMessage && (
-          <div className="b2b-error-banner">
-            <span>{errorMessage}</span>
+        {/* Right Column: Structured Application Form */}
+        <div className="b2b-form-card">
+          {/* User Account Strip */}
+          <div className="b2b-user-badge-strip">
+            <div className="b2b-user-badge-left">
+              <div className="b2b-user-avatar">
+                {user.name ? user.name[0].toUpperCase() : 'U'}
+              </div>
+              <div className="b2b-user-info-text">
+                <strong>Signed in as {user.name}</strong>
+                <span>{user.email || 'Verified Account'} · Account ID: {user.id ? user.id.slice(0, 12) + '...' : 'Active'}</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#047857', background: '#ecfdf5', padding: '3px 8px', borderRadius: 6 }}>
+              ✓ Verified User
+            </span>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="b2b-form">
-          {/* Section 1: Contact Details */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">1. Contact Representative</h3>
-            <div className="b2b-field-grid">
-              <div className="b2b-field">
-                <label>Contact Person Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Rajesh Sharma"
-                />
+          {errorMessage && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertCircle size={16} />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            {/* Section 1: Contact Representative */}
+            <div className="b2b-form-section">
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">1</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Contact Representative</h3>
+                  <p>Primary point of contact for purchase orders and dispatch coordination.</p>
+                </div>
               </div>
-              <div className="b2b-field">
-                <label>Business Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="e.g. rajesh@apexmotors.in"
-                />
+
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Representative Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Rajesh Sharma"
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>Business Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="e.g. rajesh@apexmotors.in"
+                  />
+                </div>
+
+                <div className="b2b-field full">
+                  <label>Mobile / WhatsApp Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +91 98765 43210"
+                  />
+                  <span className="b2b-field-hint">Used for dispatch tracking updates and order confirmations.</span>
+                </div>
               </div>
-              <div className="b2b-field">
-                <label>Mobile / WhatsApp *</label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="e.g. +91 98765 43210"
+            </div>
+
+            {/* Section 2: Business & Tax Identification */}
+            <div className="b2b-form-section">
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">2</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Business Identification & Tax</h3>
+                  <p>Registered dealership, workshop, or retailer entity.</p>
+                </div>
+              </div>
+
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Legal Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.businessName}
+                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                    placeholder="e.g. Apex Auto Components Pvt Ltd"
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>
+                    <span>Trade / Workshop Name</span>
+                    <span className="opt">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tradeName}
+                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                    placeholder="e.g. Apex Car Accessories"
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>
+                    <span>GSTIN (GST Number)</span>
+                    <span className="opt">(Recommended for ITC)</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    value={formData.gstin}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    placeholder="e.g. 27AAAAA0000A1Z5"
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>
+                    <span>Business PAN</span>
+                    <span className="opt">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={formData.pan}
+                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                    placeholder="e.g. ABCDE1234F"
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>Business Category</label>
+                  <select
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                  >
+                    <option value="Authorized Dealership">Authorized Dealership</option>
+                    <option value="Multi-Brand Workshop">Multi-Brand Workshop / Garage</option>
+                    <option value="Aftermarket Retailer / Distributor">Aftermarket Retailer / Distributor</option>
+                    <option value="Fleet Operator / Commercial">Fleet Operator / Commercial</option>
+                    <option value="Detailing & Custom Studio">Detailing & Custom Studio</option>
+                  </select>
+                </div>
+
+                <div className="b2b-field">
+                  <label>Expected Monthly Order Volume</label>
+                  <select
+                    value={formData.expectedMonthlyVolume}
+                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
+                  >
+                    <option value="Under ₹50k">Under ₹50,000 / month</option>
+                    <option value="₹50k–₹2L (Tier 1)">₹50,000 – ₹2,00,000 / month (Tier 1 Standard)</option>
+                    <option value="₹2L–₹5L (Tier 2)">₹2,00,000 – ₹5,00,000 / month (Tier 2 High Volume)</option>
+                    <option value="Above ₹5L (Enterprise)">Above ₹5,00,000 / month (Enterprise VIP)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Registered Address */}
+            <div className="b2b-form-section">
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">3</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Workshop Location & Delivery</h3>
+                  <p>Primary commercial address for bulk dispatch and freight delivery.</p>
+                </div>
+              </div>
+
+              <div className="b2b-field-grid">
+                <div className="b2b-field full">
+                  <label>Street Address / Workshop Facility</label>
+                  <input
+                    type="text"
+                    value={formData.businessAddress}
+                    onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
+                    placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC Phase II"
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="e.g. Pune"
+                  />
+                </div>
+
+                <div className="b2b-field">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </div>
+
+                <div className="b2b-field full">
+                  <label>PIN Code</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={formData.pincode}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                    placeholder="e.g. 411019"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Notes / Certifications */}
+            <div className="b2b-form-section">
+              <div className="b2b-section-header">
+                <div className="b2b-section-num">4</div>
+                <div className="b2b-section-title-wrap">
+                  <h3>Special Requirements / Certifications</h3>
+                  <p>Optional notes or drive links to GST certification / store photos.</p>
+                </div>
+              </div>
+
+              <div className="b2b-field full">
+                <label>
+                  <span>Verification Notes</span>
+                  <span className="opt">(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Mention OEM affiliations, vehicle brands serviced, or special logistics requirements..."
                 />
               </div>
             </div>
-          </div>
 
-          {/* Section 2: Business & Legal Details */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">2. Business Identification</h3>
-            <div className="b2b-field-grid">
-              <div className="b2b-field">
-                <label>Legal Business Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                  placeholder="e.g. Apex Auto Components Pvt Ltd"
-                />
-              </div>
-              <div className="b2b-field">
-                <label>Trade / Workshop Name (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.tradeName}
-                  onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
-                  placeholder="e.g. Apex Car Accessories"
-                />
-              </div>
-              <div className="b2b-field">
-                <label>GSTIN (Recommended for ITC)</label>
-                <input
-                  type="text"
-                  value={formData.gstin}
-                  onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                  placeholder="e.g. 27AAAAA0000A1Z5"
-                  maxLength={15}
-                />
-              </div>
-              <div className="b2b-field">
-                <label>Business PAN</label>
-                <input
-                  type="text"
-                  value={formData.pan}
-                  onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                  placeholder="e.g. ABCDE1234F"
-                  maxLength={10}
-                />
-              </div>
-              <div className="b2b-field">
-                <label>Business Type</label>
-                <select
-                  value={formData.businessType}
-                  onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-                >
-                  <option>Authorized Dealership</option>
-                  <option>Multi-Brand Workshop</option>
-                  <option>Aftermarket Retailer / Distributor</option>
-                  <option>Fleet Operator</option>
-                  <option>Detailing & Custom Studio</option>
-                </select>
-              </div>
-              <div className="b2b-field">
-                <label>Expected Monthly Volume</label>
-                <select
-                  value={formData.expectedMonthlyVolume}
-                  onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
-                >
-                  <option>₹50k – ₹2 Lakhs</option>
-                  <option>₹2 Lakhs – ₹5 Lakhs</option>
-                  <option>₹5 Lakhs+ (Tier 2 High Volume)</option>
-                </select>
-              </div>
+            {/* Submit Block */}
+            <div className="b2b-submit-block">
+              <button type="submit" disabled={submitting} className="b2b-submit-btn">
+                {submitting ? (
+                  <span>Submitting Wholesale Application...</span>
+                ) : (
+                  <>
+                    <span>Submit Wholesale Application</span>
+                    <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+              <p className="b2b-terms-notice">
+                By submitting, you confirm you are a registered dealership, garage, or commercial retailer. Reviewed within 24–48 business hours.
+              </p>
             </div>
-          </div>
-
-          {/* Section 3: Business Address */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">3. Business Location</h3>
-            <div className="b2b-field-grid">
-              <div className="b2b-field full-width">
-                <label>Street Address / Workshop Location</label>
-                <input
-                  type="text"
-                  value={formData.businessAddress}
-                  onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
-                  placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC"
-                />
-              </div>
-              <div className="b2b-field">
-                <label>City</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g. Pune"
-                />
-              </div>
-              <div className="b2b-field">
-                <label>State</label>
-                <input
-                  type="text"
-                  value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  placeholder="e.g. Maharashtra"
-                />
-              </div>
-              <div className="b2b-field">
-                <label>PIN Code</label>
-                <input
-                  type="text"
-                  value={formData.pincode}
-                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                  placeholder="e.g. 411019"
-                  maxLength={6}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 4: Notes / Documents */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">4. Verification Notes (Optional)</h3>
-            <div className="b2b-field full-width">
-              <label>Additional Notes or Certifications</label>
-              <textarea
-                rows={2}
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Mention any OEM affiliations, brands serviced, or special requirements..."
-              />
-            </div>
-          </div>
-
-          <div className="b2b-submit-row">
-            <button type="submit" disabled={submitting} className="b2b-submit-btn">
-              {submitting ? 'Submitting Application...' : 'Submit Wholesale Application'}
-            </button>
-            <p className="b2b-terms-notice">
-              By submitting, you confirm you are a registered business or dealership. Approval is reviewed inside Carxen Veda within 24-48 business hours.
-            </p>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

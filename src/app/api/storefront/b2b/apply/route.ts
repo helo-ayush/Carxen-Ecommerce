@@ -47,7 +47,14 @@ export async function POST(request: Request) {
       authUser = auth.user;
       customer = auth.customer;
     } catch {
-      // Continue for unauthenticated guest applicants
+      // Unauthenticated access
+    }
+
+    if (!authUser && !customer) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in to apply for a wholesale account.' },
+        { status: 401 }
+      );
     }
 
     const normalizedEmail = (email || customer?.email || authUser?.email || '').trim().toLowerCase();
