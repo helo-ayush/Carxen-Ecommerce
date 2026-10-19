@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
-import { getEffectiveWholesaleUnitPrice, getActiveWholesaleTier } from '@/lib/storefront/wholesale-pricing';
+import {
+  getEffectiveWholesaleUnitPrice,
+  getActiveWholesaleTier,
+  calculateItemPriceWithOfferLimit,
+} from '@/lib/storefront/wholesale-pricing';
 import { CatalogState } from './CatalogState';
 import { ProductArt } from './ProductArt';
 import {
@@ -171,13 +175,11 @@ export function CartDrawer() {
             <>
               {/* Product Cards List */}
               {cartEntries.map(({ product, qty }) => {
-                const effectivePrice = isWholesaleApproved
-                  ? getEffectiveWholesaleUnitPrice(product, qty)
-                  : product.p;
+                const priceResult = calculateItemPriceWithOfferLimit(product, qty, isWholesaleApproved);
                 const activeTier = isWholesaleApproved
                   ? getActiveWholesaleTier(product, qty)
                   : null;
-                const itemTotal = effectivePrice * qty;
+                const itemTotal = priceResult.totalPrice;
 
                 return (
                   <div className="cx-cart-card" key={product.id}>
@@ -210,7 +212,7 @@ export function CartDrawer() {
                           <span>{product.c || 'Precision Fit'}</span>
                           <span>·</span>
                           <span>
-                            {formatINR(effectivePrice)} {isWholesaleApproved ? 'wholesale/ea' : 'each'}
+                            {formatINR(priceResult.discountedUnitPrice)} {isWholesaleApproved ? 'wholesale/ea' : 'each'}
                           </span>
                           {isWholesaleApproved && (
                             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 ml-1">
@@ -218,6 +220,18 @@ export function CartDrawer() {
                             </span>
                           )}
                         </div>
+
+                        {priceResult.isLimitExceeded && (
+                          <div className="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-amber-600 dark:text-amber-400">
+                            <span>⚡ Offer cap ({priceResult.limitQty}):</span>
+                            <span>{priceResult.discountedQty} @ discount · {priceResult.regularQty} @ regular ({formatINR(priceResult.regularUnitPrice)})</span>
+                          </div>
+                        )}
+                        {product.discountLimitQty && !priceResult.isLimitExceeded && (
+                          <div className="mt-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                            ⚡ Offer limit: Max {product.discountLimitQty} units at discount
+                          </div>
+                        )}
                       </div>
 
                     {/* Stepper + Remove row */}

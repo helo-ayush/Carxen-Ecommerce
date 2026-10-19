@@ -9,7 +9,10 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import { createStorefrontOrder } from '@/lib/storefront/order-client';
-import { getEffectiveWholesaleUnitPrice } from '@/lib/storefront/wholesale-pricing';
+import {
+  getEffectiveWholesaleUnitPrice,
+  calculateItemPriceWithOfferLimit,
+} from '@/lib/storefront/wholesale-pricing';
 import type {
   StorefrontCheckoutRequest,
   StorefrontPaymentMethod,
@@ -385,15 +388,13 @@ export default function CheckoutPage() {
           country: selectedAddress.country || 'India',
         },
         items: cartEntries.map(({ product, qty }) => {
-          const effectivePrice = isWholesaleApproved
-            ? getEffectiveWholesaleUnitPrice(product, qty)
-            : product.p;
+          const priceResult = calculateItemPriceWithOfferLimit(product, qty, isWholesaleApproved);
           return {
             productId: product.id,
             name: product.n,
             quantity: qty,
-            unitPrice: effectivePrice,
-            lineSubtotal: effectivePrice * qty,
+            unitPrice: priceResult.discountedUnitPrice,
+            lineSubtotal: priceResult.totalPrice,
             category: product.c,
             image: product.image || product.images?.[0],
           };
@@ -1282,7 +1283,7 @@ export default function CheckoutPage() {
                           </div>
 
                           <div className="inf-ck-item-price">
-                            {formatINR(product.p * qty)}
+                            {formatINR(calculateItemPriceWithOfferLimit(product, qty, isWholesaleApproved).totalPrice)}
                           </div>
                         </div>
                       ))}

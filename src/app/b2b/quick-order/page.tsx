@@ -11,6 +11,7 @@ import {
   getWholesaleTiers,
   getEffectiveWholesaleUnitPrice,
   getActiveWholesaleTier,
+  calculateItemPriceWithOfferLimit,
 } from '@/lib/storefront/wholesale-pricing';
 
 export default function QuickOrderPage() {
@@ -72,9 +73,9 @@ export default function QuickOrderPage() {
   const handleAddRowToCart = (p: Product) => {
     const moq = getProductMoq(p);
     const qty = quantities[p.id] || moq;
-    const unitPrice = getEffectiveWholesaleUnitPrice(p, qty);
+    const priceResult = calculateItemPriceWithOfferLimit(p, qty, true);
     addToCart(p.id, qty);
-    showToast(`Added ${qty} units (${formatINR(unitPrice * qty)}) of ${p.n} to order`);
+    showToast(`Added ${qty} units (${formatINR(priceResult.totalPrice)}) of ${p.n} to order`);
   };
 
   const handleAddAllSelectedToCart = () => {
@@ -96,7 +97,7 @@ export default function QuickOrderPage() {
   const totalSelectedValue = Object.entries(quantities).reduce((sum, [idStr, q]) => {
     const p = products.find((item) => item.id === Number(idStr));
     if (!p) return sum;
-    return sum + getEffectiveWholesaleUnitPrice(p, q) * q;
+    return sum + calculateItemPriceWithOfferLimit(p, q, true).totalPrice;
   }, 0);
 
   return (
@@ -201,11 +202,13 @@ export default function QuickOrderPage() {
               const tiers = getProductTiers(p);
               const currentQty = quantities[p.id] || 0;
               const effectiveQty = currentQty > 0 ? currentQty : moq;
-              const wsUnitPrice = getEffectiveWholesaleUnitPrice(p, effectiveQty);
+              const priceResult = calculateItemPriceWithOfferLimit(p, effectiveQty, true);
+              const wsUnitPrice = priceResult.discountedUnitPrice;
               const activeTier = getActiveWholesaleTier(p, effectiveQty);
               const retailPrice = p.o || p.p;
               const marginPercent = Math.round(((retailPrice - wsUnitPrice) / retailPrice) * 100);
-              const rowTotal = currentQty > 0 ? currentQty * wsUnitPrice : 0;
+              const activePriceResult = currentQty > 0 ? calculateItemPriceWithOfferLimit(p, currentQty, true) : null;
+              const rowTotal = activePriceResult ? activePriceResult.totalPrice : 0;
               const basePackTotal = moq * tiers[0].unitPrice;
               const inCartQty = cart[p.id] || 0;
 
@@ -227,6 +230,11 @@ export default function QuickOrderPage() {
                       <span className="b2b-product-sku">
                         SKU: {p.slug || `CX-${String(p.id).padStart(4, '0')}`} · {p.s} Series
                       </span>
+                      {p.discountLimitQty && p.discountLimitQty > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
+                          ⚡ Offer Cap: Max {p.discountLimitQty} units
+                        </span>
+                      ) : null}
                       {p.customFit && (
                         <span className="b2b-product-badge">Custom 3D/7D Fitment</span>
                       )}
@@ -326,9 +334,15 @@ export default function QuickOrderPage() {
                     {currentQty > 0 ? (
                       <div className="flex flex-col">
                         <span className="b2b-row-total">{formatINR(rowTotal)}</span>
-                        <span className="text-[10px] text-zinc-400">
-                          {currentQty} units × {formatINR(wsUnitPrice)}
-                        </span>
+                        {activePriceResult && activePriceResult.isLimitExceeded ? (
+                          <span className="text-[10px] text-amber-400 font-medium">
+                            Split: {activePriceResult.discountedQty} @ offer · {activePriceResult.regularQty} @ regular
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-400">
+                            {currentQty} units × {formatINR(wsUnitPrice)}
+                          </span>
+                        )}
                         <span className="text-[10px] text-emerald-400 font-semibold">
                           {marginPercent}% margin
                         </span>

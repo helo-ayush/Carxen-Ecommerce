@@ -50,6 +50,7 @@ export interface EcommerceProductRow {
   comboItems?: unknown;
   wholesalePrice?: number | string | null;
   b2bMoq?: number | string | null;
+  discountLimitQty?: number | string | null;
 }
 
 export class CatalogConfigurationError extends Error {
@@ -345,6 +346,13 @@ function mapProductRow(
     isCombo: Boolean(row.isCombo),
     comboItems: Array.isArray(row.comboItems) ? (row.comboItems as any) : undefined,
     customFit: isCustomFit,
+    discountLimitQty: (() => {
+      const specLimit = row.specifications && typeof (row.specifications as any).discountLimitQty === 'number'
+        ? (row.specifications as any).discountLimitQty
+        : null;
+      const parsedLimit = asFiniteNumber((row as any).discountLimitQty ?? specLimit);
+      return parsedLimit !== null && parsedLimit > 0 ? parsedLimit : null;
+    })(),
     ...(isWholesale ? (() => {
       const parsedWholesale = asFiniteNumber(row.wholesalePrice);
       const wsPrice = parsedWholesale !== null && parsedWholesale > 0

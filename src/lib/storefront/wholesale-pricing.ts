@@ -110,3 +110,78 @@ export function getActiveWholesaleTier(
   }
   return tiers[0];
 }
+
+export interface PriceWithLimitResult {
+  totalPrice: number;
+  discountedQty: number;
+  regularQty: number;
+  effectiveUnitPrice: number;
+  regularUnitPrice: number;
+  discountUnitPrice: number;
+  discountedUnitPrice: number;
+  isLimitApplied: boolean;
+  isLimitExceeded: boolean;
+  limitQty: number | null;
+}
+
+export function calculateItemPriceWithOfferLimit(
+  product: {
+    p: number;
+    o?: number;
+    wholesalePrice?: number | string | null;
+    b2bMoq?: number;
+    discountLimitQty?: number | null;
+  },
+  quantity: number,
+  isWholesale: boolean = false
+): PriceWithLimitResult {
+  const regularUnitPrice = isWholesale
+    ? product.p
+    : (product.o && product.o > product.p ? product.o : product.p);
+
+  const limit = typeof product.discountLimitQty === 'number' && product.discountLimitQty > 0
+    ? product.discountLimitQty
+    : null;
+
+  // Determine the discounted unit price for the order
+  const discountUnitPrice = isWholesale
+    ? getEffectiveWholesaleUnitPrice(product, Math.min(quantity, limit ?? quantity))
+    : product.p;
+
+  // If no limit is configured or order quantity is within limit
+  if (!limit || quantity <= limit) {
+    const unitPrice = isWholesale ? getEffectiveWholesaleUnitPrice(product, quantity) : product.p;
+    return {
+      totalPrice: unitPrice * quantity,
+      discountedQty: quantity,
+      regularQty: 0,
+      effectiveUnitPrice: unitPrice,
+      regularUnitPrice,
+      discountUnitPrice: unitPrice,
+      discountedUnitPrice: unitPrice,
+      isLimitApplied: false,
+      isLimitExceeded: false,
+      limitQty: limit,
+    };
+  }
+
+  // When quantity exceeds limit:
+  const discountedQty = limit;
+  const regularQty = quantity - limit;
+  // Units above limit are billed at standard regular price
+  const totalPrice = (discountedQty * discountUnitPrice) + (regularQty * regularUnitPrice);
+  const effectiveUnitPrice = Math.round(totalPrice / quantity);
+
+  return {
+    totalPrice,
+    discountedQty,
+    regularQty,
+    effectiveUnitPrice,
+    regularUnitPrice,
+    discountUnitPrice,
+    discountedUnitPrice: discountUnitPrice,
+    isLimitApplied: true,
+    isLimitExceeded: true,
+    limitQty: limit,
+  };
+}

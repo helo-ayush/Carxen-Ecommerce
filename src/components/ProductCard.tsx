@@ -279,6 +279,14 @@ export function ProductCard({
             </div>
           )}
 
+          {/* Offer / Discount Quantity Limit Badge */}
+          {product.discountLimitQty && product.discountLimitQty > 0 ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>Offer Limit: Max {product.discountLimitQty} units at discount</span>
+            </div>
+          ) : null}
+
           {/* Full-Width Add to Cart Button with Quantity + Total Price */}
           <button
             type="button"

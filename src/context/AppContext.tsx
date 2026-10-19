@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import type { Product } from '@/data/products';
 import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
-import { getEffectiveWholesaleUnitPrice } from '@/lib/storefront/wholesale-pricing';
+import { getEffectiveWholesaleUnitPrice, calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { supabase } from '@/lib/supabase/client';
 import type {
   CustomerAddress,
@@ -1107,10 +1107,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
       const p = products.find((x) => x.id === Number(idStr));
       if (!p) return total;
-      const effectivePrice = isWholesaleApproved
-        ? getEffectiveWholesaleUnitPrice(p, qty)
-        : p.p;
-      return total + (effectivePrice * qty);
+      const priceResult = calculateItemPriceWithOfferLimit(p, qty, isWholesaleApproved);
+      return total + priceResult.totalPrice;
     }, 0);
   }, [cart, products, isWholesaleApproved]);
 

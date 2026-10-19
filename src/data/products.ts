@@ -54,6 +54,7 @@ export interface Product {
   comboItems?: ProductComboItem[];
   wholesalePrice?: number;
   b2bMoq?: number;
+  discountLimitQty?: number | null;
   taxBreakdown?: {
     gstPercent: number;
     basePriceExGst: number;

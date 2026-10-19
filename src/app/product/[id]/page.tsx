@@ -20,6 +20,7 @@ import {
   getWholesaleTiers,
   getEffectiveWholesaleUnitPrice,
   getActiveWholesaleTier,
+  calculateItemPriceWithOfferLimit,
 } from '@/lib/storefront/wholesale-pricing';
 
 // shadcn UI components
@@ -317,13 +318,18 @@ function ProductDetailContent({ product }: { product: Product }) {
 
   const [quantity, setQuantity] = useState(isWholesaleApproved ? b2bMoq : 1);
 
+  const priceWithLimit = useMemo(
+    () => calculateItemPriceWithOfferLimit(product, quantity, isWholesaleApproved),
+    [product, quantity, isWholesaleApproved]
+  );
+
   const currentWholesaleUnitPrice = isWholesaleApproved
     ? getEffectiveWholesaleUnitPrice(product, quantity)
     : product.p;
   const activeWholesaleTier = isWholesaleApproved
     ? getActiveWholesaleTier(product, quantity)
     : null;
-  const currentLotTotal = currentWholesaleUnitPrice * quantity;
+  const currentLotTotal = priceWithLimit.totalPrice;
   const wholesaleSavingsMargin = activeWholesaleTier?.marginPercent || Math.max(
     5,
     Math.round(
@@ -1042,57 +1048,74 @@ function ProductDetailContent({ product }: { product: Product }) {
               </div>
             )}
 
-            {/* CTA Action Buttons: Add to Cart (outline) + Buy it now (Carxen Red) + Wishlist */}
-            <div className="ps-cta-row" ref={mainCtaRef}>
-              {isWholesaleApproved && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    border: '1px solid #333',
-                    borderRadius: '8px',
-                    background: '#18181b',
-                    height: '46px',
-                    padding: '0 4px',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.max(b2bMoq, q - 1))}
-                    style={{
-                      width: '32px',
-                      height: '100%',
-                      color: '#fff',
-                      fontSize: '18px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                    aria-label="Decrease quantity"
-                  >
-                    −
-                  </button>
-                  <span style={{ padding: '0 10px', fontWeight: 600, color: '#fff', fontSize: '14px', minWidth: '32px', textAlign: 'center' }}>
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    style={{
-                      width: '32px',
-                      height: '100%',
-                      color: '#fff',
-                      fontSize: '18px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                    aria-label="Increase quantity"
-                  >
-                    +
-                  </button>
+            {/* Offer / Discount Quantity Limit Alert Banner */}
+            {product.discountLimitQty && product.discountLimitQty > 0 ? (
+              <div className="mt-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                  <span>⚡ Promotional Offer Limit:</span>
+                  <span>Max {product.discountLimitQty} units at discount rate per order</span>
                 </div>
-              )}
+                {priceWithLimit.isLimitExceeded ? (
+                  <div className="mt-1 text-[11px] text-amber-200/90 font-medium">
+                    Split pricing applied: First {priceWithLimit.discountedQty} units @ {formatINR(priceWithLimit.discountedUnitPrice)} + {priceWithLimit.regularQty} units @ {formatINR(priceWithLimit.regularUnitPrice)} standard price = Total {formatINR(priceWithLimit.totalPrice)}.
+                  </div>
+                ) : (
+                  <div className="mt-1 text-[11px] text-amber-200/80">
+                    Order up to {product.discountLimitQty} units at this discount price. Units beyond the cap bill at standard price.
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* CTA Action Buttons: Stepper + Add to Cart + Buy it now + Wishlist */}
+            <div className="ps-cta-row" ref={mainCtaRef}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  border: '1px solid #333',
+                  borderRadius: '8px',
+                  background: '#18181b',
+                  height: '46px',
+                  padding: '0 4px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(isWholesaleApproved ? b2bMoq : 1, q - 1))}
+                  style={{
+                    width: '32px',
+                    height: '100%',
+                    color: '#fff',
+                    fontSize: '18px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span style={{ padding: '0 10px', fontWeight: 600, color: '#fff', fontSize: '14px', minWidth: '32px', textAlign: 'center' }}>
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  style={{
+                    width: '32px',
+                    height: '100%',
+                    color: '#fff',
+                    fontSize: '18px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -1102,7 +1125,11 @@ function ProductDetailContent({ product }: { product: Product }) {
                   openCart();
                 }}
               >
-                {isWholesaleApproved ? `Add ${quantity} Units · ${formatINR(currentLotTotal)}` : 'Add to Cart'}
+                {isWholesaleApproved
+                  ? `Add ${quantity} Units · ${formatINR(priceWithLimit.totalPrice)}`
+                  : quantity > 1
+                  ? `Add ${quantity} to Cart · ${formatINR(priceWithLimit.totalPrice)}`
+                  : 'Add to Cart'}
               </button>
 
               <button
@@ -2163,10 +2190,10 @@ function ProductDetailContent({ product }: { product: Product }) {
       <div className={`ps-mobile-sticky-bar ${showStickyBar ? 'ps-sticky-visible' : ''}`}>
         <div>
           <span style={{ fontSize: '11px', color: '#71717a', display: 'block' }}>
-            {isWholesaleApproved ? `Wholesale (${quantity} units)` : 'Total price'}
+            {isWholesaleApproved ? `Wholesale (${quantity} units)` : quantity > 1 ? `Total (${quantity} units)` : 'Total price'}
           </span>
           <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>
-            {formatINR(isWholesaleApproved ? currentLotTotal : product.p)}
+            {formatINR(priceWithLimit.totalPrice)}
           </b>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -2179,7 +2206,11 @@ function ProductDetailContent({ product }: { product: Product }) {
             className="ps-btn-add-cart"
             style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
           >
-            {isWholesaleApproved ? `Add ${quantity} Units · ${formatINR(currentLotTotal)}` : 'Add to Cart'}
+            {isWholesaleApproved
+              ? `Add ${quantity} Units · ${formatINR(priceWithLimit.totalPrice)}`
+              : quantity > 1
+              ? `Add ${quantity} · ${formatINR(priceWithLimit.totalPrice)}`
+              : 'Add to Cart'}
           </button>
           <button
             type="button"
