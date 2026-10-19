@@ -1230,6 +1230,23 @@ function ProductDetailContent({ product }: { product: Product }) {
                   'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
               </p>
 
+              {/* Product Search Tags */}
+              {Array.isArray(product.tags) && product.tags.length > 0 && (
+                <div className="ps-desc-tags">
+                  <span className="ps-desc-tags-label">Tags:</span>
+                  {product.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/shop?q=${encodeURIComponent(tag)}`}
+                      className="ps-desc-tag-pill"
+                      title={`Search products tagged #${tag}`}
+                    >
+                      #{tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
               {/* Quick Feature Badges */}
               <div className="ps-sidebar-highlights">
                 <span className="ps-sidebar-highlight-pill">
@@ -1445,6 +1462,23 @@ function ProductDetailContent({ product }: { product: Product }) {
                   {product.d ||
                     'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
                 </p>
+
+                {/* Technical Product Search Tags */}
+                {Array.isArray(product.tags) && product.tags.length > 0 && (
+                  <div className="ps-desc-tags" style={{ marginTop: '12px' }}>
+                    <span className="ps-desc-tags-label">Search Tags:</span>
+                    {product.tags.map((tag) => (
+                      <Link
+                        key={tag}
+                        href={`/shop?q=${encodeURIComponent(tag)}`}
+                        className="ps-desc-tag-pill"
+                        title={`Search products tagged #${tag}`}
+                      >
+                        #{tag}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '12px' }}>
