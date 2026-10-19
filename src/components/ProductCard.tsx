@@ -6,6 +6,7 @@ import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { useApp } from '@/context/AppContext';
 
 export interface ProductCardProps {
   product: Product;
@@ -33,10 +34,11 @@ export function ProductCard({
   className = '',
 }: ProductCardProps) {
   const router = useRouter();
+  const { isWholesaleApproved } = useApp();
   const [isAdding, setIsAdding] = useState(false);
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
 
-  const isB2B = typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0;
+  const isB2B = Boolean(isWholesaleApproved && typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0);
   const wholesaleTiers = useMemo(() => (isB2B ? getWholesaleTiers(product) : []), [isB2B, product]);
   const baseTier = wholesaleTiers[0];
   const effectivePrice = isB2B && baseTier ? baseTier.unitPrice : product.p;

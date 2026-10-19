@@ -353,27 +353,26 @@ function mapProductRow(
       const parsedLimit = asFiniteNumber((row as any).discountLimitQty ?? specLimit);
       return parsedLimit !== null && parsedLimit > 0 ? parsedLimit : null;
     })(),
-    ...(isWholesale ? (() => {
-      const parsedWholesale = asFiniteNumber(row.wholesalePrice);
-      const wsPrice = parsedWholesale !== null && parsedWholesale > 0
-        ? parsedWholesale
-        : Math.round(price * 0.6);
-      const parsedMoq = asFiniteNumber(row.b2bMoq);
-      const moq = parsedMoq !== null && parsedMoq > 0 ? parsedMoq : 5;
+    wholesalePrice: (() => {
+      const parsed = asFiniteNumber(row.wholesalePrice);
+      return parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
+    })(),
+    b2bMoq: (() => {
+      const parsed = asFiniteNumber(row.b2bMoq);
+      return parsed !== null && parsed > 0 ? parsed : 5;
+    })(),
+    taxBreakdown: (() => {
+      const parsed = asFiniteNumber(row.wholesalePrice);
+      const wsPrice = parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
       const basePriceExGst = Math.round(wsPrice / 1.18);
       const gstAmount = wsPrice - basePriceExGst;
-
       return {
-        wholesalePrice: wsPrice,
-        b2bMoq: moq,
-        taxBreakdown: {
-          gstPercent: 18,
-          basePriceExGst,
-          gstAmount,
-        },
-        wholesaleTier: wholesaleTier || 'tier1',
+        gstPercent: 18,
+        basePriceExGst,
+        gstAmount,
       };
-    })() : {}),
+    })(),
+    wholesaleTier: wholesaleTier || 'tier1',
   };
 }
 
