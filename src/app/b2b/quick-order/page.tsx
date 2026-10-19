@@ -7,6 +7,11 @@ import { useApp } from '@/context/AppContext';
 import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
+import {
+  getWholesaleTiers,
+  getEffectiveWholesaleUnitPrice,
+  getActiveWholesaleTier,
+} from '@/lib/storefront/wholesale-pricing';
 
 export default function QuickOrderPage() {
   const router = useRouter();
@@ -27,12 +32,11 @@ export default function QuickOrderPage() {
 
   // Initialize draft quantities to each product's b2bMoq
   const getProductMoq = (p: Product) => p.b2bMoq || 5;
+  const getProductTiers = (p: Product) => getWholesaleTiers(p);
 
-  const getEffectiveWholesalePrice = (p: Product) => {
-    if (typeof p.wholesalePrice === 'number' && p.wholesalePrice > 0) {
-      return p.wholesalePrice;
-    }
-    return Math.round(p.p * 0.6);
+  const getEffectiveWholesalePrice = (p: Product, qty: number = 0) => {
+    const effectiveQty = qty > 0 ? qty : getProductMoq(p);
+    return getEffectiveWholesaleUnitPrice(p, effectiveQty);
   };
 
   const filteredProducts = useMemo(() => {
@@ -68,8 +72,9 @@ export default function QuickOrderPage() {
   const handleAddRowToCart = (p: Product) => {
     const moq = getProductMoq(p);
     const qty = quantities[p.id] || moq;
+    const unitPrice = getEffectiveWholesaleUnitPrice(p, qty);
     addToCart(p.id, qty);
-    showToast(`Added ${qty} units of ${p.n} to order`);
+    showToast(`Added ${qty} units (${formatINR(unitPrice * qty)}) of ${p.n} to order`);
   };
 
   const handleAddAllSelectedToCart = () => {
@@ -91,7 +96,7 @@ export default function QuickOrderPage() {
   const totalSelectedValue = Object.entries(quantities).reduce((sum, [idStr, q]) => {
     const p = products.find((item) => item.id === Number(idStr));
     if (!p) return sum;
-    return sum + getEffectiveWholesalePrice(p) * q;
+    return sum + getEffectiveWholesaleUnitPrice(p, q) * q;
   }, 0);
 
   return (
@@ -179,13 +184,12 @@ export default function QuickOrderPage() {
         <table className="b2b-table">
           <thead>
             <tr>
-              <th style={{ width: '80px' }}>Thumbnail</th>
+              <th style={{ width: '70px' }}>Thumbnail</th>
               <th>SKU / Product Details</th>
               <th>Category</th>
               <th>Retail (MRP)</th>
-              <th>Wholesale (Excl. GST)</th>
-              <th>Margin</th>
-              <th>MOQ</th>
+              <th style={{ minWidth: '220px' }}>Quantity & Price Breaks</th>
+              <th>Base Pack (MOQ)</th>
               <th>Order Qty</th>
               <th>Row Subtotal</th>
               <th style={{ textAlign: 'right' }}>Action</th>
@@ -194,11 +198,15 @@ export default function QuickOrderPage() {
           <tbody>
             {filteredProducts.map((p) => {
               const moq = getProductMoq(p);
-              const wsPrice = getEffectiveWholesalePrice(p);
-              const retailPrice = p.o || p.p;
-              const marginPercent = Math.round(((retailPrice - wsPrice) / retailPrice) * 100);
+              const tiers = getProductTiers(p);
               const currentQty = quantities[p.id] || 0;
-              const rowTotal = currentQty * wsPrice;
+              const effectiveQty = currentQty > 0 ? currentQty : moq;
+              const wsUnitPrice = getEffectiveWholesaleUnitPrice(p, effectiveQty);
+              const activeTier = getActiveWholesaleTier(p, effectiveQty);
+              const retailPrice = p.o || p.p;
+              const marginPercent = Math.round(((retailPrice - wsUnitPrice) / retailPrice) * 100);
+              const rowTotal = currentQty > 0 ? currentQty * wsUnitPrice : 0;
+              const basePackTotal = moq * tiers[0].unitPrice;
               const inCartQty = cart[p.id] || 0;
 
               return (
@@ -235,22 +243,47 @@ export default function QuickOrderPage() {
                     <span className="b2b-retail-price">{formatINR(retailPrice)}</span>
                   </td>
 
-                  {/* Wholesale Price */}
+                  {/* Wholesale Pricing Tiers (Quantity + Price) */}
                   <td>
-                    <div className="b2b-wholesale-cell">
-                      <span className="b2b-ws-price">{formatINR(wsPrice)}</span>
-                      <span className="b2b-gst-note">excl. 18% GST</span>
+                    <div className="flex flex-col gap-1 text-[11px]">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded font-semibold border ${
+                          currentQty >= tiers[0].minQty && (!tiers[0].maxQty || currentQty <= tiers[0].maxQty)
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                        }`}>
+                          {tiers[0].minQty}+ @ {formatINR(tiers[0].unitPrice)}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded font-semibold border ${
+                          currentQty >= tiers[1].minQty && (!tiers[1].maxQty || currentQty <= tiers[1].maxQty)
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                        }`}>
+                          {tiers[1].minQty}+ @ {formatINR(tiers[1].unitPrice)} (-{tiers[1].discountPercent}%)
+                        </span>
+                        <span className={`px-2 py-0.5 rounded font-semibold border ${
+                          currentQty >= tiers[2].minQty
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                        }`}>
+                          {tiers[2].minQty}+ @ {formatINR(tiers[2].unitPrice)} (-{tiers[2].discountPercent}%)
+                        </span>
+                      </div>
+                      {activeTier && currentQty >= tiers[1].minQty && (
+                        <span className="text-[10px] text-emerald-400 font-medium">
+                          ✓ {activeTier.badge || `${activeTier.label} active`}
+                        </span>
+                      )}
                     </div>
                   </td>
 
-                  {/* Margin */}
+                  {/* Base Pack (MOQ Quantity + Price) */}
                   <td>
-                    <span className="b2b-margin-badge">{marginPercent}% Margin</span>
-                  </td>
-
-                  {/* MOQ */}
-                  <td>
-                    <span className="b2b-moq-pill">Min. {moq} units</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-zinc-100 text-xs">Pack of {moq}</span>
+                      <span className="font-semibold text-emerald-400 text-xs">{formatINR(basePackTotal)}</span>
+                      <span className="text-[10px] text-zinc-400">({formatINR(tiers[0].unitPrice)}/ea)</span>
+                    </div>
                   </td>
 
                   {/* Stepper */}
@@ -290,12 +323,22 @@ export default function QuickOrderPage() {
 
                   {/* Row Total */}
                   <td>
-                    <span className="b2b-row-total">
-                      {currentQty > 0 ? formatINR(rowTotal) : '—'}
-                    </span>
+                    {currentQty > 0 ? (
+                      <div className="flex flex-col">
+                        <span className="b2b-row-total">{formatINR(rowTotal)}</span>
+                        <span className="text-[10px] text-zinc-400">
+                          {currentQty} units × {formatINR(wsUnitPrice)}
+                        </span>
+                        <span className="text-[10px] text-emerald-400 font-semibold">
+                          {marginPercent}% margin
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500 text-xs">—</span>
+                    )}
                   </td>
 
-                  {/* Add to Cart */}
+                  {/* Add to Cart with Quantity + Total Price */}
                   <td style={{ textAlign: 'right' }}>
                     <div className="flex items-center justify-end gap-2">
                       {inCartQty > 0 && (
@@ -307,8 +350,9 @@ export default function QuickOrderPage() {
                         type="button"
                         onClick={() => handleAddRowToCart(p)}
                         className="b2b-add-row-btn"
+                        title="Add to wholesale order"
                       >
-                        Add {currentQty > 0 ? currentQty : moq}
+                        Add {currentQty > 0 ? currentQty : moq} Units · {formatINR(currentQty > 0 ? rowTotal : basePackTotal)}
                       </button>
                     </div>
                   </td>

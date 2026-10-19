@@ -9,6 +9,7 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import { createStorefrontOrder } from '@/lib/storefront/order-client';
+import { getEffectiveWholesaleUnitPrice } from '@/lib/storefront/wholesale-pricing';
 import type {
   StorefrontCheckoutRequest,
   StorefrontPaymentMethod,
@@ -384,8 +385,8 @@ export default function CheckoutPage() {
           country: selectedAddress.country || 'India',
         },
         items: cartEntries.map(({ product, qty }) => {
-          const effectivePrice = isWholesaleApproved && product.wholesalePrice
-            ? product.wholesalePrice
+          const effectivePrice = isWholesaleApproved
+            ? getEffectiveWholesaleUnitPrice(product, qty)
             : product.p;
           return {
             productId: product.id,

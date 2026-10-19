@@ -16,6 +16,11 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { ProductCard } from '@/components/ProductCard';
 import { Footer } from '@/components/Footer';
+import {
+  getWholesaleTiers,
+  getEffectiveWholesaleUnitPrice,
+  getActiveWholesaleTier,
+} from '@/lib/storefront/wholesale-pricing';
 
 // shadcn UI components
 import { Button } from '@/components/ui/button';
@@ -305,20 +310,28 @@ function ProductDetailContent({ product }: { product: Product }) {
   const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
 
   const b2bMoq = product.b2bMoq || 5;
-  const effectiveWholesalePrice =
-    typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0
-      ? product.wholesalePrice
-      : Math.round(product.p * 0.6);
-  const wholesaleSavingsMargin = Math.max(
+  const wholesaleTiers = useMemo(
+    () => (isWholesaleApproved ? getWholesaleTiers(product) : []),
+    [isWholesaleApproved, product]
+  );
+
+  const [quantity, setQuantity] = useState(isWholesaleApproved ? b2bMoq : 1);
+
+  const currentWholesaleUnitPrice = isWholesaleApproved
+    ? getEffectiveWholesaleUnitPrice(product, quantity)
+    : product.p;
+  const activeWholesaleTier = isWholesaleApproved
+    ? getActiveWholesaleTier(product, quantity)
+    : null;
+  const currentLotTotal = currentWholesaleUnitPrice * quantity;
+  const wholesaleSavingsMargin = activeWholesaleTier?.marginPercent || Math.max(
     5,
     Math.round(
-      (((product.o || Math.round(product.p * 1.35)) - effectiveWholesalePrice) /
+      (((product.o || Math.round(product.p * 1.35)) - currentWholesaleUnitPrice) /
         (product.o || Math.round(product.p * 1.35))) *
         100
     )
   );
-
-  const [quantity, setQuantity] = useState(isWholesaleApproved ? b2bMoq : 1);
 
   useEffect(() => {
     if (isWholesaleApproved) {
@@ -935,13 +948,17 @@ function ProductDetailContent({ product }: { product: Product }) {
 
             {/* Big Price Display */}
             {isWholesaleApproved ? (
-              <div className="ps-price-display" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+              <div className="ps-price-display" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '14px', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                  <span className="ps-current-price">{formatINR(effectiveWholesalePrice)}</span>
+                  <span className="ps-current-price">{formatINR(currentWholesaleUnitPrice)}</span>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
                     Wholesale Price (excl. 18% GST)
                   </span>
+                  <span className="text-xs font-bold text-zinc-100 bg-zinc-800/90 border border-zinc-700/80 px-2.5 py-1 rounded-lg">
+                    Pack Total: {formatINR(currentLotTotal)} ({quantity} units)
+                  </span>
                 </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888', flexWrap: 'wrap' }}>
                   <span>Retail MRP: <span style={{ textDecoration: 'line-through' }}>{formatINR(product.o || Math.round(product.p * 1.35))}</span></span>
                   <span>·</span>
@@ -951,6 +968,67 @@ function ProductDetailContent({ product }: { product: Product }) {
                     Min. Units (MOQ): {b2bMoq}
                   </span>
                 </div>
+
+                {/* Wholesale Volume Discount Matrix Table (Quantity + Price breaks for maximum conversion) */}
+                {wholesaleTiers.length > 0 && (
+                  <div style={{ width: '100%', borderRadius: '12px', border: '1px solid #27272a', background: '#09090b', padding: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#d4d4d8' }}>
+                        Wholesale Volume & Price Breaks
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
+                        Select Tier to Auto-Fill Quantity
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                      {wholesaleTiers.map((tier, idx) => {
+                        const isTierActive = quantity >= tier.minQty && (!tier.maxQty || quantity <= tier.maxQty);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setQuantity(tier.minQty)}
+                            style={{
+                              textAlign: 'left',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: isTierActive ? '1px solid #10b981' : '1px solid #27272a',
+                              background: isTierActive ? 'rgba(16, 185, 129, 0.12)' : '#18181b',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>
+                                {tier.minQty}{tier.maxQty ? `–${tier.maxQty}` : '+'} Units
+                              </span>
+                              {tier.discountPercent > 0 ? (
+                                <span style={{ fontSize: '9.5px', fontWeight: 700, background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', padding: '1px 5px', borderRadius: '4px' }}>
+                                  -{tier.discountPercent}%
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '9.5px', color: '#a1a1aa' }}>Base MOQ</span>
+                              )}
+                            </div>
+                            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 800, color: '#34d399' }}>
+                                {formatINR(tier.unitPrice)}
+                                <span style={{ fontSize: '10px', color: '#71717a', fontWeight: 400 }}>/ea</span>
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#e4e4e7', marginTop: '2px' }}>
+                              Lot: {formatINR(tier.lotTotal)}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#a1a1aa', marginTop: '2px' }}>
+                              {tier.marginPercent}% profit margin
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="ps-price-display">
@@ -1024,7 +1102,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   openCart();
                 }}
               >
-                {isWholesaleApproved ? `Add ${quantity} units to Cart` : 'Add to Cart'}
+                {isWholesaleApproved ? `Add ${quantity} Units · ${formatINR(currentLotTotal)}` : 'Add to Cart'}
               </button>
 
               <button
@@ -2088,7 +2166,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             {isWholesaleApproved ? `Wholesale (${quantity} units)` : 'Total price'}
           </span>
           <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>
-            {formatINR(isWholesaleApproved ? effectiveWholesalePrice * quantity : product.p)}
+            {formatINR(isWholesaleApproved ? currentLotTotal : product.p)}
           </b>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -2101,7 +2179,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             className="ps-btn-add-cart"
             style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
           >
-            {isWholesaleApproved ? `Add MOQ (${quantity})` : 'Add to Cart'}
+            {isWholesaleApproved ? `Add ${quantity} Units · ${formatINR(currentLotTotal)}` : 'Add to Cart'}
           </button>
           <button
             type="button"

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
+import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 
 export interface ProductCardProps {
   product: Product;
@@ -36,10 +37,12 @@ export function ProductCard({
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
 
   const isB2B = typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0;
-  const effectivePrice = isB2B ? product.wholesalePrice! : product.p;
+  const wholesaleTiers = useMemo(() => (isB2B ? getWholesaleTiers(product) : []), [isB2B, product]);
+  const baseTier = wholesaleTiers[0];
+  const effectivePrice = isB2B && baseTier ? baseTier.unitPrice : product.p;
   const comparePrice = isB2B ? (product.o || product.p) : (product.o && product.o > product.p ? product.o : 0);
-  const resaleMargin = isB2B && comparePrice > 0
-    ? Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)
+  const resaleMargin = isB2B && baseTier
+    ? baseTier.marginPercent
     : 0;
 
   const discountPercent =
@@ -76,7 +79,7 @@ export function ProductCard({
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsAdding(true);
-    const qty = isB2B ? (product.b2bMoq || 5) : 1;
+    const qty = isB2B ? (baseTier?.minQty || product.b2bMoq || 5) : 1;
     onAddToCart(product.id, qty);
     if (onOpenCart) {
       onOpenCart();
@@ -224,9 +227,9 @@ export function ProductCard({
           <div className="ref-bottom-row">
             <div className="ref-price-row">
               <span className="ref-price-now">{formatINR(effectivePrice)}</span>
-              {isB2B ? (
-                <span className="text-[10px] text-emerald-500 font-semibold ml-1">
-                  wholesale (excl. GST)
+              {isB2B && baseTier ? (
+                <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 ml-1">
+                  / unit · Pack of {baseTier.minQty}: {formatINR(baseTier.lotTotal)}
                 </span>
               ) : (
                 product.o && product.o > product.p && (
@@ -261,10 +264,25 @@ export function ProductCard({
             </div>
           </div>
 
-          {/* Full-Width Add to Cart Button */}
+          {/* Volume Tiers Matrix (Quantity + Price Breaks for Maximum Sales) */}
+          {isB2B && wholesaleTiers.length > 1 && (
+            <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10.5px]">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
+                {wholesaleTiers[0].minQty}+ @ {formatINR(wholesaleTiers[0].unitPrice)}
+              </span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary font-medium border border-border/80">
+                {wholesaleTiers[1].minQty}+ @ {formatINR(wholesaleTiers[1].unitPrice)} (-{wholesaleTiers[1].discountPercent}%)
+              </span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary font-medium border border-border/80">
+                {wholesaleTiers[2].minQty}+ @ {formatINR(wholesaleTiers[2].unitPrice)} (-{wholesaleTiers[2].discountPercent}%)
+              </span>
+            </div>
+          )}
+
+          {/* Full-Width Add to Cart Button with Quantity + Total Price */}
           <button
             type="button"
-            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''}`}
+            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''} ${isB2B ? 'mt-2.5' : ''}`}
             onClick={handleAddClick}
             aria-label={`Add ${product.n} to cart`}
           >
@@ -282,7 +300,11 @@ export function ProductCard({
                   <circle cx="18" cy="20" r="1" />
                   <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
-                <span>{isB2B ? `Add MOQ (${product.b2bMoq || 5} units)` : 'Add to Cart'}</span>
+                <span>
+                  {isB2B && baseTier
+                    ? `Add ${baseTier.minQty} Units · ${formatINR(baseTier.lotTotal)}`
+                    : 'Add to Cart'}
+                </span>
               </>
             )}
           </button>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
+import { getEffectiveWholesaleUnitPrice, getActiveWholesaleTier } from '@/lib/storefront/wholesale-pricing';
 import { CatalogState } from './CatalogState';
 import { ProductArt } from './ProductArt';
 import {
@@ -171,8 +172,11 @@ export function CartDrawer() {
               {/* Product Cards List */}
               {cartEntries.map(({ product, qty }) => {
                 const effectivePrice = isWholesaleApproved
-                  ? (typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0 ? product.wholesalePrice : Math.round(product.p * 0.6))
+                  ? getEffectiveWholesaleUnitPrice(product, qty)
                   : product.p;
+                const activeTier = isWholesaleApproved
+                  ? getActiveWholesaleTier(product, qty)
+                  : null;
                 const itemTotal = effectivePrice * qty;
 
                 return (
@@ -206,11 +210,11 @@ export function CartDrawer() {
                           <span>{product.c || 'Precision Fit'}</span>
                           <span>·</span>
                           <span>
-                            {formatINR(effectivePrice)} {isWholesaleApproved ? 'wholesale' : 'each'}
+                            {formatINR(effectivePrice)} {isWholesaleApproved ? 'wholesale/ea' : 'each'}
                           </span>
                           {isWholesaleApproved && (
-                            <span className="text-[10px] text-text-tertiary ml-1">
-                              (MOQ {product.b2bMoq || 5})
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 ml-1">
+                              ({qty} units · {activeTier?.label || `MOQ ${product.b2bMoq || 5}`})
                             </span>
                           )}
                         </div>
