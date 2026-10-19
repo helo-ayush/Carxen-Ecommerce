@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { getAvailableCouponsForBuyer, type WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
 export default function B2BWholesalePage() {
   const router = useRouter();
@@ -74,6 +75,25 @@ export default function B2BWholesalePage() {
     }
   };
 
+  const buyerContext: WholesaleBuyerContext = useMemo(
+    () => ({
+      isWholesaleApproved,
+      businessName: b2bProfile?.businessName,
+      tradeName: b2bProfile?.tradeName,
+      email: user?.email,
+      userId: user?.id,
+    }),
+    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, user?.email, user?.id]
+  );
+
+  const availableCoupons = useMemo(() => {
+    return getAvailableCouponsForBuyer(buyerContext);
+  }, [buyerContext]);
+
+  const assignedCoupons = availableCoupons.filter(
+    (c) => c.audience === 'Individual Wholesale Buyer' || c.audience === 'Dealer accounts'
+  );
+
   // 1. APPROVED WHOLESALER VIEW
   if (isWholesaleApproved) {
     return (
@@ -116,6 +136,87 @@ export default function B2BWholesalePage() {
               <span className="val text-success">GST ITC Eligible</span>
             </div>
           </div>
+
+          {assignedCoupons.length > 0 && (
+            <div className="b2b-coupons-section" style={{ marginTop: 24, textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--text-primary, #0f172a)' }}>
+                  🏷️ Your Exclusive Wholesale Coupon Codes
+                </h3>
+                <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
+                  Assigned by Owner for {b2bProfile?.businessName || 'Your Dealership'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                {assignedCoupons.map((c) => (
+                  <div
+                    key={c.code}
+                    style={{
+                      border: '1px dashed #f59e0b',
+                      borderRadius: 10,
+                      padding: '14px',
+                      background: 'rgba(245, 158, 11, 0.05)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: 6 }}>
+                          {c.code}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>
+                          {c.type === 'Percentage' ? `${c.value}% OFF` : `₹${c.value.toLocaleString('en-IN')} OFF`}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, fontWeight: 600, margin: '8px 0 2px', color: '#1e293b' }}>
+                        {c.name}
+                      </p>
+                      <p style={{ fontSize: 11, margin: 0, color: '#64748b' }}>
+                        {c.description || (c.minimumOrder ? `Valid on wholesale orders above ₹${c.minimumOrder.toLocaleString('en-IN')}` : 'Valid on wholesale orders')}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(c.code);
+                          alert(`Coupon code ${c.code} copied!`);
+                        }}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: '5px 10px',
+                          borderRadius: 6,
+                          border: '1px solid #cbd5e1',
+                          background: '#fff',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Copy Code
+                      </button>
+                      <Link
+                        href="/checkout"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          background: '#f59e0b',
+                          color: '#fff',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Use in Checkout &rarr;
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

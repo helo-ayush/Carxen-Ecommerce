@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
@@ -18,6 +18,12 @@ import type {
   StorefrontPaymentMethod,
   StorefrontShippingAddressSnapshot,
 } from '@/lib/storefront/order-types';
+import {
+  validateCoupon,
+  getAvailableCouponsForBuyer,
+  type WholesaleBuyerContext,
+  type StorefrontCoupon,
+} from '@/lib/storefront/coupons';
 
 import {
   CreditCard,
@@ -37,6 +43,8 @@ import {
   Package,
   ArrowRight,
   ExternalLink,
+  Building2,
+  Tag,
 } from 'lucide-react';
 
 import '@/components/storefront/checkout-infinite.css';
@@ -222,7 +230,23 @@ export default function CheckoutPage() {
 
   const totalItemCount = cartEntries.reduce((acc, curr) => acc + curr.qty, 0);
 
-  const couponDiscount = appliedCoupon === 'CARXEN10' ? Math.round(cartSubtotal * 0.1) : 0;
+  const buyerContext: WholesaleBuyerContext = useMemo(
+    () => ({
+      isWholesaleApproved,
+      businessName: b2bProfile?.businessName,
+      tradeName: b2bProfile?.tradeName,
+      email: user?.email,
+      userId: user?.id,
+    }),
+    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, user?.email, user?.id]
+  );
+
+  const couponValidation = useMemo(() => {
+    if (!appliedCoupon) return null;
+    return validateCoupon(appliedCoupon, cartSubtotal, buyerContext);
+  }, [appliedCoupon, cartSubtotal, buyerContext]);
+
+  const couponDiscount = couponValidation?.valid ? couponValidation.discountAmount : 0;
   const isEligibleForFreeStandard = cartSubtotal - couponDiscount >= 1499;
 
   const shippingCost =
@@ -234,15 +258,24 @@ export default function CheckoutPage() {
 
   const finalTotal = cartSubtotal - couponDiscount + shippingCost;
 
+  const availableCoupons: StorefrontCoupon[] = useMemo(() => {
+    return getAvailableCouponsForBuyer(buyerContext);
+  }, [buyerContext]);
+
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
-    if (code === 'CARXEN10') {
-      setAppliedCoupon('CARXEN10');
-      setCouponCode('CARXEN10');
-      showToast('Coupon applied — 10% off');
+    if (!code) {
+      showToast('Please enter a coupon code.');
+      return;
+    }
+    const result = validateCoupon(code, cartSubtotal, buyerContext);
+    if (result.valid && result.coupon) {
+      setAppliedCoupon(code);
+      setCouponCode(code);
+      showToast(result.message || `Coupon ${code} applied!`);
     } else {
       setAppliedCoupon('');
-      showToast('Invalid code — try CARXEN10');
+      showToast(result.error || 'Invalid or ineligible coupon code.');
     }
   };
 
@@ -1290,77 +1323,124 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Card 2: Promo Code of Gift Card */}
-                  <div className="inf-ck-card">
-                    <div className="inf-ck-card-hdr">
-                      <div className="inf-ck-card-t">
-                        <Gift />
-                        <span>Promo Code of Gift Card</span>
+                    {/* Card 2: Promo Code / Wholesale Offers */}
+                    <div className="inf-ck-card">
+                      <div className="inf-ck-card-hdr">
+                        <div className="inf-ck-card-t">
+                          <Gift />
+                          <span>Promo Code & Wholesale Offers</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="inf-ck-promo-row">
-                      <input
-                        className="inf-ck-input"
-                        placeholder="Enter number"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="inf-ck-promo-btn"
-                        onClick={() => handleApplyCoupon()}
-                      >
-                        Apply
-                      </button>
-                    </div>
-
-                    {appliedCoupon ? (
-                      <div className="inf-ck-promo-tag">
-                        <span>✓ &ldquo;{appliedCoupon}&rdquo; active (10% off)</span>
+                      <div className="inf-ck-promo-row">
+                        <input
+                          className="inf-ck-input"
+                          placeholder="Enter coupon code"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                        />
                         <button
                           type="button"
-                          onClick={() => {
-                            setAppliedCoupon('');
-                            setCouponCode('');
-                          }}
-                          style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: 11 }}
+                          className="inf-ck-promo-btn"
+                          onClick={() => handleApplyCoupon()}
                         >
-                          Remove
+                          Apply
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="inf-ck-quick-promo"
-                        onClick={() => handleApplyCoupon('CARXEN10')}
-                      >
-                        Tap to use CARXEN10 for 10% off
-                      </button>
-                    )}
-                  </div>
 
-                  {/* Card 3: Summary */}
-                  <div className="inf-ck-card">
-                    <div className="inf-ck-card-hdr">
-                      <div className="inf-ck-card-t">
-                        <ReceiptText />
-                        <span>Summary</span>
+                      {appliedCoupon && couponValidation?.valid ? (
+                        <div className="inf-ck-promo-tag">
+                          <span>
+                            ✓ &ldquo;{appliedCoupon}&rdquo; active ({couponValidation.coupon?.name || (couponValidation.coupon?.type === 'Percentage' ? `${couponValidation.coupon.value}% off` : `${formatINR(couponDiscount)} off`)})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppliedCoupon('');
+                              setCouponCode('');
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {/* Available Coupons Suggestions */}
+                      <div className="inf-ck-promo-suggestions">
+                        {/* 1. Highlight individual wholesale buyer coupon */}
+                        {availableCoupons
+                          .filter((c: StorefrontCoupon) => c.audience === 'Individual Wholesale Buyer' && c.code !== appliedCoupon)
+                          .map((c: StorefrontCoupon) => (
+                            <div key={c.code} className="inf-ck-wholesale-promo-banner">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Building2 size={14} style={{ color: '#d97706', flexShrink: 0 }} />
+                                <div>
+                                  <span style={{ fontWeight: 700, color: '#92400e' }}>
+                                    Exclusive for {b2bProfile?.businessName || 'Your Business'}:
+                                  </span>{' '}
+                                  <span style={{ color: '#78350f' }}>
+                                    Use <strong>{c.code}</strong> ({c.type === 'Percentage' ? `${c.value}% off` : formatINR(c.value) + ' off'})
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="inf-ck-wholesale-promo-btn"
+                                onClick={() => handleApplyCoupon(c.code)}
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          ))}
+
+                        {/* 2. Other available coupons */}
+                        {availableCoupons
+                          .filter((c: StorefrontCoupon) => c.audience !== 'Individual Wholesale Buyer' && c.code !== appliedCoupon)
+                          .slice(0, 2)
+                          .map((c: StorefrontCoupon) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              className="inf-ck-quick-promo"
+                              onClick={() => handleApplyCoupon(c.code)}
+                            >
+                              <Tag size={12} />
+                              <span>
+                                Tap to use <strong>{c.code}</strong> for {c.type === 'Percentage' ? `${c.value}% off` : `${formatINR(c.value)} off`}
+                                {c.minimumOrder ? ` (min ${formatINR(c.minimumOrder)})` : ''}
+                              </span>
+                            </button>
+                          ))}
                       </div>
                     </div>
 
-                    <div className="inf-ck-summary-rows">
-                      <div className="inf-ck-summary-row">
-                        <span>Subtotal</span>
-                        <span>{formatINR(cartSubtotal)}</span>
+                    {/* Card 3: Summary */}
+                    <div className="inf-ck-card">
+                      <div className="inf-ck-card-hdr">
+                        <div className="inf-ck-card-t">
+                          <ReceiptText />
+                          <span>Summary</span>
+                        </div>
                       </div>
 
-                      {couponDiscount > 0 && (
-                        <div className="inf-ck-summary-row discount">
-                          <span>Discount (10%)</span>
-                          <span>−{formatINR(couponDiscount)}</span>
+                      <div className="inf-ck-summary-rows">
+                        <div className="inf-ck-summary-row">
+                          <span>Subtotal</span>
+                          <span>{formatINR(cartSubtotal)}</span>
                         </div>
-                      )}
+
+                        {couponDiscount > 0 && (
+                          <div className="inf-ck-summary-row discount">
+                            <span>
+                              Discount{' '}
+                              {couponValidation?.coupon?.type === 'Percentage'
+                                ? `(${couponValidation.coupon.value}%)`
+                                : `(${couponValidation?.coupon?.code || 'Coupon'})`}
+                            </span>
+                            <span>−{formatINR(couponDiscount)}</span>
+                          </div>
+                        )}
 
                       <div className="inf-ck-summary-row">
                         <span>Tax</span>
