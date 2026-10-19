@@ -57,7 +57,7 @@ export interface GarageVehicle {
 }
 
 export interface B2BProfile {
-  status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'INQUIRY';
   businessName?: string;
   tradeName?: string;
   gstin?: string;
@@ -70,6 +70,7 @@ export interface B2BProfile {
   expectedMonthlyVolume?: string;
   wholesaleTier?: 'tier1' | 'tier2';
   rejectionReason?: string;
+  inquiryMessage?: string;
   appliedAt?: string;
 }
 
@@ -141,6 +142,7 @@ interface AppContextType {
   b2bProfile: B2BProfile | null;
   isWholesaleApproved: boolean;
   isWholesalePending: boolean;
+  isWholesaleInquiry: boolean;
   applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
   refreshCustomerProfile: () => Promise<void>;
 }
@@ -174,6 +176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
+  const isWholesaleInquiry = b2bProfile?.status === 'INQUIRY';
 
   const requestCatalog = useCallback(async (signal?: AbortSignal) => {
     setCatalogStatus('loading');
@@ -308,6 +311,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               expectedMonthlyVolume: data.profile.expectedMonthlyVolume || undefined,
               wholesaleTier: data.profile.wholesaleTier || 'tier1',
               rejectionReason: data.profile.b2bRejectionReason || undefined,
+              inquiryMessage: data.profile.b2bRejectionReason || undefined,
               appliedAt: data.profile.b2bAppliedAt || undefined,
             });
           }
@@ -1144,6 +1148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         b2bProfile,
         isWholesaleApproved,
         isWholesalePending,
+        isWholesaleInquiry,
         applyForWholesale: async (applicationData: any) => {
           try {
             const headers = await getAuthHeaders();

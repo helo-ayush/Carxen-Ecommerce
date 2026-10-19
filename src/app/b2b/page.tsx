@@ -172,7 +172,231 @@ export default function B2BWholesalePage() {
     );
   }
 
-  // 3. REJECTED VIEW (WITH OPTION TO RE-APPLY)
+  // 3. INQUIRY / INFORMATION REQUESTED VIEW
+  if (b2bProfile?.status === 'INQUIRY') {
+    return (
+      <div className="b2b-page-container">
+        <div className="b2b-hero-banner inquiry">
+          <div className="b2b-badge inquiry">
+            <span className="dot pulse-sky" />
+            <span>INFORMATION REQUESTED BY VEDA FACTORY</span>
+          </div>
+          <h1>Action Required: Additional Verification Details Needed</h1>
+          <p className="b2b-hero-sub">
+            The CarXen Veda review team has reviewed your application for <strong>{b2bProfile?.businessName || formData.businessName || 'your business'}</strong> and requested clarification:
+          </p>
+
+          <div className="b2b-inquiry-box">
+            <div className="b2b-inquiry-header">
+              <span className="icon">💬</span>
+              <strong>Inquiry Request from Veda:</strong>
+            </div>
+            <p className="b2b-inquiry-text">
+              {b2bProfile.inquiryMessage || b2bProfile.rejectionReason || 'Please provide GST certificate copy, valid trade license, or clarify monthly order volume.'}
+            </p>
+          </div>
+
+          <p className="b2b-rejection-help">
+            Update your business details or add clarifying notes in the form below and click <strong>Submit Response & Re-verify</strong>.
+          </p>
+        </div>
+
+        {/* Application Form pre-filled for easy update */}
+        <div className="b2b-form-card">
+          <div className="b2b-form-header">
+            <h2>Respond to Inquiry & Update Details</h2>
+            <p>Modify any details requested by the factory review team to expedite approval.</p>
+          </div>
+
+          {errorMessage && (
+            <div className="b2b-error-banner">
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="b2b-form">
+            {/* Section 1: Contact Details */}
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">1. Contact Representative</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Contact Person Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Rajesh Sharma"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Business Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="e.g. rajesh@apexmotors.in"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Mobile / WhatsApp *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +91 98765 43210"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Business & Legal Details */}
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">2. Business Legal Entity</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Legal Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.businessName}
+                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                    placeholder="e.g. Apex Auto Spares LLP"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Trade Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.tradeName}
+                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                    placeholder="e.g. Apex Performance Garage"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>GSTIN (Goods & Service Tax Number)</label>
+                  <input
+                    type="text"
+                    value={formData.gstin}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>PAN Number</label>
+                  <input
+                    type="text"
+                    value={formData.pan}
+                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Business Type</label>
+                  <select
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                  >
+                    <option value="Dealership / Multi-Brand Workshop">Dealership / Multi-Brand Workshop</option>
+                    <option value="Auto Accessories Retailer">Auto Accessories Retailer</option>
+                    <option value="Fleet Operator / Commercial">Fleet Operator / Commercial</option>
+                    <option value="Independent Garage / Detailer">Independent Garage / Detailer</option>
+                    <option value="Ecommerce Reseller">Ecommerce Reseller</option>
+                  </select>
+                </div>
+                <div className="b2b-field">
+                  <label>Expected Monthly Order Volume</label>
+                  <select
+                    value={formData.expectedMonthlyVolume}
+                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
+                  >
+                    <option value="Under ₹50k">Under ₹50,000 / mo</option>
+                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / mo (Standard Tier 1)</option>
+                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / mo (High Volume Tier 2)</option>
+                    <option value="Above ₹5L">Above ₹5,00,000 / mo (Enterprise VIP)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Registered Address */}
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">3. Business Address & Logistics</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field full-width">
+                  <label>Street Address / Workshop Location</label>
+                  <input
+                    type="text"
+                    value={formData.businessAddress}
+                    onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
+                    placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="e.g. Pune"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>PIN Code</label>
+                  <input
+                    type="text"
+                    value={formData.pincode}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                    placeholder="e.g. 411019"
+                    maxLength={6}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Notes / Documents */}
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">4. Response to Inquiry & Documents</h3>
+              <div className="b2b-field full-width">
+                <label>Clarification / Document Link / Additional Details *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Provide clarification, drive link to GST cert / electricity bill, or details requested above..."
+                />
+              </div>
+            </div>
+
+            <div className="b2b-submit-row">
+              <button type="submit" disabled={submitting} className="b2b-submit-btn">
+                {submitting ? 'Submitting Response...' : 'Submit Inquiry Response & Re-verify'}
+              </button>
+              <p className="b2b-terms-notice">
+                Your response will update your application record in CarXen Veda for prompt review.
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. DECLINED VIEW (WITH OPTION TO RE-APPLY)
   if (b2bProfile?.status === 'REJECTED') {
     return (
       <div className="b2b-page-container">
@@ -186,22 +410,200 @@ export default function B2BWholesalePage() {
           </p>
           {b2bProfile.rejectionReason && (
             <div className="b2b-rejection-box">
-              <strong>Reason:</strong> {b2bProfile.rejectionReason}
+              <strong>Decline Reason:</strong> {b2bProfile.rejectionReason}
             </div>
           )}
           <p className="b2b-rejection-help">
-            You may revise your business or tax information below and resubmit for verification.
+            You may revise your business or tax information in the form below and resubmit for verification.
           </p>
-          <button
-            type="button"
-            className="b2b-btn primary mt-4"
-            onClick={() => setFormData((prev) => ({ ...prev, notes: 'Resubmitted with corrections' }))}
-          >
-            Review & Resubmit Form Below
-          </button>
         </div>
 
-        {/* Form rendered below */}
+        {/* Application Form pre-filled for revision */}
+        <div className="b2b-form-card">
+          <div className="b2b-form-header">
+            <h2>Revise & Resubmit Application</h2>
+            <p>Update any incorrect details or provide supplementary verification documents.</p>
+          </div>
+
+          {errorMessage && (
+            <div className="b2b-error-banner">
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="b2b-form">
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">1. Contact Representative</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Contact Person Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Rajesh Sharma"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Business Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="e.g. rajesh@apexmotors.in"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Mobile / WhatsApp *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +91 98765 43210"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">2. Business Legal Entity</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field">
+                  <label>Legal Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.businessName}
+                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                    placeholder="e.g. Apex Auto Spares LLP"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Trade Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.tradeName}
+                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                    placeholder="e.g. Apex Performance Garage"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>GSTIN (Goods & Service Tax Number)</label>
+                  <input
+                    type="text"
+                    value={formData.gstin}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>PAN Number</label>
+                  <input
+                    type="text"
+                    value={formData.pan}
+                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>Business Type</label>
+                  <select
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                  >
+                    <option value="Dealership / Multi-Brand Workshop">Dealership / Multi-Brand Workshop</option>
+                    <option value="Auto Accessories Retailer">Auto Accessories Retailer</option>
+                    <option value="Fleet Operator / Commercial">Fleet Operator / Commercial</option>
+                    <option value="Independent Garage / Detailer">Independent Garage / Detailer</option>
+                    <option value="Ecommerce Reseller">Ecommerce Reseller</option>
+                  </select>
+                </div>
+                <div className="b2b-field">
+                  <label>Expected Monthly Order Volume</label>
+                  <select
+                    value={formData.expectedMonthlyVolume}
+                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
+                  >
+                    <option value="Under ₹50k">Under ₹50,000 / mo</option>
+                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / mo (Standard Tier 1)</option>
+                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / mo (High Volume Tier 2)</option>
+                    <option value="Above ₹5L">Above ₹5,00,000 / mo (Enterprise VIP)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">3. Business Address & Logistics</h3>
+              <div className="b2b-field-grid">
+                <div className="b2b-field full-width">
+                  <label>Street Address / Workshop Location</label>
+                  <input
+                    type="text"
+                    value={formData.businessAddress}
+                    onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
+                    placeholder="e.g. Plot 42, Auto Ancillary Zone, MIDC"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="e.g. Pune"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </div>
+                <div className="b2b-field">
+                  <label>PIN Code</label>
+                  <input
+                    type="text"
+                    value={formData.pincode}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                    placeholder="e.g. 411019"
+                    maxLength={6}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="b2b-form-section">
+              <h3 className="b2b-section-title">4. Verification Notes</h3>
+              <div className="b2b-field full-width">
+                <label>Correction Explanation or Clarification</label>
+                <textarea
+                  rows={2}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Explain corrections or updated business proofs..."
+                />
+              </div>
+            </div>
+
+            <div className="b2b-submit-row">
+              <button type="submit" disabled={submitting} className="b2b-submit-btn">
+                {submitting ? 'Resubmitting Application...' : 'Resubmit Wholesale Application'}
+              </button>
+              <p className="b2b-terms-notice">
+                Your revised application will be reviewed in CarXen Veda.
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     );
   }

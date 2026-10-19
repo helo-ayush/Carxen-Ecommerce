@@ -8784,6 +8784,15 @@ footer {
   background: #ef4444;
 }
 
+.b2b-hero-banner.inquiry {
+  border-color: #bae6fd;
+  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 60%);
+}
+
+.b2b-hero-banner.inquiry::before {
+  background: #0284c7;
+}
+
 .b2b-badge {
   display: inline-flex;
   align-items: center;
@@ -8815,6 +8824,12 @@ footer {
   background: #fef2f2;
   border-color: #fecaca;
   color: #dc2626;
+}
+
+.b2b-badge.inquiry {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
 }
 
 .b2b-hero-banner h1 {
@@ -9001,6 +9016,36 @@ footer {
   max-width: 600px;
   margin: 16px auto;
   text-align: left;
+}
+
+.b2b-inquiry-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0c4a6e;
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 13.5px;
+  max-width: 600px;
+  margin: 16px auto;
+  text-align: left;
+}
+
+.b2b-inquiry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0284c7;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.b2b-inquiry-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #0f172a;
 }
 
 .b2b-rejection-help {
