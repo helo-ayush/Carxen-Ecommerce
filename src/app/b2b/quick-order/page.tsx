@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { ProductArt } from '@/components/ProductArt';
+import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 
 export default function QuickOrderPage() {
@@ -204,18 +206,16 @@ export default function QuickOrderPage() {
                   {/* Thumbnail */}
                   <td>
                     <div className="b2b-thumb-box">
-                      {p.image ? (
-                        <img src={p.image} alt={p.n} className="b2b-thumb-img" />
-                      ) : (
-                        <div className="b2b-thumb-fallback">{p.n.slice(0, 2).toUpperCase()}</div>
-                      )}
+                      <ProductArt product={p} />
                     </div>
                   </td>
 
                   {/* Title & SKU */}
                   <td>
                     <div className="b2b-product-info">
-                      <span className="b2b-product-title">{p.n}</span>
+                      <Link href={`/product/${p.id}`} className="b2b-product-title">
+                        {p.n}
+                      </Link>
                       <span className="b2b-product-sku">
                         SKU: {p.slug || `CX-${String(p.id).padStart(4, '0')}`} · {p.s} Series
                       </span>
@@ -232,14 +232,14 @@ export default function QuickOrderPage() {
 
                   {/* Retail MRP */}
                   <td>
-                    <span className="b2b-retail-price">₹{retailPrice.toLocaleString('en-IN')}</span>
+                    <span className="b2b-retail-price">{formatINR(retailPrice)}</span>
                   </td>
 
                   {/* Wholesale Price */}
                   <td>
                     <div className="b2b-wholesale-cell">
-                      <span className="b2b-ws-price">₹{wsPrice.toLocaleString('en-IN')}</span>
-                      <span className="b2b-gst-note">+18% GST (ITC Eligible)</span>
+                      <span className="b2b-ws-price">{formatINR(wsPrice)}</span>
+                      <span className="b2b-gst-note">excl. 18% GST</span>
                     </div>
                   </td>
 
@@ -269,7 +269,8 @@ export default function QuickOrderPage() {
                         type="number"
                         min="0"
                         value={currentQty === 0 ? '' : currentQty}
-                        placeholder={`Min ${moq}`}
+                        placeholder={String(moq)}
+                        title={`Minimum order quantity: ${moq} units`}
                         onChange={(e) => {
                           const val = e.target.value === '' ? 0 : Number(e.target.value);
                           handleQtyChange(p.id, val, moq);
@@ -290,7 +291,7 @@ export default function QuickOrderPage() {
                   {/* Row Total */}
                   <td>
                     <span className="b2b-row-total">
-                      {currentQty > 0 ? `₹${rowTotal.toLocaleString('en-IN')}` : '—'}
+                      {currentQty > 0 ? formatINR(rowTotal) : '—'}
                     </span>
                   </td>
 
@@ -330,8 +331,9 @@ export default function QuickOrderPage() {
             </div>
             <div>
               <span className="lbl">Estimated Wholesale Value:</span>
-              <span className="val text-success font-bold text-lg">
-                ₹{totalSelectedValue.toLocaleString('en-IN')} <span className="text-xs text-text-tertiary">(Excl. GST)</span>
+              <span className="val text-emerald-400 font-bold text-lg">
+                {formatINR(totalSelectedValue)}{' '}
+                <span className="text-xs text-zinc-400">(Excl. GST)</span>
               </span>
             </div>
           </div>
