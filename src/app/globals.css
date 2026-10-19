@@ -1306,10 +1306,10 @@ nav.main a.active {
 /* ─── Scroll hint wrapper ─── */
 .hero-video-scroll-hint-wrap {
   position: absolute;
-  bottom: clamp(14px, 2.2vw, 30px);
+  bottom: clamp(22px, 3.4vw, 46px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 8;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1323,26 +1323,69 @@ nav.main a.active {
 }
 
 .hero-video-scroll-hint {
-  width: clamp(66px, 7vw, 86px);
-  height: clamp(66px, 7vw, 86px);
-  border: 0;
+  width: clamp(68px, 6.5vw, 84px);
+  height: clamp(68px, 6.5vw, 84px);
+  border: 2px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
-  background: var(--ink);
+  background: #121214;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   padding: 0;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .45), 0 0 20px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.hero-video-scroll-hint span {
+.hero-video-scroll-hint:hover {
+  transform: scale(1.08);
+  border-color: rgba(226, 35, 26, 0.7);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(226, 35, 26, 0.35);
+}
+
+/* Mouse Silhouette Body */
+.hero-mouse-icon {
+  width: 22px;
+  height: 34px;
+  border: 2px solid #ffffff;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  padding-top: 5px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-video-scroll-hint:hover .hero-mouse-icon {
+  border-color: #ffffff;
+  transform: translateY(1px);
+}
+
+/* Animated Scroll Wheel */
+.hero-mouse-wheel {
   display: block;
-  width: 15px;
-  height: 15px;
-  border-right: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  transform: translateY(-3px) rotate(45deg);
-  animation: scrollArrow 1.8s ease-in-out infinite;
+  width: 3.5px;
+  height: 8px;
+  border-radius: 2px;
+  background: #e2231a;
+  box-shadow: 0 0 8px #e2231a, 0 0 2px #ffffff;
+  animation: heroMouseWheel 1.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* Micro Chevron below mouse */
+.hero-mouse-arrow {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(45deg);
+  margin-top: 2px;
+  animation: heroArrowNudge 1.6s ease-in-out infinite;
 }
 
 .hero-video-bottom-curve {
@@ -1365,9 +1408,38 @@ nav.main a.active {
   fill: var(--bg);
 }
 
-@keyframes scrollArrow {
-  0%, 100% { opacity: .78; transform: translateY(-4px) rotate(45deg); }
-  50% { opacity: 1; transform: translateY(3px) rotate(45deg); }
+@keyframes heroMouseWheel {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(10px);
+  }
+  75% {
+    opacity: 0.3;
+    transform: translateY(12px);
+  }
+  76% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroArrowNudge {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translateY(-1px) rotate(45deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(3px) rotate(45deg);
+  }
 }
 
 @media (max-width: 768px) {
