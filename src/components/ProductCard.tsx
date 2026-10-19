@@ -117,15 +117,15 @@ export function ProductCard({
     }
   })();
 
-  // Single subtle badge matching UI reference (never stacked, never stretched)
+  // Single subtle luxury tag matching clean UI
   const badge = (() => {
     if (isCustomFitBadge && fitText && product.c === 'mats' && (product.id === 2 || !product.o)) {
-      return { type: 'fit', label: fitText };
+      return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     }
-    if (discountPercent > 0) return { type: 'sale', label: 'Sale' };
+    if (discountPercent > 0) return { type: 'sale', label: `${discountPercent}% OFF` };
     if (product.top || product.spot) return { type: 'best', label: 'Best Seller' };
     if (product.nw) return { type: 'new', label: 'New' };
-    if (isCustomFitBadge && fitText) return { type: 'fit', label: fitText };
+    if (isCustomFitBadge && fitText) return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     return null;
   })();
 
@@ -136,11 +136,15 @@ export function ProductCard({
     >
       {/* Inset rounded media frame */}
       <div className="ref-media" onClick={handleCardClick}>
-        {/* Top-Left Badge: Single, compact, subtle pill */}
+        {/* Top-Left Badge: Clean, subtle luxury tag */}
         {badge && (
           <div className="ref-badge-wrap">
             <span className={`ref-badge ref-badge-${badge.type}`}>
-              {badge.label}
+              {badge.type === 'sale' && <span className="ref-badge-dot ref-badge-dot-sale" />}
+              {badge.type === 'new' && <span className="ref-badge-dot ref-badge-dot-new" />}
+              {badge.type === 'best' && <span className="ref-badge-star">★</span>}
+              {badge.type === 'fit' && <span className="ref-badge-check">✓</span>}
+              <span>{badge.label}</span>
             </span>
           </div>
         )}
@@ -172,8 +176,15 @@ export function ProductCard({
       {/* Info Section */}
       <div className="ref-info">
         <div className="ref-info-top">
-          {/* Category */}
-          <div className="ref-category">{categoryName}</div>
+          {/* Top Meta Row: Category on left, Rating at right top */}
+          <div className="ref-meta-row">
+            <span className="ref-category">{categoryName}</span>
+            <div className="ref-rating">
+              <span className="star">★</span>
+              <span className="score">{product.r.toFixed(1)}</span>
+              <span className="count">({product.rv})</span>
+            </div>
+          </div>
 
           {/* Product Title */}
           <h3
@@ -184,23 +195,31 @@ export function ProductCard({
             {product.n}
           </h3>
 
-          {/* Rating row: ★ 4.8 (124 reviews) */}
-          <div className="ref-rating">
-            <span className="star">★</span>
-            <span className="score">{product.r.toFixed(1)}</span>
-            <span className="count">({product.rv} reviews)</span>
+          {/* Glassmorphic Feature Chips */}
+          <div className="ref-feature-chips">
+            <span className="ref-feature-chip fit">
+              {product.customFit !== false ? 'Laser Mapped' : 'Universal Fit'}
+            </span>
+            <span className="ref-feature-chip spec">
+              {product.c === 'seats'
+                ? 'Breathable Composite'
+                : product.c === 'mats'
+                ? 'All-Weather Defense'
+                : product.c === 'steering'
+                ? 'Ergonomic Grip'
+                : 'High-Density Foam'}
+            </span>
           </div>
-
         </div>
 
         <div className="ref-info-bottom">
-          {/* Bottom row: Price on the left, matching swatches on the right (eliminating dead space) */}
+          {/* Price & Swatches in a balanced, spacious row */}
           <div className="ref-bottom-row">
             <div className="ref-price-row">
               <span className="ref-price-now">{formatINR(effectivePrice)}</span>
               {isB2B && baseTier ? (
-                <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 ml-1">
-                  / unit · Pack of {baseTier.minQty}: {formatINR(baseTier.lotTotal)}
+                <span className="ref-b2b-unit-hint">
+                  / unit · Pack of {baseTier.minQty}
                 </span>
               ) : (
                 product.o && product.o > product.p && (
@@ -208,7 +227,7 @@ export function ProductCard({
                 )
               )}
               {isB2B && resaleMargin > 0 ? (
-                <span className="ref-price-discount" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                <span className="ref-price-discount b2b-margin">
                   {resaleMargin}% margin
                 </span>
               ) : (
@@ -218,65 +237,66 @@ export function ProductCard({
               )}
             </div>
 
-            {/* Matching Color Swatches */}
-            <div className="ref-swatches" aria-label="Color options">
-              {colorOptions.map((color, idx) => (
-                <span
-                  key={idx}
-                  className={`ref-swatch ${selectedColorIdx === idx ? 'active' : ''}`}
-                  style={{ background: color.hex }}
-                  title={color.name}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedColorIdx(idx);
-                  }}
-                />
-              ))}
-            </div>
+            {/* Subtle, minimalist color swatches */}
+            {colorOptions.length > 1 && (
+              <div className="ref-swatches" aria-label="Color options">
+                {colorOptions.map((color, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`ref-swatch ${selectedColorIdx === idx ? 'active' : ''}`}
+                    style={{ backgroundColor: color.hex }}
+                    title={color.name}
+                    aria-label={`Select ${color.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedColorIdx(idx);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Volume Tiers Matrix (Quantity + Price Breaks for Maximum Sales) */}
+          {/* Volume Tiers Matrix (Only for approved B2B Wholesale buyers) */}
           {isB2B && wholesaleTiers.length > 1 && (
-            <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10.5px]">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
+            <div className="ref-b2b-tier-matrix">
+              <span className="ref-b2b-tier-chip active">
                 {wholesaleTiers[0].minQty}+ @ {formatINR(wholesaleTiers[0].unitPrice)}
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary font-medium border border-border/80">
+              <span className="ref-b2b-tier-chip">
                 {wholesaleTiers[1].minQty}+ @ {formatINR(wholesaleTiers[1].unitPrice)} (-{wholesaleTiers[1].discountPercent}%)
-              </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary font-medium border border-border/80">
-                {wholesaleTiers[2].minQty}+ @ {formatINR(wholesaleTiers[2].unitPrice)} (-{wholesaleTiers[2].discountPercent}%)
               </span>
             </div>
           )}
 
-          {/* Offer / Discount Quantity Limit Badge */}
+          {/* Offer / Discount Quantity Limit Badge (if applicable) */}
           {product.discountLimitQty && product.discountLimitQty > 0 ? (
-            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <div className="ref-limit-badge">
+              <span className="ref-limit-dot" />
               <span>Offer Limit: Max {product.discountLimitQty} units at discount</span>
             </div>
           ) : null}
 
-          {/* Full-Width Add to Cart Button with Quantity + Total Price */}
+          {/* Primary Action Button */}
           <button
             type="button"
-            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''} ${isB2B ? 'mt-2.5' : ''}`}
+            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''} ${isB2B ? 'mt-1' : ''}`}
             onClick={handleAddClick}
             aria-label={`Add ${product.n} to cart`}
           >
             {isAdding ? (
               <>
-                <svg viewBox="0 0 24 24" style={{ strokeWidth: 2.2 }}>
-                  <path d="M20 6L9 17l-5-5" />
+                <svg viewBox="0 0 24 24" className="ref-btn-svg" strokeWidth="2.4" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
                 </svg>
                 <span>Added to Cart</span>
               </>
             ) : (
               <>
-                <svg viewBox="0 0 24 24">
-                  <circle cx="9" cy="20" r="1" />
-                  <circle cx="18" cy="20" r="1" />
+                <svg viewBox="0 0 24 24" className="ref-btn-svg" strokeWidth="2" fill="none" stroke="currentColor">
+                  <circle cx="9" cy="20" r="1.5" />
+                  <circle cx="18" cy="20" r="1.5" />
                   <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
                 <span>
