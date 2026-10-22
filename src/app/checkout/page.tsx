@@ -1369,77 +1369,43 @@ export default function CheckoutPage() {
                             {paymentOption === 'razorpay' && (
                               <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
                                 <div className="inf-ck-pay-detail-container">
-                                  {/* Payment Channels Grid */}
-                                  <div className="inf-ck-channels-grid">
-                                    {/* Channel 1: UPI */}
-                                    <div className="inf-ck-channel-box">
-                                      <div className="inf-ck-channel-hdr">
-                                        <div className="inf-ck-channel-icon-wrap upi">
-                                          <Smartphone size={16} />
-                                        </div>
-                                        <div>
-                                          <div className="inf-ck-channel-title">UPI &amp; Instant QR</div>
-                                          <div className="inf-ck-channel-sub">Google Pay, PhonePe, Paytm</div>
-                                        </div>
+                                  {/* Clean Supported Methods Strip */}
+                                  <div className="inf-ck-methods-strip">
+                                    <div className="inf-ck-method-item">
+                                      <div className="inf-ck-method-meta">
+                                        <Smartphone size={15} className="inf-ck-icon-upi" style={{ flexShrink: 0 }} />
+                                        <span>UPI &amp; QR</span>
                                       </div>
-                                      <div className="inf-ck-channel-pill-row">
-                                        <span className="inf-ck-brand-pill gpay">GPay</span>
-                                        <span className="inf-ck-brand-pill phonepe">PhonePe</span>
-                                        <span className="inf-ck-brand-pill paytm">Paytm</span>
-                                        <span className="inf-ck-brand-pill cred">CRED</span>
-                                        <span className="inf-ck-brand-pill any-upi">Any UPI App</span>
+                                      <div className="inf-ck-method-tags-grid">
+                                        <span className="inf-ck-tag">GPay</span>
+                                        <span className="inf-ck-tag">PhonePe</span>
+                                        <span className="inf-ck-tag">Paytm</span>
+                                        <span className="inf-ck-tag">CRED</span>
                                       </div>
                                     </div>
 
-                                    {/* Channel 2: Cards */}
-                                    <div className="inf-ck-channel-box">
-                                      <div className="inf-ck-channel-hdr">
-                                        <div className="inf-ck-channel-icon-wrap cards">
-                                          <CreditCard size={16} />
-                                        </div>
-                                        <div>
-                                          <div className="inf-ck-channel-title">Credit &amp; Debit Cards</div>
-                                          <div className="inf-ck-channel-sub">Visa, Mastercard, RuPay, Amex</div>
-                                        </div>
-                                      </div>
-                                      <div className="inf-ck-channel-pill-row">
-                                        <span className="inf-ck-brand-pill card-visa">VISA</span>
-                                        <span className="inf-ck-brand-pill card-mc">MC</span>
-                                        <span className="inf-ck-brand-pill rupay">RuPay</span>
-                                        <span className="inf-ck-brand-pill amex">AMEX</span>
-                                        <span className="inf-ck-brand-pill emi">EMI Available</span>
-                                      </div>
-                                    </div>
+                                    <div className="inf-ck-strip-divider" />
 
-                                    {/* Channel 3: NetBanking */}
-                                    <div className="inf-ck-channel-box">
-                                      <div className="inf-ck-channel-hdr">
-                                        <div className="inf-ck-channel-icon-wrap bank">
-                                          <Building2 size={16} />
-                                        </div>
-                                        <div>
-                                          <div className="inf-ck-channel-title">NetBanking &amp; Wallets</div>
-                                          <div className="inf-ck-channel-sub">50+ Indian Banks &bull; Wallets</div>
-                                        </div>
+                                    <div className="inf-ck-method-item">
+                                      <div className="inf-ck-method-meta">
+                                        <CreditCard size={15} className="inf-ck-icon-card" style={{ flexShrink: 0 }} />
+                                        <span>Cards &amp; Banks</span>
                                       </div>
-                                      <div className="inf-ck-channel-pill-row">
-                                        <span className="inf-ck-brand-pill bank-tag">HDFC</span>
-                                        <span className="inf-ck-brand-pill bank-tag">ICICI</span>
-                                        <span className="inf-ck-brand-pill bank-tag">SBI</span>
-                                        <span className="inf-ck-brand-pill bank-tag">Axis</span>
-                                        <span className="inf-ck-brand-pill bank-tag">+45 Banks</span>
+                                      <div className="inf-ck-method-tags-grid">
+                                        <span className="inf-ck-tag">Visa</span>
+                                        <span className="inf-ck-tag">Mastercard</span>
+                                        <span className="inf-ck-tag">RuPay</span>
+                                        <span className="inf-ck-tag">50+ Banks</span>
                                       </div>
                                     </div>
                                   </div>
 
-                                  {/* Modal Explanation Banner */}
-                                  <div className="inf-ck-gateway-explainer">
-                                    <div className="inf-ck-explainer-left">
-                                      <Lock size={15} style={{ color: '#10b981', flexShrink: 0, marginTop: 1 }} />
-                                      <div>
-                                        <strong>Secure Razorpay Overlay:</strong> Clicking <em>&ldquo;Pay with Razorpay&rdquo;</em> opens the bank-grade checkout modal with 256-bit encryption. Card and UPI credentials never touch our servers.
-                                      </div>
-                                    </div>
+                                  {/* Refined Context Note */}
+                                  <div className="inf-ck-gateway-note">
+                                    <ShieldCheck size={16} className="inf-ck-note-shield" />
+                                    <span>
+                                      Click <strong>&ldquo;Pay with Razorpay&rdquo;</strong> to launch the official secure overlay. Card and UPI credentials never touch our servers.
+                                    </span>
                                   </div>
 
                                   {/* Trust Badges Strip */}

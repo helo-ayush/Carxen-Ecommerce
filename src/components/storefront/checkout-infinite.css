@@ -1456,3 +1456,98 @@
   align-items: center;
   gap: 10px;
 }
+
+
+/* Clean Uncluttered Payment Methods Strip */
+.inf-ck-methods-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e7e6e0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.inf-ck-method-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+}
+
+.inf-ck-method-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #09090b;
+  white-space: nowrap;
+}
+
+.inf-ck-icon-upi { color: #2563eb; flex-shrink: 0; }
+.inf-ck-icon-card { color: #dc2626; flex-shrink: 0; }
+
+.inf-ck-method-tags-grid {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 4px 6px;
+}
+
+.inf-ck-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #52525b;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+  text-align: center;
+}
+
+.inf-ck-strip-divider {
+  width: 1px;
+  height: 38px;
+  background: #e4e4e7;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+@media (max-width: 680px) {
+  .inf-ck-methods-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .inf-ck-strip-divider {
+    width: 100%;
+    height: 1px;
+    margin: 2px 0;
+  }
+}
+
+.inf-ck-gateway-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  background: #ffffff;
+  border: 1px solid #e7e6e0;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.inf-ck-note-shield {
+  color: #10b981;
+  flex-shrink: 0;
+}
