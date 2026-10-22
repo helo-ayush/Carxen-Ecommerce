@@ -26,6 +26,7 @@ import {
   DEFAULT_COMMUNICATION_PREFS,
   DEFAULT_GST_INFO,
 } from '@/data/customer-defaults';
+import type { StorefrontCoupon } from '@/lib/storefront/coupons';
 
 export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -146,6 +147,8 @@ interface AppContextType {
   isWholesaleInquiry: boolean;
   applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
   refreshCustomerProfile: () => Promise<void>;
+  coupons: StorefrontCoupon[];
+  refreshCoupons: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -178,6 +181,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
   const isWholesaleInquiry = b2bProfile?.status === 'INQUIRY';
+
+  const [coupons, setCoupons] = useState<StorefrontCoupon[]>([]);
+
+  const refreshCoupons = useCallback(async () => {
+    try {
+      const res = await fetch('/api/storefront/coupons');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.coupons)) {
+          setCoupons(data.coupons);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load storefront coupons:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshCoupons();
+  }, [refreshCoupons]);
 
   const requestCatalog = useCallback(async (signal?: AbortSignal) => {
     setCatalogStatus('loading');
@@ -396,8 +419,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           void fetchCustomerBackendProfile(session.access_token, session.user);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          setOrders([]);
+          setAddresses([]);
+          setB2bProfile(null);
           try {
             localStorage.removeItem('cx_demo_user');
+            localStorage.removeItem('cx_user');
+            localStorage.removeItem('cx_order_history');
+            localStorage.removeItem('cx_addresses');
+            localStorage.removeItem('cx_user_profile');
           } catch {}
         }
         setAuthLoading(false);
@@ -426,12 +456,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedAddresses) {
         const parsed = JSON.parse(savedAddresses);
         if (Array.isArray(parsed) && parsed.length > 0) setAddresses(parsed);
-      }
-
-      const savedOrders = localStorage.getItem('cx_order_history');
-      if (savedOrders) {
-        const parsed = JSON.parse(savedOrders);
-        if (Array.isArray(parsed) && parsed.length > 0) setOrders(parsed);
       }
 
       const savedPm = localStorage.getItem('cx_saved_payments');
@@ -564,6 +588,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         const constructed = constructUserFromSession(data.user);
         setUser(constructed);
+        setOrders([]);
+        setAddresses([]);
+        setB2bProfile(null);
+        void fetchCustomerBackendProfile(data.session?.access_token, data.user);
         showToast(`Welcome back, ${constructed.name}!`);
       }
       return { error: null };
@@ -609,6 +637,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (signInData.user) {
         const constructed = constructUserFromSession(signInData.user);
         setUser(constructed);
+        setOrders([]);
+        setAddresses([]);
+        setB2bProfile(null);
+        try {
+          localStorage.removeItem('cx_order_history');
+          localStorage.removeItem('cx_addresses');
+          localStorage.removeItem('cx_user_profile');
+        } catch {}
+        void fetchCustomerBackendProfile(signInData.session?.access_token, signInData.user);
         showToast(`Welcome to CARXEN, ${constructed.name}!`);
       }
 
@@ -632,9 +669,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn('Supabase sign out error:', e);
     }
     setUser(null);
+    setOrders([]);
+    setAddresses([]);
+    setB2bProfile(null);
     try {
       localStorage.removeItem('cx_demo_user');
       localStorage.removeItem('cx_user');
+      localStorage.removeItem('cx_order_history');
+      localStorage.removeItem('cx_addresses');
+      localStorage.removeItem('cx_user_profile');
+      localStorage.removeItem('cx_custom_coupons');
     } catch (e) {}
     showToast('Signed out successfully');
   };
@@ -1124,10 +1168,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 0);
   }, [orders]);
 
-  // Verified Buyer badge earned when any user has purchased >= 3 products
+  // Completed non-cancelled order count for the active logged-in user
+  const userOrderCount = useMemo(() => {
+    if (!user || !user.email) return 0;
+    return orders.filter((order) => {
+      const status = (order.status || '').toLowerCase();
+      return status !== 'cancelled' && status !== 'refunded';
+    }).length;
+  }, [user, orders]);
+
+  // Verified Buyer status is granted strictly to logged-in users with 3 or more completed orders
   const isVerifiedBuyer = useMemo(() => {
-    return Boolean(user && totalProductsBought >= 3);
-  }, [user, totalProductsBought]);
+    return Boolean(user && user.email && userOrderCount >= 3);
+  }, [user, userOrderCount]);
 
   return (
     <AppContext.Provider
@@ -1233,6 +1286,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         openQuickView,
         closeQuickView,
         showToast,
+        coupons,
+        refreshCoupons,
       }}
     >
       {children}

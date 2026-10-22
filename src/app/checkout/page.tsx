@@ -21,6 +21,7 @@ import type {
 import {
   validateCoupon,
   getAvailableCouponsForBuyer,
+  getAssignedCouponForBuyer,
   type WholesaleBuyerContext,
   type StorefrontCoupon,
 } from '@/lib/storefront/coupons';
@@ -82,6 +83,9 @@ export default function CheckoutPage() {
     addAddress,
     isWholesaleApproved,
     b2bProfile,
+    isVerifiedBuyer,
+    orders,
+    coupons,
   } = useApp();
 
   const userName =
@@ -230,6 +234,18 @@ export default function CheckoutPage() {
 
   const totalItemCount = cartEntries.reduce((acc, curr) => acc + curr.qty, 0);
 
+  const verifiedOrderCount = useMemo(() => {
+    if (!user || !user.email) return 0;
+    return (orders || []).filter((o) => {
+      const status = (o.status || '').toLowerCase();
+      return status !== 'cancelled' && status !== 'refunded';
+    }).length;
+  }, [user, orders]);
+
+  const verifiedStatus = useMemo(() => {
+    return Boolean(user && user.email && verifiedOrderCount >= 3);
+  }, [user, verifiedOrderCount]);
+
   const buyerContext: WholesaleBuyerContext = useMemo(
     () => ({
       isWholesaleApproved,
@@ -237,14 +253,16 @@ export default function CheckoutPage() {
       tradeName: b2bProfile?.tradeName,
       email: user?.email,
       userId: user?.id,
+      orderCount: verifiedOrderCount,
+      isVerifiedBuyer: verifiedStatus,
     }),
-    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, user?.email, user?.id]
+    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, user?.email, user?.id, verifiedOrderCount, verifiedStatus]
   );
 
   const couponValidation = useMemo(() => {
     if (!appliedCoupon) return null;
-    return validateCoupon(appliedCoupon, cartSubtotal, buyerContext);
-  }, [appliedCoupon, cartSubtotal, buyerContext]);
+    return validateCoupon(appliedCoupon, cartSubtotal, buyerContext, coupons);
+  }, [appliedCoupon, cartSubtotal, buyerContext, coupons]);
 
   const couponDiscount = couponValidation?.valid ? couponValidation.discountAmount : 0;
   const isEligibleForFreeStandard = cartSubtotal - couponDiscount >= 1499;
@@ -258,9 +276,9 @@ export default function CheckoutPage() {
 
   const finalTotal = cartSubtotal - couponDiscount + shippingCost;
 
-  const availableCoupons: StorefrontCoupon[] = useMemo(() => {
-    return getAvailableCouponsForBuyer(buyerContext);
-  }, [buyerContext]);
+  const assignedCoupon: StorefrontCoupon | null = useMemo(() => {
+    return getAssignedCouponForBuyer(buyerContext, coupons);
+  }, [buyerContext, coupons]);
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -268,7 +286,7 @@ export default function CheckoutPage() {
       showToast('Please enter a coupon code.');
       return;
     }
-    const result = validateCoupon(code, cartSubtotal, buyerContext);
+    const result = validateCoupon(code, cartSubtotal, buyerContext, coupons);
     if (result.valid && result.coupon) {
       setAppliedCoupon(code);
       setCouponCode(code);
@@ -1366,53 +1384,38 @@ export default function CheckoutPage() {
                         </div>
                       ) : null}
 
-                      {/* Available Coupons Suggestions */}
-                      <div className="inf-ck-promo-suggestions">
-                        {/* 1. Highlight individual wholesale buyer coupon */}
-                        {availableCoupons
-                          .filter((c: StorefrontCoupon) => c.audience === 'Individual Wholesale Buyer' && c.code !== appliedCoupon)
-                          .map((c: StorefrontCoupon) => (
-                            <div key={c.code} className="inf-ck-wholesale-promo-banner">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Building2 size={14} style={{ color: '#d97706', flexShrink: 0 }} />
-                                <div>
-                                  <span style={{ fontWeight: 700, color: '#92400e' }}>
-                                    Exclusive for {b2bProfile?.businessName || 'Your Business'}:
-                                  </span>{' '}
-                                  <span style={{ color: '#78350f' }}>
-                                    Use <strong>{c.code}</strong> ({c.type === 'Percentage' ? `${c.value}% off` : formatINR(c.value) + ' off'})
-                                  </span>
-                                </div>
+                      {/* Only Show Assigned Coupon by Owner (if available for this customer and not already applied) */}
+                      {assignedCoupon && assignedCoupon.code !== appliedCoupon ? (
+                        <div className="inf-ck-promo-suggestions">
+                          <div className="inf-ck-wholesale-promo-banner">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {assignedCoupon.audience === 'Verified customers (3+ orders)' ? (
+                                <CheckCircle2 size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                              ) : (
+                                <Building2 size={15} style={{ color: '#d97706', flexShrink: 0 }} />
+                              )}
+                              <div>
+                                <span style={{ fontWeight: 700, color: assignedCoupon.audience === 'Verified customers (3+ orders)' ? '#1e40af' : '#92400e' }}>
+                                  {assignedCoupon.audience === 'Verified customers (3+ orders)'
+                                    ? 'Verified Buyer Exclusive:'
+                                    : `Exclusive for ${b2bProfile?.businessName || 'Your Business'}:`}
+                                </span>{' '}
+                                <span style={{ color: assignedCoupon.audience === 'Verified customers (3+ orders)' ? '#1e3a8a' : '#78350f' }}>
+                                  Use <strong>{assignedCoupon.code}</strong> ({assignedCoupon.type === 'Percentage' ? `${assignedCoupon.value}% off` : formatINR(assignedCoupon.value) + ' off'})
+                                  {assignedCoupon.minimumOrder ? ` (min ${formatINR(assignedCoupon.minimumOrder)})` : ''}
+                                </span>
                               </div>
-                              <button
-                                type="button"
-                                className="inf-ck-wholesale-promo-btn"
-                                onClick={() => handleApplyCoupon(c.code)}
-                              >
-                                Apply
-                              </button>
                             </div>
-                          ))}
-
-                        {/* 2. Other available coupons */}
-                        {availableCoupons
-                          .filter((c: StorefrontCoupon) => c.audience !== 'Individual Wholesale Buyer' && c.code !== appliedCoupon)
-                          .slice(0, 2)
-                          .map((c: StorefrontCoupon) => (
                             <button
-                              key={c.code}
                               type="button"
-                              className="inf-ck-quick-promo"
-                              onClick={() => handleApplyCoupon(c.code)}
+                              className="inf-ck-wholesale-promo-btn"
+                              onClick={() => handleApplyCoupon(assignedCoupon.code)}
                             >
-                              <Tag size={12} />
-                              <span>
-                                Tap to use <strong>{c.code}</strong> for {c.type === 'Percentage' ? `${c.value}% off` : `${formatINR(c.value)} off`}
-                                {c.minimumOrder ? ` (min ${formatINR(c.minimumOrder)})` : ''}
-                              </span>
+                              Apply
                             </button>
-                          ))}
-                      </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Card 3: Summary */}

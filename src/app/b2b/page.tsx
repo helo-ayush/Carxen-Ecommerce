@@ -36,6 +36,7 @@ export default function B2BWholesalePage() {
     isWholesalePending,
     applyForWholesale,
     refreshCustomerProfile,
+    coupons,
   } = useApp();
 
   const [formData, setFormData] = useState({
@@ -127,11 +128,14 @@ export default function B2BWholesalePage() {
   );
 
   const availableCoupons = useMemo(() => {
-    return getAvailableCouponsForBuyer(buyerContext);
-  }, [buyerContext]);
+    return getAvailableCouponsForBuyer(buyerContext, coupons);
+  }, [buyerContext, coupons]);
 
   const assignedCoupons = availableCoupons.filter(
-    (c) => c.audience === 'Individual Wholesale Buyer' || c.audience === 'Dealer accounts'
+    (c) =>
+      c.audience === 'Wholesale buyers' ||
+      c.audience === 'Individual Wholesale Buyer' ||
+      c.audience === 'Dealer accounts'
   );
 
   // --------------------------------------------------------------------------
