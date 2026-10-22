@@ -2,10 +2,10 @@
 
 export type StorefrontCouponAudience =
   | 'All customers'
-  | 'New customers'
-  | 'Repeat buyers'
-  | 'Dealer accounts'
-  | 'Individual Wholesale Buyer';
+  | 'Verified customers (3+ orders)'
+  | 'Wholesale buyers'
+  | 'Individual Wholesale Buyer'
+  | 'Dealer accounts';
 
 export type StorefrontCoupon = {
   code: string;
@@ -14,7 +14,7 @@ export type StorefrontCoupon = {
   value: number; // e.g. 15 for 15% or 1000 for ₹1000
   status: 'Active' | 'Draft' | 'Scheduled' | 'Expired';
   minimumOrder?: number;
-  audience: StorefrontCouponAudience;
+  audience: StorefrontCouponAudience | string;
   targetWholesaleBuyerId?: string | null;
   targetWholesaleBuyerName?: string | null;
   targetWholesaleBuyerEmail?: string | null;
@@ -27,6 +27,8 @@ export type WholesaleBuyerContext = {
   tradeName?: string | null;
   email?: string | null;
   userId?: string | null;
+  orderCount?: number;
+  isVerifiedBuyer?: boolean;
 };
 
 export type CouponValidationResult = {
@@ -38,71 +40,21 @@ export type CouponValidationResult = {
 };
 
 /**
- * Seeded coupon rules, including general promotions and individual wholesale buyer offers.
+ * Empty default coupons array so no hardcoded or mock coupons appear by default.
+ * All coupons are fetched dynamically from the database configured by the owner in Veda.
  */
-export const DEFAULT_STOREFRONT_COUPONS: StorefrontCoupon[] = [
-  {
-    code: 'CARXEN10',
-    name: 'X-List Welcome Discount',
-    type: 'Percentage',
-    value: 10,
-    status: 'Active',
-    minimumOrder: 0,
-    audience: 'All customers',
-    description: '10% discount on entire storefront cart',
-  },
-  {
-    code: 'APEX15',
-    name: 'Apex Auto Spares VIP Wholesale Offer',
-    type: 'Percentage',
-    value: 15,
-    status: 'Active',
-    minimumOrder: 10000,
-    audience: 'Individual Wholesale Buyer',
-    targetWholesaleBuyerName: 'Apex Auto Spares',
-    targetWholesaleBuyerEmail: 'apex@apexauto.in',
-    description: 'Exclusive 15% bulk discount for Apex Auto Spares on orders above ₹10,000',
-  },
-  {
-    code: 'SHARMA10',
-    name: 'Sharma Wheels & Tyres Bulk Season Offer',
-    type: 'Percentage',
-    value: 10,
-    status: 'Active',
-    minimumOrder: 15000,
-    audience: 'Individual Wholesale Buyer',
-    targetWholesaleBuyerName: 'Sharma Wheels & Tyres',
-    targetWholesaleBuyerEmail: 'sharma.wheels@example.test',
-    description: 'Exclusive 10% wholesale discount for Sharma Wheels & Tyres on orders above ₹15,000',
-  },
-  {
-    code: 'DEALER1000',
-    name: 'Dealer Stocking Credit',
-    type: 'Fixed amount',
-    value: 1000,
-    status: 'Active',
-    minimumOrder: 25000,
-    audience: 'Dealer accounts',
-    description: 'Flat ₹1,000 credit on dealer bulk restocking orders of ₹25,000 or more',
-  },
-  {
-    code: 'DIWALI20',
-    name: 'Diwali Garage Refresh',
-    type: 'Percentage',
-    value: 20,
-    status: 'Active',
-    minimumOrder: 7500,
-    audience: 'All customers',
-    description: 'Festival discount of 20% on orders above ₹7,500',
-  },
-];
+export const DEFAULT_STOREFRONT_COUPONS: StorefrontCoupon[] = [];
 
 const STORAGE_KEY = 'cx_custom_coupons';
 
 /**
- * Retrieve all coupons, combining defaults with any locally saved promotions.
+ * Retrieve all coupons, combining dynamically loaded or locally cached promotions.
  */
-export function getAllCoupons(): StorefrontCoupon[] {
+export function getAllCoupons(customCoupons?: StorefrontCoupon[]): StorefrontCoupon[] {
+  if (customCoupons && customCoupons.length > 0) {
+    return customCoupons;
+  }
+
   if (typeof window === 'undefined') {
     return DEFAULT_STOREFRONT_COUPONS;
   }
@@ -112,9 +64,7 @@ export function getAllCoupons(): StorefrontCoupon[] {
     if (!raw) return DEFAULT_STOREFRONT_COUPONS;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Merge by code, letting custom ones override
       const map = new Map<string, StorefrontCoupon>();
-      DEFAULT_STOREFRONT_COUPONS.forEach((c) => map.set(c.code.toUpperCase(), c));
       parsed.forEach((c: StorefrontCoupon) => {
         if (c && c.code) map.set(c.code.toUpperCase(), c);
       });
@@ -194,14 +144,15 @@ export function isWholesaleBuyerMatch(
 export function validateCoupon(
   code: string,
   cartTotal: number,
-  buyerContext?: WholesaleBuyerContext
+  buyerContext?: WholesaleBuyerContext,
+  customCoupons?: StorefrontCoupon[]
 ): CouponValidationResult {
   const cleanCode = (code || '').trim().toUpperCase();
   if (!cleanCode) {
     return { valid: false, discountAmount: 0, error: 'Please enter a coupon code.' };
   }
 
-  const all = getAllCoupons();
+  const all = getAllCoupons(customCoupons);
   const coupon = all.find((c) => c.code.toUpperCase() === cleanCode);
 
   if (!coupon) {
@@ -229,34 +180,64 @@ export function validateCoupon(
     };
   }
 
-  // Check audience eligibility
-  if (coupon.audience === 'Dealer accounts') {
-    if (!buyerContext?.isWholesaleApproved) {
+  // Check audience eligibility:
+  // 1. Verified customers (3+ orders)
+  if (
+    coupon.audience === 'Verified customers (3+ orders)' ||
+    coupon.audience === 'Repeat buyers'
+  ) {
+    if (!buyerContext?.userId && !buyerContext?.email) {
       return {
         valid: false,
         discountAmount: 0,
-        error: `Coupon "${cleanCode}" is reserved exclusively for approved Wholesale & Dealer accounts.`,
+        error: `Coupon "${cleanCode}" is reserved exclusively for verified customers with 3 or more previous orders. Please sign in to verify your account.`,
+      };
+    }
+
+    const orderCount = typeof buyerContext?.orderCount === 'number' ? buyerContext.orderCount : 0;
+    const isVerified = Boolean(buyerContext?.isVerifiedBuyer && orderCount >= 3);
+
+    if (!isVerified || orderCount < 3) {
+      return {
+        valid: false,
+        discountAmount: 0,
+        error: `Coupon "${cleanCode}" is reserved exclusively for verified customers with 3 or more previous orders. This account currently has ${orderCount} completed order${orderCount === 1 ? '' : 's'}.`,
       };
     }
   }
 
-  if (coupon.audience === 'Individual Wholesale Buyer') {
+  // 2. Wholesale buyers (including individual B2B buyer assignment)
+  if (
+    coupon.audience === 'Wholesale buyers' ||
+    coupon.audience === 'Individual Wholesale Buyer' ||
+    coupon.audience === 'Dealer accounts'
+  ) {
     if (!buyerContext?.isWholesaleApproved) {
       return {
         valid: false,
         discountAmount: 0,
-        error: `Coupon "${cleanCode}" is an exclusive offer reserved for approved wholesale business partners.`,
+        error: `Coupon "${cleanCode}" is reserved exclusively for approved Wholesale business accounts.`,
       };
     }
 
-    const matches = isWholesaleBuyerMatch(coupon, buyerContext);
-    if (!matches) {
-      const targetLabel = coupon.targetWholesaleBuyerName || coupon.targetWholesaleBuyerEmail || 'a specific wholesale buyer';
-      return {
-        valid: false,
-        discountAmount: 0,
-        error: `Coupon "${cleanCode}" is private to ${targetLabel}. It cannot be applied to this account (${buyerContext.businessName || buyerContext.email || 'guest'}).`,
-      };
+    // Check if coupon is assigned to an individual wholesale buyer
+    const isTargeted = Boolean(
+      coupon.targetWholesaleBuyerEmail ||
+      coupon.targetWholesaleBuyerName ||
+      coupon.targetWholesaleBuyerId
+    );
+
+    if (isTargeted) {
+      const matches = isWholesaleBuyerMatch(coupon, buyerContext);
+      if (!matches) {
+        const targetLabel =
+          coupon.targetWholesaleBuyerName || coupon.targetWholesaleBuyerEmail || 'an assigned business partner';
+        return {
+          valid: false,
+          discountAmount: 0,
+          error: `Coupon "${cleanCode}" is exclusive to ${targetLabel}.`,
+        };
+      }
     }
   }
 
@@ -268,7 +249,8 @@ export function validateCoupon(
     discountAmount = Math.min(coupon.value, cartTotal);
   }
 
-  const discountLabel = coupon.type === 'Percentage' ? `${coupon.value}% off` : `₹${coupon.value.toLocaleString('en-IN')} off`;
+  const discountLabel =
+    coupon.type === 'Percentage' ? `${coupon.value}% off` : `₹${coupon.value.toLocaleString('en-IN')} off`;
 
   return {
     valid: true,
@@ -279,29 +261,109 @@ export function validateCoupon(
 }
 
 /**
- * Get all coupons applicable to the currently signed-in buyer (including individual wholesale coupons).
+ * Get all coupons applicable to the currently signed-in buyer.
  */
-export function getAvailableCouponsForBuyer(buyerContext?: WholesaleBuyerContext): StorefrontCoupon[] {
-  const all = getAllCoupons();
+export function getAvailableCouponsForBuyer(
+  buyerContext?: WholesaleBuyerContext,
+  customCoupons?: StorefrontCoupon[]
+): StorefrontCoupon[] {
+  const all = getAllCoupons(customCoupons);
 
   return all.filter((coupon) => {
     if (coupon.status !== 'Active') return false;
 
     // Public coupons
-    if (coupon.audience === 'All customers' || coupon.audience === 'New customers' || coupon.audience === 'Repeat buyers') {
+    if (
+      coupon.audience === 'All customers' ||
+      coupon.audience === 'New customers' ||
+      coupon.audience === 'Repeat buyers'
+    ) {
       return true;
     }
 
-    // Dealer account coupons
-    if (coupon.audience === 'Dealer accounts') {
-      return Boolean(buyerContext?.isWholesaleApproved);
+    // Verified customers (3+ orders)
+    if (
+      coupon.audience === 'Verified customers (3+ orders)' ||
+      coupon.audience === 'Repeat buyers'
+    ) {
+      const orderCount = typeof buyerContext?.orderCount === 'number' ? buyerContext.orderCount : 0;
+      return Boolean(
+        (buyerContext?.userId || buyerContext?.email) &&
+        buyerContext?.isVerifiedBuyer &&
+        orderCount >= 3
+      );
     }
 
-    // Individual wholesale buyer coupons
-    if (coupon.audience === 'Individual Wholesale Buyer') {
-      return Boolean(buyerContext?.isWholesaleApproved) && isWholesaleBuyerMatch(coupon, buyerContext);
+    // Wholesale buyers
+    if (
+      coupon.audience === 'Wholesale buyers' ||
+      coupon.audience === 'Individual Wholesale Buyer' ||
+      coupon.audience === 'Dealer accounts'
+    ) {
+      if (!buyerContext?.isWholesaleApproved) return false;
+      const isTargeted = Boolean(
+        coupon.targetWholesaleBuyerEmail ||
+        coupon.targetWholesaleBuyerName ||
+        coupon.targetWholesaleBuyerId
+      );
+      if (isTargeted) {
+        return isWholesaleBuyerMatch(coupon, buyerContext);
+      }
+      return true;
     }
 
     return false;
   });
+}
+
+/**
+ * Get specifically assigned coupons by the owner for this buyer (e.g. exclusive individual B2B coupon,
+ * or verified customer loyalty coupon).
+ */
+export function getAssignedCouponForBuyer(
+  buyerContext?: WholesaleBuyerContext,
+  customCoupons?: StorefrontCoupon[]
+): StorefrontCoupon | null {
+  const all = getAllCoupons(customCoupons);
+  if (!buyerContext) return null;
+
+  // 1. Check for individual B2B buyer coupon assigned to this wholesale partner
+  if (buyerContext.isWholesaleApproved) {
+    const individualMatch = all.find(
+      (c) =>
+        c.status === 'Active' &&
+        (c.audience === 'Wholesale buyers' || c.audience === 'Individual Wholesale Buyer') &&
+        Boolean(c.targetWholesaleBuyerEmail || c.targetWholesaleBuyerName || c.targetWholesaleBuyerId) &&
+        isWholesaleBuyerMatch(c, buyerContext)
+    );
+    if (individualMatch) return individualMatch;
+
+    // Next, wholesale wide coupon
+    const wholesaleGeneral = all.find(
+      (c) =>
+        c.status === 'Active' &&
+        (c.audience === 'Wholesale buyers' || c.audience === 'Dealer accounts') &&
+        !c.targetWholesaleBuyerEmail &&
+        !c.targetWholesaleBuyerName
+    );
+    if (wholesaleGeneral) return wholesaleGeneral;
+  }
+
+  // 2. Check for verified customer (3+ orders) loyalty coupon
+  const orderCount = typeof buyerContext.orderCount === 'number' ? buyerContext.orderCount : 0;
+  const isVerified = Boolean(
+    (buyerContext.userId || buyerContext.email) &&
+    buyerContext.isVerifiedBuyer &&
+    orderCount >= 3
+  );
+  if (isVerified) {
+    const verifiedCoupon = all.find(
+      (c) =>
+        c.status === 'Active' &&
+        (c.audience === 'Verified customers (3+ orders)' || c.audience === 'Repeat buyers')
+    );
+    if (verifiedCoupon) return verifiedCoupon;
+  }
+
+  return null;
 }

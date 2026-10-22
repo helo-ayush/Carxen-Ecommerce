@@ -383,7 +383,31 @@ export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
 
         <div className="hero-video-scroll-hint-wrap" ref={scrollHintRef}>
           <p className="hero-video-label mono">{heroConfig?.scrollHint || 'Scroll to explore'}</p>
-          <div className="hero-video-scroll-hint"><span /></div>
+          <div
+            className="hero-video-scroll-hint"
+            role="button"
+            tabIndex={0}
+            aria-label="Scroll down to explore products"
+            onClick={() => {
+              const target = document.getElementById('shop') || document.querySelector('.sec');
+              if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                const target = document.getElementById('shop') || document.querySelector('.sec');
+                if (target) target.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          >
+            <div className="hero-mouse-icon">
+              <span className="hero-mouse-wheel" />
+            </div>
+            <span className="hero-mouse-arrow" />
+          </div>
         </div>
 
         <div className="hero-video-bottom-curve" aria-hidden="true">

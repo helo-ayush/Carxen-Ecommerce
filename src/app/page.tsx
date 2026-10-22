@@ -306,7 +306,7 @@ export default function HomePage() {
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setNewsletterMsg('✓ Welcome to the X-List — 10% coupon code CARXEN10 unlocked.');
+    setNewsletterMsg('✓ Welcome to the X-List — thank you for subscribing!');
     setNewsletterEmail('');
   };
 

@@ -1,6 +1,7 @@
 ﻿import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
-import { validateCoupon, type WholesaleBuyerContext } from '@/lib/storefront/coupons';
+import { validateCoupon, type WholesaleBuyerContext, type StorefrontCoupon } from '@/lib/storefront/coupons';
+import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
 export interface CartItemInput {
   productId: number;
@@ -79,6 +80,55 @@ export async function calculateAuthoritativeCartTotals(
     });
   }
 
+  // Fetch active store campaigns from DB if any
+  let dynamicCoupons: StorefrontCoupon[] = [];
+  try {
+    const supabase = getSupabaseAdmin();
+    const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
+    const { data: store } = await supabase
+      .from('ecommerce_stores')
+      .select('id')
+      .eq('slug', storeSlug)
+      .maybeSingle();
+
+    if (store) {
+      const { data: campaigns } = await supabase
+        .from('ecommerce_campaigns')
+        .select('*')
+        .eq('storeId', store.id)
+        .eq('status', 'ACTIVE');
+
+      if (campaigns) {
+        const now = new Date();
+        const validCampaigns = campaigns.filter((camp: any) => {
+          if (camp.startsAt && new Date(camp.startsAt) > now) return false;
+          if (camp.endsAt && new Date(camp.endsAt) < now) return false;
+          if (camp.usageLimit && camp.usageCount && Number(camp.usageCount) >= Number(camp.usageLimit)) return false;
+          return true;
+        });
+
+        dynamicCoupons = validCampaigns.map((camp: any) => {
+          const rules = camp.audienceRules && typeof camp.audienceRules === 'object' ? camp.audienceRules : {};
+          return {
+            code: camp.code,
+            name: camp.name,
+            type: camp.discountType === 'PERCENTAGE' || camp.discountType === 'Percentage' ? 'Percentage' : 'Fixed amount',
+            value: Number(camp.discountValue) || 0,
+            status: 'Active',
+            minimumOrder: Number(camp.minimumOrderAmount) || 0,
+            audience: camp.audience || 'All customers',
+            targetWholesaleBuyerId: rules.targetWholesaleBuyerId || null,
+            targetWholesaleBuyerName: rules.targetWholesaleBuyerName || null,
+            targetWholesaleBuyerEmail: rules.targetWholesaleBuyerEmail || null,
+            description: rules.description || camp.name,
+          };
+        });
+      }
+    }
+  } catch {
+    // Non-fatal, predefined static coupons will validate
+  }
+
   // Authoritative Coupon Validation
   let couponDiscount = 0;
   let appliedCoupon: string | null = null;
@@ -86,7 +136,7 @@ export async function calculateAuthoritativeCartTotals(
 
   if (params.couponCode && params.couponCode.trim()) {
     const code = params.couponCode.trim().toUpperCase();
-    const couponValidation = validateCoupon(code, subtotal, params.buyerContext);
+    const couponValidation = validateCoupon(code, subtotal, params.buyerContext, dynamicCoupons);
 
     if (!couponValidation.valid) {
       throw new Error(couponValidation.error || `Coupon "${code}" is invalid or expired.`);
