@@ -49,6 +49,8 @@ import {
   QrCode,
   AlertCircle,
   Sparkles,
+  Banknote,
+  Check,
 } from 'lucide-react';
 
 import '@/components/storefront/checkout-infinite.css';
@@ -1336,130 +1338,128 @@ export default function CheckoutPage() {
                             >
                               <div className="inf-ck-radio-label">
                                 <span className="inf-ck-radio-circle" />
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontWeight: 800, fontSize: 14 }}>Razorpay Secure Gateway</span>
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: 800,
-                                        color: '#ffffff',
-                                        background: 'var(--red, #e2231a)',
-                                        padding: '2px 7px',
-                                        borderRadius: 4,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.4px',
-                                      }}
-                                    >
-                                      Instant &bull; Recommended
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 800, fontSize: 15, color: '#09090b', letterSpacing: '-0.2px' }}>
+                                      Razorpay Secure Gateway
+                                    </span>
+                                    <span className="inf-ck-badge-recommend">
+                                      <Zap size={11} style={{ fill: '#ffffff' }} /> Instant &bull; Zero Surcharge
                                     </span>
                                   </div>
-                                  <span style={{ fontSize: 11.5, color: '#71717a' }}>
-                                    UPI (GPay, PhonePe, Paytm, QR) &bull; Cards &bull; NetBanking &bull; Wallets
-                                  </span>
+                                  <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.4 }}>
+                                    Instant UPI (GPay, PhonePe, Paytm, QR) &bull; Credit &amp; Debit Cards &bull; NetBanking &bull; EMI
+                                  </div>
                                 </div>
                               </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <ShieldCheck style={{ width: 18, height: 18, color: '#10b981' }} />
+                              <div className="inf-ck-header-badges">
+                                <div className="inf-ck-payment-brand-cluster">
+                                  <span className="inf-ck-mini-brand-tag upi">UPI</span>
+                                  <span className="inf-ck-mini-brand-tag visa">VISA</span>
+                                  <span className="inf-ck-mini-brand-tag mc">MC</span>
+                                  <span className="inf-ck-mini-brand-tag rupay">RuPay</span>
+                                </div>
+                                <div className="inf-ck-verified-shield">
+                                  <ShieldCheck size={18} style={{ color: '#10b981' }} />
+                                </div>
                               </div>
                             </div>
 
                             {paymentOption === 'razorpay' && (
-                              <div className="inf-ck-card-body" style={{ padding: '0 18px 18px' }}>
-                                <div
-                                  style={{
-                                    background: '#faf9f6',
-                                    border: '1px solid #eeede8',
-                                    borderRadius: 10,
-                                    padding: '14px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 12,
-                                  }}
-                                >
-                                  {/* Payment Methods Badges */}
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        background: '#ffffff',
-                                        border: '1px solid #e7e6e0',
-                                        borderRadius: 6,
-                                        padding: '4px 10px',
-                                        fontSize: 11.5,
-                                        fontWeight: 700,
-                                        color: '#0e0e10',
-                                      }}
-                                    >
-                                      <Smartphone style={{ width: 13, height: 13, color: 'var(--red, #e2231a)' }} />
-                                      UPI: Google Pay, PhonePe, Paytm, QR
+                              <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
+                                <div className="inf-ck-pay-detail-container">
+                                  {/* Payment Channels Grid */}
+                                  <div className="inf-ck-channels-grid">
+                                    {/* Channel 1: UPI */}
+                                    <div className="inf-ck-channel-box">
+                                      <div className="inf-ck-channel-hdr">
+                                        <div className="inf-ck-channel-icon-wrap upi">
+                                          <Smartphone size={16} />
+                                        </div>
+                                        <div>
+                                          <div className="inf-ck-channel-title">UPI &amp; Instant QR</div>
+                                          <div className="inf-ck-channel-sub">Google Pay, PhonePe, Paytm</div>
+                                        </div>
+                                      </div>
+                                      <div className="inf-ck-channel-pill-row">
+                                        <span className="inf-ck-brand-pill gpay">GPay</span>
+                                        <span className="inf-ck-brand-pill phonepe">PhonePe</span>
+                                        <span className="inf-ck-brand-pill paytm">Paytm</span>
+                                        <span className="inf-ck-brand-pill cred">CRED</span>
+                                        <span className="inf-ck-brand-pill any-upi">Any UPI App</span>
+                                      </div>
                                     </div>
 
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        background: '#ffffff',
-                                        border: '1px solid #e7e6e0',
-                                        borderRadius: 6,
-                                        padding: '4px 10px',
-                                        fontSize: 11.5,
-                                        fontWeight: 700,
-                                        color: '#0e0e10',
-                                      }}
-                                    >
-                                      <CreditCard style={{ width: 13, height: 13, color: '#2563eb' }} />
-                                      Credit &amp; Debit Cards (Visa, MC, RuPay)
+                                    {/* Channel 2: Cards */}
+                                    <div className="inf-ck-channel-box">
+                                      <div className="inf-ck-channel-hdr">
+                                        <div className="inf-ck-channel-icon-wrap cards">
+                                          <CreditCard size={16} />
+                                        </div>
+                                        <div>
+                                          <div className="inf-ck-channel-title">Credit &amp; Debit Cards</div>
+                                          <div className="inf-ck-channel-sub">Visa, Mastercard, RuPay, Amex</div>
+                                        </div>
+                                      </div>
+                                      <div className="inf-ck-channel-pill-row">
+                                        <span className="inf-ck-brand-pill card-visa">VISA</span>
+                                        <span className="inf-ck-brand-pill card-mc">MC</span>
+                                        <span className="inf-ck-brand-pill rupay">RuPay</span>
+                                        <span className="inf-ck-brand-pill amex">AMEX</span>
+                                        <span className="inf-ck-brand-pill emi">EMI Available</span>
+                                      </div>
                                     </div>
 
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        background: '#ffffff',
-                                        border: '1px solid #e7e6e0',
-                                        borderRadius: 6,
-                                        padding: '4px 10px',
-                                        fontSize: 11.5,
-                                        fontWeight: 700,
-                                        color: '#0e0e10',
-                                      }}
-                                    >
-                                      <Building2 style={{ width: 13, height: 13, color: '#059669' }} />
-                                      NetBanking (50+ Indian Banks)
+                                    {/* Channel 3: NetBanking */}
+                                    <div className="inf-ck-channel-box">
+                                      <div className="inf-ck-channel-hdr">
+                                        <div className="inf-ck-channel-icon-wrap bank">
+                                          <Building2 size={16} />
+                                        </div>
+                                        <div>
+                                          <div className="inf-ck-channel-title">NetBanking &amp; Wallets</div>
+                                          <div className="inf-ck-channel-sub">50+ Indian Banks &bull; Wallets</div>
+                                        </div>
+                                      </div>
+                                      <div className="inf-ck-channel-pill-row">
+                                        <span className="inf-ck-brand-pill bank-tag">HDFC</span>
+                                        <span className="inf-ck-brand-pill bank-tag">ICICI</span>
+                                        <span className="inf-ck-brand-pill bank-tag">SBI</span>
+                                        <span className="inf-ck-brand-pill bank-tag">Axis</span>
+                                        <span className="inf-ck-brand-pill bank-tag">+45 Banks</span>
+                                      </div>
                                     </div>
                                   </div>
 
-                                  <div style={{ fontSize: 12, color: '#5d5d64', lineHeight: 1.5 }}>
-                                    When you click <b>Pay with Razorpay</b>, the official Razorpay payment modal will open.
-                                    You can choose your preferred payment method with bank-grade 256-bit encryption.
+                                  {/* Modal Explanation Banner */}
+                                  <div className="inf-ck-gateway-explainer">
+                                    <div className="inf-ck-explainer-left">
+                                      <Lock size={15} style={{ color: '#10b981', flexShrink: 0, marginTop: 1 }} />
+                                      <div>
+                                        <strong>Secure Razorpay Overlay:</strong> Clicking <em>&ldquo;Pay with Razorpay&rdquo;</em> opens the bank-grade checkout modal with 256-bit encryption. Card and UPI credentials never touch our servers.
+                                      </div>
+                                    </div>
                                   </div>
 
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 16,
-                                      fontSize: 11,
-                                      color: '#71717a',
-                                      paddingTop: 8,
-                                      borderTop: '1px solid #eeede8',
-                                    }}
-                                  >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      <Lock style={{ width: 12, height: 12, color: '#10b981' }} /> 256-bit SSL Encrypted
-                                    </span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      <ShieldCheck style={{ width: 12, height: 12, color: '#10b981' }} /> PCI-DSS Level 1
-                                    </span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      <Sparkles style={{ width: 12, height: 12, color: '#f59e0b' }} /> Zero Surcharge
-                                    </span>
+                                  {/* Trust Badges Strip */}
+                                  <div className="inf-ck-trust-bar">
+                                    <div className="inf-ck-trust-item">
+                                      <Lock size={13} style={{ color: '#10b981' }} />
+                                      <span>256-Bit SSL Encrypted</span>
+                                    </div>
+                                    <div className="inf-ck-trust-item">
+                                      <ShieldCheck size={13} style={{ color: '#10b981' }} />
+                                      <span>PCI-DSS Level 1</span>
+                                    </div>
+                                    <div className="inf-ck-trust-item">
+                                      <Sparkles size={13} style={{ color: '#f59e0b' }} />
+                                      <span>Zero Convenience Fee</span>
+                                    </div>
+                                    <div className="inf-ck-trust-item">
+                                      <Zap size={13} style={{ color: '#3b82f6' }} />
+                                      <span>Instant Refunds</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1468,7 +1468,7 @@ export default function CheckoutPage() {
 
                           {/* 2. CASH ON DELIVERY */}
                           <div
-                            className={`inf-ck-pay-card ${paymentOption === 'cod' ? 'active' : ''}`}
+                            className={`inf-ck-pay-card ${paymentOption === 'cod' ? 'cod-active' : ''}`}
                           >
                             <div
                               className="inf-ck-pay-card-header"
@@ -1476,20 +1476,65 @@ export default function CheckoutPage() {
                             >
                               <div className="inf-ck-radio-label">
                                 <span className="inf-ck-radio-circle" />
-                                <div>
-                                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>Cash on Delivery (Doorstep)</div>
-                                  <div style={{ fontSize: 11.5, color: '#71717a' }}>Pay via Cash or dynamic UPI QR at delivery</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 800, fontSize: 15, color: '#09090b', letterSpacing: '-0.2px' }}>
+                                      Cash on Delivery (Doorstep)
+                                    </span>
+                                    <span className="inf-ck-badge-available">
+                                      <Check size={11} /> Available at Your Pincode
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.4 }}>
+                                    Pay via physical Cash or dynamic UPI QR on delivery handover
+                                  </div>
                                 </div>
                               </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: 4 }}>
-                                Available
-                              </span>
+
+                              <div className="inf-ck-header-badges">
+                                <div className="inf-ck-cod-badge-icon">
+                                  <Banknote size={20} style={{ color: '#059669' }} />
+                                </div>
+                              </div>
                             </div>
 
                             {paymentOption === 'cod' && (
-                              <div className="inf-ck-card-body" style={{ padding: '0 18px 18px' }}>
-                                <div style={{ fontSize: 12.5, color: '#5d5d64' }}>
-                                  Pay {formatINR(finalTotal)} in cash or scan the courier&apos;s dynamic QR code on doorstep handover.
+                              <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
+                                <div className="inf-ck-cod-container">
+                                  {/* 3-Step Doorstep Timeline */}
+                                  <div className="inf-ck-cod-timeline">
+                                    <div className="inf-ck-cod-step">
+                                      <div className="inf-ck-cod-step-num">1</div>
+                                      <div>
+                                        <div className="inf-ck-cod-step-title">Insured Transit</div>
+                                        <div className="inf-ck-cod-step-desc">Sealed packaging from fulfillment hub.</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="inf-ck-cod-step">
+                                      <div className="inf-ck-cod-step-num">2</div>
+                                      <div>
+                                        <div className="inf-ck-cod-step-title">Delivery OTP</div>
+                                        <div className="inf-ck-cod-step-desc">SMS &amp; WhatsApp OTP on arrival.</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="inf-ck-cod-step">
+                                      <div className="inf-ck-cod-step-num">3</div>
+                                      <div>
+                                        <div className="inf-ck-cod-step-title">Cash or QR Scan</div>
+                                        <div className="inf-ck-cod-step-desc">Pay {formatINR(finalTotal)} cash or UPI QR.</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Tip Box */}
+                                  <div className="inf-ck-cod-tip">
+                                    <QrCode size={16} style={{ color: '#059669', flexShrink: 0, marginTop: 1 }} />
+                                    <div>
+                                      <strong>Contactless Handover:</strong> You can scan the courier partner&apos;s dynamic UPI QR code with any UPI app on your phone upon arrival if you prefer not to carry physical cash.
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1507,7 +1552,10 @@ export default function CheckoutPage() {
                                 >
                                   <div className="inf-ck-radio-label">
                                     <span className="inf-ck-radio-circle" />
-                                    <span>Bank Wire Transfer (NEFT / RTGS)</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                      <span style={{ fontWeight: 700, fontSize: 14 }}>Bank Wire Transfer (NEFT / RTGS)</span>
+                                      <span style={{ fontSize: 11.5, color: '#71717a' }}>Direct B2B commercial settlement</span>
+                                    </div>
                                   </div>
                                   <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
                                     Zero Surcharge
@@ -1515,13 +1563,13 @@ export default function CheckoutPage() {
                                 </div>
 
                                 {paymentOption === 'wire' && (
-                                  <div className="inf-ck-card-body" style={{ padding: '0 18px 18px' }}>
-                                    <div className="rounded-lg bg-surface-2 p-2.5 text-xs text-text-secondary space-y-1">
+                                  <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
+                                    <div className="rounded-xl border border-border bg-surface-2 p-3 text-xs text-text-secondary space-y-1.5">
                                       <p><strong>Beneficiary:</strong> CarXen Automotive Technologies Pvt Ltd</p>
-                                      <p><strong>Bank:</strong> HDFC Bank Ltd, Industrial Finance</p>
+                                      <p><strong>Bank:</strong> HDFC Bank Ltd, Industrial Finance Branch</p>
                                       <p><strong>A/C No:</strong> 50200088192301</p>
                                       <p><strong>IFSC:</strong> HDFC0000128</p>
-                                      <p className="text-[11px] text-text-tertiary pt-1">
+                                      <p className="text-[11px] text-text-tertiary pt-1 border-t border-border/50">
                                         Quote your order number in transfer remarks. Immediate dispatch on wire confirmation.
                                       </p>
                                     </div>
@@ -1538,16 +1586,19 @@ export default function CheckoutPage() {
                                 >
                                   <div className="inf-ck-radio-label">
                                     <span className="inf-ck-radio-circle" />
-                                    <span>Net 15 Dealer Credit Terms</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                      <span style={{ fontWeight: 700, fontSize: 14 }}>Net 15 Commercial Credit Terms</span>
+                                      <span style={{ fontSize: 11.5, color: '#71717a' }}>Invoice dispatched with 15-day payment window</span>
+                                    </div>
                                   </div>
                                   <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                                    Verified Dealers
+                                    Approved Dealers
                                   </span>
                                 </div>
 
                                 {paymentOption === 'credit_terms' && (
-                                  <div className="inf-ck-card-body" style={{ padding: '0 18px 18px' }}>
-                                    <p className="text-xs text-text-secondary">
+                                  <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
+                                    <p className="text-xs text-text-secondary bg-surface-2 p-3 rounded-xl border border-border">
                                       Payable within 15 days of shipment dispatch. Official GST tax invoice issued upon placement.
                                     </p>
                                   </div>
@@ -1555,6 +1606,31 @@ export default function CheckoutPage() {
                               </div>
                             </>
                           )}
+                        </div>
+
+                        {/* Security Guarantee Footer Bar */}
+                        <div className="inf-ck-security-guarantee-bar">
+                          <div className="inf-ck-security-item">
+                            <ShieldCheck size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 12, color: '#09090b' }}>100% Buyer Protection</div>
+                              <div style={{ fontSize: 11, color: '#71717a' }}>Genuine CarXen products guaranteed</div>
+                            </div>
+                          </div>
+                          <div className="inf-ck-security-item">
+                            <Lock size={18} style={{ color: '#2563eb', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 12, color: '#09090b' }}>Bank-Grade Security</div>
+                              <div style={{ fontSize: 11, color: '#71717a' }}>RBI authorized Razorpay gateway</div>
+                            </div>
+                          </div>
+                          <div className="inf-ck-security-item">
+                            <Truck size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 12, color: '#09090b' }}>Insured Transit</div>
+                              <div style={{ fontSize: 11, color: '#71717a' }}>Instant replacement on damage</div>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Save info checkbox */}
