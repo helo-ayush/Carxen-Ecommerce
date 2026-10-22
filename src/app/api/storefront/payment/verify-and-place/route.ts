@@ -15,7 +15,7 @@ import {
   ORDER_ACCESS_COOKIE_NAME,
   ORDER_ACCESS_COOKIE_PATH,
 } from '@/lib/storefront/order-access';
-import { getAuthenticatedCustomer } from '@/lib/server/customer';
+import { getAuthenticatedCustomer, loadCustomerOrders } from '@/lib/server/customer';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import type { WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
@@ -61,12 +61,51 @@ export async function POST(request: Request) {
       const { customer: authCust } = await getAuthenticatedCustomer(request);
       if (authCust) {
         customerId = authCust.id;
+        let orderCount = 0;
+        try {
+          const pastOrders = await loadCustomerOrders(authCust.id, authCust.email);
+          const completedOrders = (pastOrders || []).filter((o: any) => {
+            const st = (o.status || '').toLowerCase();
+            return st !== 'cancelled' && st !== 'refunded';
+          });
+          orderCount = completedOrders.length;
+        } catch (e) {
+          console.warn('Could not load customer order count:', e);
+        }
+
         buyerContext = {
           isWholesaleApproved: authCust.b2bStatus === 'APPROVED',
           businessName: authCust.businessName || undefined,
           email: authCust.email || undefined,
           userId: authCust.id,
+          orderCount,
+          isVerifiedBuyer: orderCount >= 3,
         };
+      } else {
+        const guestEmail = (parsedPayload.customer?.email || (parsedPayload.shippingAddress as any)?.email)?.trim();
+        if (guestEmail) {
+          try {
+            const pastOrders = await loadCustomerOrders('', guestEmail);
+            const completedOrders = (pastOrders || []).filter((o: any) => {
+              const st = (o.status || '').toLowerCase();
+              return st !== 'cancelled' && st !== 'refunded';
+            });
+            const orderCount = completedOrders.length;
+            buyerContext = {
+              isWholesaleApproved: false,
+              email: guestEmail,
+              orderCount,
+              isVerifiedBuyer: orderCount >= 3,
+            };
+          } catch {
+            buyerContext = {
+              isWholesaleApproved: false,
+              email: guestEmail,
+              orderCount: 0,
+              isVerifiedBuyer: false,
+            };
+          }
+        }
       }
     } catch {
       // Guest or anonymous

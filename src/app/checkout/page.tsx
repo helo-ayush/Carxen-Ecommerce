@@ -139,6 +139,7 @@ export default function CheckoutPage() {
   const [buyerGstin, setBuyerGstin] = useState(b2bProfile?.gstin || '');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [saveInfo, setSaveInfo] = useState(true);
 
   // New Address form state
@@ -305,12 +306,18 @@ export default function CheckoutPage() {
   const finalTotal = cartSubtotal - couponDiscount + shippingCost;
 
   const assignedCoupon: StorefrontCoupon | null = useMemo(() => {
-    return getAssignedCouponForBuyer(buyerContext, coupons);
-  }, [buyerContext, coupons]);
+    const candidate = getAssignedCouponForBuyer(buyerContext, coupons);
+    if (!candidate) return null;
+    // Check if the current user and cart are actually eligible for this coupon right now
+    const validation = validateCoupon(candidate.code, cartSubtotal, buyerContext, coupons);
+    if (!validation.valid) return null;
+    return candidate;
+  }, [buyerContext, coupons, cartSubtotal]);
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
     if (!code) {
+      setCouponError('Please enter a coupon code.');
       showToast('Please enter a coupon code.');
       return;
     }
@@ -318,10 +325,14 @@ export default function CheckoutPage() {
     if (result.valid && result.coupon) {
       setAppliedCoupon(code);
       setCouponCode(code);
+      setCouponError(null);
+      setSubmitError(null);
       showToast(result.message || `Coupon ${code} applied!`);
     } else {
       setAppliedCoupon('');
-      showToast(result.error || 'Invalid or ineligible coupon code.');
+      const err = result.error || `Coupon "${code}" is invalid or ineligible.`;
+      setCouponError(err);
+      showToast(err);
     }
   };
 
@@ -1673,7 +1684,16 @@ export default function CheckoutPage() {
                           className="inf-ck-input"
                           placeholder="Enter coupon code"
                           value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
+                          onChange={(e) => {
+                            setCouponCode(e.target.value);
+                            if (couponError) setCouponError(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleApplyCoupon();
+                            }
+                          }}
                         />
                         <button
                           type="button"
@@ -1684,8 +1704,30 @@ export default function CheckoutPage() {
                         </button>
                       </div>
 
+                      {couponError ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: '10px 14px',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: 8,
+                            color: '#dc2626',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 2, color: '#dc2626' }} />
+                          <span>{couponError}</span>
+                        </div>
+                      ) : null}
+
                       {appliedCoupon && couponValidation?.valid ? (
-                        <div className="inf-ck-promo-tag">
+                        <div className="inf-ck-promo-tag" style={{ marginTop: 10 }}>
                           <span>
                             ✓ &ldquo;{appliedCoupon}&rdquo; active ({couponValidation.coupon?.name || (couponValidation.coupon?.type === 'Percentage' ? `${couponValidation.coupon.value}% off` : `${formatINR(couponDiscount)} off`)})
                           </span>
@@ -1694,8 +1736,44 @@ export default function CheckoutPage() {
                             onClick={() => {
                               setAppliedCoupon('');
                               setCouponCode('');
+                              setCouponError(null);
                             }}
                             style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {appliedCoupon && !couponValidation?.valid ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: '10px 14px',
+                            backgroundColor: '#fffbeb',
+                            border: '1px solid #fde68a',
+                            borderRadius: 8,
+                            color: '#b45309',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 2, color: '#b45309' }} />
+                          <div style={{ flex: 1 }}>
+                            <span>{couponValidation?.error || `Coupon "${appliedCoupon}" is no longer applicable.`}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppliedCoupon('');
+                              setCouponCode('');
+                              setCouponError(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#b45309', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
                           >
                             Remove
                           </button>

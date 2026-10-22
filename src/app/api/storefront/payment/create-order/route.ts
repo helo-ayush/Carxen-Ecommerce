@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { getRazorpayConfig, createRazorpayOrder } from '@/lib/server/razorpay';
 import { calculateAuthoritativeCartTotals } from '@/lib/server/checkout-pricing';
-import { getAuthenticatedCustomer } from '@/lib/server/customer';
+import { getAuthenticatedCustomer, loadCustomerOrders } from '@/lib/server/customer';
 import type { WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
 export const dynamic = 'force-dynamic';
@@ -26,12 +26,51 @@ export async function POST(request: Request) {
     try {
       const { customer: authCust } = await getAuthenticatedCustomer(request);
       if (authCust) {
+        let orderCount = 0;
+        try {
+          const pastOrders = await loadCustomerOrders(authCust.id, authCust.email);
+          const completedOrders = (pastOrders || []).filter((o: any) => {
+            const st = (o.status || '').toLowerCase();
+            return st !== 'cancelled' && st !== 'refunded';
+          });
+          orderCount = completedOrders.length;
+        } catch (e) {
+          console.warn('Could not load customer order count:', e);
+        }
+
         buyerContext = {
           isWholesaleApproved: authCust.b2bStatus === 'APPROVED',
           businessName: authCust.businessName || undefined,
           email: authCust.email || undefined,
           userId: authCust.id,
+          orderCount,
+          isVerifiedBuyer: orderCount >= 3,
         };
+      } else {
+        const guestEmail = (customer?.email || shippingAddress?.email)?.trim();
+        if (guestEmail) {
+          try {
+            const pastOrders = await loadCustomerOrders('', guestEmail);
+            const completedOrders = (pastOrders || []).filter((o: any) => {
+              const st = (o.status || '').toLowerCase();
+              return st !== 'cancelled' && st !== 'refunded';
+            });
+            const orderCount = completedOrders.length;
+            buyerContext = {
+              isWholesaleApproved: false,
+              email: guestEmail,
+              orderCount,
+              isVerifiedBuyer: orderCount >= 3,
+            };
+          } catch {
+            buyerContext = {
+              isWholesaleApproved: false,
+              email: guestEmail,
+              orderCount: 0,
+              isVerifiedBuyer: false,
+            };
+          }
+        }
       }
     } catch {
       // Unauthenticated / guest checkout fallback
