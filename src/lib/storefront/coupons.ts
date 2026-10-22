@@ -1,4 +1,3 @@
-'use client';
 
 export type StorefrontCouponAudience =
   | 'All customers'
