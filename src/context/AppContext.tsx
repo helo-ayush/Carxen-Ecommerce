@@ -27,6 +27,7 @@ import {
   DEFAULT_GST_INFO,
 } from '@/data/customer-defaults';
 import type { StorefrontCoupon } from '@/lib/storefront/coupons';
+import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
 export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -256,7 +257,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       phone: localProfile.phone || u.user_metadata?.phone || u.phone || '',
       avatarUrl: localProfile.avatarUrl || u.user_metadata?.avatar_url || '',
       joinedDate: localProfile.joinedDate || (u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Oct 2024'),
-      tier: localProfile.tier || 'Apex Gold Member',
+      tier: localProfile.tier && localProfile.tier !== 'Apex Gold Member' ? localProfile.tier : undefined,
       rewardPoints: localProfile.rewardPoints ?? 250,
     };
   };
@@ -300,7 +301,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             phone: data.profile.phone || prev?.phone || '',
             avatarUrl: data.profile.avatarUrl ?? prev?.avatarUrl ?? '',
             joinedDate: data.profile.joinedDate || prev?.joinedDate || 'Oct 2024',
-            tier: data.profile.tier || prev?.tier || 'Apex Gold Member',
+            tier: (data.profile.tier && data.profile.tier !== 'Apex Gold Member') ? data.profile.tier : (prev?.tier && prev.tier !== 'Apex Gold Member' ? prev.tier : undefined),
             rewardPoints: data.profile.rewardPoints ?? prev?.rewardPoints ?? 250,
           }));
 
@@ -566,8 +567,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       phone: '+91 98201 44829',
       avatarUrl: '',
       joinedDate: 'Oct 2024',
-      tier: 'Apex Gold Member',
-      rewardPoints: 1450,
+      rewardPoints: 250,
     };
     setUser(demoUser);
     try {
@@ -1211,9 +1211,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               headers,
               body: JSON.stringify(applicationData),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-              return { success: false, error: data.error || 'Failed to submit application' };
+              const friendlyError = formatUserFriendlyB2BError(
+                data.error || 'Failed to submit application. Please review your details and try again.'
+              );
+              return { success: false, error: friendlyError };
             }
             setB2bProfile({
               status: 'PENDING',
@@ -1233,7 +1236,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             showToast('Wholesale application submitted for review');
             return { success: true };
           } catch (err) {
-            return { success: false, error: err instanceof Error ? err.message : 'Network error' };
+            return {
+              success: false,
+              error: formatUserFriendlyB2BError(err),
+            };
           }
         },
         refreshCustomerProfile: async () => {

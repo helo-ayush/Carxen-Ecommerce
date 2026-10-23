@@ -25,11 +25,13 @@ export async function GET(request: Request) {
     const basePoints = typeof meta.rewardPoints === 'number' ? meta.rewardPoints : 250;
     const computedPoints = basePoints + orderPoints;
 
-    let computedTier = meta.tier;
-    if (!computedTier) {
-      if (totalSpent >= 50000) computedTier = 'Apex Titanium Member';
-      else if (totalSpent >= 15000) computedTier = 'Apex Gold Member';
-      else computedTier = 'Apex Silver Member';
+    let computedTier = meta.tier && meta.tier !== 'Apex Gold Member' ? meta.tier : null;
+    if (totalSpent >= 50000) {
+      computedTier = 'Apex Titanium Member';
+    } else if (totalSpent >= 15000) {
+      computedTier = 'Apex Gold Member';
+    } else if (totalSpent >= 5000) {
+      computedTier = 'Apex Silver Member';
     }
 
     const profile = {
@@ -169,8 +171,8 @@ export async function PUT(request: Request) {
         email: updatedCustomer.email,
         phone: updatedCustomer.phone,
         avatarUrl: updatedMeta.avatarUrl || '',
-        tier: updatedMeta.tier || 'Apex Gold Member',
-        rewardPoints: updatedMeta.rewardPoints ?? 1450,
+        tier: updatedMeta.tier || null,
+        rewardPoints: updatedMeta.rewardPoints ?? 250,
         joinedDate: updatedMeta.joinedDate || 'Oct 2024',
         communicationPrefs: updatedMeta.communicationPrefs || null,
         gstBilling: updatedMeta.gstBilling || null,

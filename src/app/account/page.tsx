@@ -184,7 +184,7 @@ function AccountContent() {
   const email = user?.email || '';
   const phone = user?.phone || '';
   const avatarUrl = user?.avatarUrl;
-  const tier = user?.tier || 'Apex Gold Member';
+  const tier = user?.tier && user.tier !== 'Apex Gold Member' ? user.tier : null;
   const points = user?.rewardPoints ?? 250;
   const initials = getInitials(name);
 
@@ -904,10 +904,12 @@ function AccountContent() {
                             tooltipText="Verified User · Purchased 3+ products from CARXEN"
                           />
                         )}
-                        <span className="ac-member-pill">
-                          <Sparkles size={12} color="#e2231a" />
-                          {tier}
-                        </span>
+                        {tier && (
+                          <span className="ac-member-pill">
+                            <Sparkles size={12} color="#e2231a" />
+                            {tier}
+                          </span>
+                        )}
                         {isVerifiedBuyer ? (
                           <span className="ac-verified-buyer-tag">
                             Verified Buyer ({totalProductsBought} products)

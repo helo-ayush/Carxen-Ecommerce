@@ -109,8 +109,7 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
         status: 'ACTIVE',
         metadata: {
           avatarUrl: authUser.user_metadata?.avatar_url || '',
-          tier: 'Apex Gold Member',
-          rewardPoints: 1450,
+          rewardPoints: 250,
           joinedDate: new Date(authUser.created_at || Date.now()).toLocaleDateString('en-US', {
             month: 'short',
             year: 'numeric',
@@ -165,8 +164,7 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
           status: 'ACTIVE',
           metadata: {
             avatarUrl: '',
-            tier: 'Apex Gold Member',
-            rewardPoints: 1450,
+            rewardPoints: 250,
             joinedDate: 'Oct 2024',
           },
           createdAt: now,
