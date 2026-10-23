@@ -128,9 +128,11 @@ export default function B2BWholesalePage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login?redirect=/b2b');
+      router.replace('/login?redirect=/wholesale');
+    } else if (isWholesaleApproved) {
+      router.replace('/wholesale');
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, isWholesaleApproved, router]);
 
   useEffect(() => {
     if (user && !formData.name) {

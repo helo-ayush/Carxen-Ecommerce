@@ -17,6 +17,8 @@ function HeaderContent() {
     isWholesaleApproved,
     isWholesalePending,
     b2bProfile,
+    wholesaleBasketSkuCount,
+    setWorkspaceMode,
   } = useApp();
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
@@ -169,196 +171,309 @@ function HeaderContent() {
   };
 
   const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
+  const isWholesaleMode = pathname.startsWith('/wholesale') || pathname.startsWith('/b2b');
 
   return (
     <div className={`top-nav-shell ${isRibbonHidden ? 'ribbon-hidden' : 'ribbon-visible'}`}>
-      {showAnnouncement && (
-        <div className={`ann ${isRibbonHidden ? 'ann-hidden' : ''}`}>
+      {/* WHOLESALE BANNER vs RETAIL BANNER */}
+      {isWholesaleMode ? (
+        <div className={`ann ann-wholesale ${isRibbonHidden ? 'ann-hidden' : ''}`}>
           <div className="ann-inner">
-            {announcementConfig?.badge ? (
-              <span className="ann-badge">{announcementConfig.badge}</span>
-            ) : (
-              <span className="ann-badge">LIMITED OFFER</span>
-            )}
+            <span className="ann-badge ann-badge-wholesale">B2B WORKSPACE</span>
             <span className="ann-text">
-              {announcementConfig?.text ||
-                '2-Year Warranty & Free Express Shipping Across India on all orders'}
+              Direct Factory Allocation · Verified GST Invoicing · Offline Commercial Terms (No Online Payment Required)
             </span>
-            {announcementConfig?.linkUrl && (
-              <Link href={announcementConfig.linkUrl} className="ann-link">
-                <span>Explore</span>
-                <span aria-hidden="true">&rarr;</span>
-              </Link>
-            )}
+            <span className="wholesale-desk-phone">Commercial Desk: +91 98765 43210</span>
           </div>
         </div>
-      )}
-      <header id="hdr" className={isScrolled ? 'sc' : ''}>
-        <div className="wrap hd">
-          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
-            <img src="/logo.png" alt="CARXEN" className="logo-img" />
-          </Link>
-
-          {/* LANDING PAGE: Section Anchor Navigation */}
-          {isLandingPage ? (
-            <nav className="main">
-              <Link href="/#categories">Product</Link>
-              <Link href="/#craft">Craft</Link>
-              <Link href="/#shop">Explore</Link>
-              <Link href="/#fitment">Vehicles</Link>
-              <Link href="/#reviews">Reviews</Link>
-            </nav>
-          ) : (
-            /* SHOP / STORE PAGES: Centered Search Bar */
-            <div className="hd-center-search">
-              <form className="hd-search hd-search-expanded" onSubmit={handleSearchSubmit}>
-                <svg viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M20 20l-4-4" />
-                </svg>
-                <input
-                  type="search"
-                  placeholder={`Search parts for your ${activeCar.m}…`}
-                  value={searchVal}
-                  onChange={(e) => setSearchVal(e.target.value)}
-                  aria-label={`Search parts for ${activeCar.m}`}
-                />
-                {searchVal && (
-                  <button
-                    type="button"
-                    className="hd-search-clear"
-                    onClick={() => {
-                      setSearchVal('');
-                      if (isShopPage) {
-                        router.push('/shop');
-                      }
-                    }}
-                    aria-label="Clear search"
-                  >
-                    <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  </button>
-                )}
-              </form>
+      ) : (
+        showAnnouncement && (
+          <div className={`ann ${isRibbonHidden ? 'ann-hidden' : ''}`}>
+            <div className="ann-inner">
+              {announcementConfig?.badge ? (
+                <span className="ann-badge">{announcementConfig.badge}</span>
+              ) : (
+                <span className="ann-badge">LIMITED OFFER</span>
+              )}
+              <span className="ann-text">
+                {announcementConfig?.text ||
+                  '2-Year Warranty & Free Express Shipping Across India on all orders'}
+              </span>
+              {announcementConfig?.linkUrl && (
+                <Link href={announcementConfig.linkUrl} className="ann-link">
+                  <span>Explore</span>
+                  <span aria-hidden="true">&rarr;</span>
+                </Link>
+              )}
             </div>
-          )}
+          </div>
+        )
+      )}
 
-          {/* Tools: search, wishlist, cart, profile only on shop page; landing page has 'Shop now' button */}
-          <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
-            {/* Wholesale Partner Status Badge / Quick Order / B2B Link */}
-            {isWholesaleApproved ? (
-              <div className="wholesale-header-badge">
-                <span className="wholesale-badge-dot" />
-                <span className="wholesale-badge-text">
-                  Wholesale Partner · Active ({b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2' : 'Tier 1'})
-                </span>
-                <Link href="/b2b/quick-order" className="wholesale-badge-link" title="Open Bulk Quick Order Sheet">
-                  Quick Order
-                </Link>
-              </div>
-            ) : isWholesalePending ? (
-              <Link href="/b2b" className="wholesale-pending-badge" title="Wholesale Application Under Review">
-                <span className="wholesale-badge-amber-dot" />
-                <span>Wholesale Under Review</span>
+      <header id="hdr" className={`${isScrolled ? 'sc' : ''} ${isWholesaleMode ? 'hdr-wholesale' : ''}`}>
+        {isWholesaleMode ? (
+          /* ==========================================================================
+             DEDICATED WHOLESALE B2B HEADER
+             No personal car garage, no favourites, no retail cart, no checkout
+             ========================================================================== */
+          <div className="wrap hd wholesale-hd-wrap">
+            <div className="wholesale-brand-group">
+              <Link href="/wholesale" className="logo logo-link" aria-label="CARXEN Wholesale Portal">
+                <img src="/logo.png" alt="CARXEN" className="logo-img" />
               </Link>
-            ) : (
+              <span className="wholesale-brand-tag">WHOLESALE</span>
+            </div>
+
+            <nav className="wholesale-nav-links" aria-label="Wholesale Navigation">
+              <Link href="/wholesale" className={pathname === '/wholesale' ? 'active' : ''}>
+                Dashboard
+              </Link>
+              <Link href="/wholesale/catalog" className={pathname.startsWith('/wholesale/catalog') ? 'active' : ''}>
+                Catalogue
+              </Link>
               <Link
-                href={user ? '/b2b' : '/login?redirect=/b2b'}
-                className="wholesale-header-link"
-                title={user ? 'B2B Wholesaler Portal' : 'Sign in to access B2B Wholesaler Portal'}
+                href="/wholesale/quick-order"
+                className={pathname.startsWith('/wholesale/quick-order') || pathname.startsWith('/b2b/quick-order') ? 'active' : ''}
               >
-                B2B Wholesale
+                Quick Order
               </Link>
-            )}
+              <Link
+                href="/wholesale/order-basket"
+                className={`wholesale-nav-basket-link ${pathname.startsWith('/wholesale/order-basket') ? 'active' : ''}`}
+              >
+                <span>Order Basket</span>
+                {wholesaleBasketSkuCount > 0 && (
+                  <span className="wholesale-nav-badge">{wholesaleBasketSkuCount}</span>
+                )}
+              </Link>
+              <Link href="/wholesale/orders" className={pathname.startsWith('/wholesale/orders') ? 'active' : ''}>
+                Orders
+              </Link>
+              <Link href="/wholesale/quotes" className={pathname.startsWith('/wholesale/quotes') ? 'active' : ''}>
+                Quotes
+              </Link>
+              <Link href="/wholesale/account" className={pathname.startsWith('/wholesale/account') ? 'active' : ''}>
+                Business Account
+              </Link>
+            </nav>
 
-            {isLandingPage && (
-              <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M20 20l-4-4" />
+            <div className="wholesale-hd-tools">
+              <div className="wholesale-partner-pill" title="Verified Wholesale Partner">
+                <span className="wholesale-badge-dot" />
+                <span className="wholesale-biz-name">
+                  {b2bProfile?.businessName || user?.name || 'Wholesale Partner'}
+                </span>
+                <span className="wholesale-tier-chip">
+                  {b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2' : 'Tier 1'}
+                </span>
+              </div>
+
+              <Link
+                href="/wholesale/order-basket"
+                className="wholesale-basket-action-btn"
+                title="Open Wholesale Order Basket"
+                aria-label={`Order Basket with ${wholesaleBasketSkuCount} items`}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 8h12l1 12H5L6 8z" />
+                  <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                </svg>
+                <span className="basket-lbl">Basket</span>
+                {wholesaleBasketSkuCount > 0 && (
+                  <span className="wholesale-basket-badge">{wholesaleBasketSkuCount}</span>
+                )}
+              </Link>
+
+              <Link
+                href="/shop"
+                className="wholesale-switch-retail-btn"
+                title="Switch to Personal Retail Shopping"
+                onClick={() => setWorkspaceMode('retail')}
+              >
+                <span>Personal Shopping</span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
-            )}
-            {!isLandingPage && (
-              <>
-                <Link
-                  href="/account?tab=garage"
-                  className="tool vehicle-tool"
-                  id="vehBtn"
-                  aria-label={`Change vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m}`}
-                >
-                  <svg viewBox="0 0 24 24">
-                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-                    <circle cx="7" cy="17" r="2" />
-                    <path d="M9 17h6" />
-                    <circle cx="17" cy="17" r="2" />
-                  </svg>
-                  <span className="veh-status-dot" />
-                  <div className="veh-hover-tooltip" role="tooltip">
-                    <span className="veh-tt-title">Change Vehicle</span>
-                    <span className="veh-tt-sub">
-                      <span className="veh-tt-dot" />
-                      <span>{activeCar.y} {activeCar.b} {activeCar.m}</span>
-                    </span>
-                  </div>
-                </Link>
-                <Link href="/wishlist" className={`tool fav ${favBump ? 'bump' : ''}`} id="favBtn" aria-label="Favourites">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
-                  </svg>
-                  <span className="lbl">Favourites</span>
-                  <span className={`badge-n ${fav.length > 0 ? 'on' : ''} ${favBump ? 'bump' : ''}`} id="favN">
-                    {fav.length}
-                  </span>
-                </Link>
-                <button className="tool" id="cartBtn" onClick={openCart} aria-label="Open cart">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M6 8h12l1 12H5L6 8z" />
-                    <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-                  </svg>
-                  <span className="lbl">Cart</span>
-                  <span className={`badge-n ${cartCount > 0 ? 'on' : ''} ${cartBump ? 'bump' : ''}`} id="cartN">
-                    {cartCount}
-                  </span>
-                </button>
-                <Link
-                  href={user ? '/account' : '/login'}
-                  className={`tool ${user ? 'on' : ''}`}
-                  id="acct"
-                  title={user ? `${user.name} — My account` : 'Log in'}
-                  aria-label="Account"
-                  style={{ overflow: 'hidden' }}
-                >
-                  {user?.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <svg viewBox="0 0 24 24">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
-                    </svg>
-                  )}
-                </Link>
-              </>
-            )}
 
-            {/* 'Shop now' button: only on landing page; removed on shop page */}
-            {isLandingPage && (
-              <Link href="/shop" className="sn">
-                Shop now
-              </Link>
-            )}
-
-            <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
-              <svg viewBox="0 0 24 24">
-                <path d="M3 7h18M3 12h18M3 17h18" />
-              </svg>
-            </button>
+              <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
+                <svg viewBox="0 0 24 24">
+                  <path d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* ==========================================================================
+             RETAIL B2C HEADER
+             Keeps vehicle garage, favourites, consumer cart, account & workspace switcher
+             ========================================================================== */
+          <div className="wrap hd">
+            <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+              <img src="/logo.png" alt="CARXEN" className="logo-img" />
+            </Link>
+
+            {/* LANDING PAGE: Section Anchor Navigation */}
+            {isLandingPage ? (
+              <nav className="main">
+                <Link href="/#categories">Product</Link>
+                <Link href="/#craft">Craft</Link>
+                <Link href="/#shop">Explore</Link>
+                <Link href="/#fitment">Vehicles</Link>
+                <Link href="/#reviews">Reviews</Link>
+              </nav>
+            ) : (
+              /* SHOP / STORE PAGES: Centered Search Bar */
+              <div className="hd-center-search">
+                <form className="hd-search hd-search-expanded" onSubmit={handleSearchSubmit}>
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-4-4" />
+                  </svg>
+                  <input
+                    type="search"
+                    placeholder={`Search parts for your ${activeCar.m}…`}
+                    value={searchVal}
+                    onChange={(e) => setSearchVal(e.target.value)}
+                    aria-label={`Search parts for ${activeCar.m}`}
+                  />
+                  {searchVal && (
+                    <button
+                      type="button"
+                      className="hd-search-clear"
+                      onClick={() => {
+                        setSearchVal('');
+                        if (isShopPage) {
+                          router.push('/shop');
+                        }
+                      }}
+                      aria-label="Clear search"
+                    >
+                      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  )}
+                </form>
+              </div>
+            )}
+
+            {/* Retail Tools */}
+            <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
+              {/* Workspace Switcher to Wholesale */}
+              <Link
+                href="/wholesale"
+                className={`wholesale-workspace-switch-btn ${
+                  isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : ''
+                }`}
+                title="Switch to Wholesale Partner Workspace"
+                onClick={() => setWorkspaceMode('wholesale')}
+              >
+                <span
+                  className={
+                    isWholesaleApproved
+                      ? 'wholesale-badge-dot'
+                      : isWholesalePending
+                      ? 'wholesale-badge-amber-dot'
+                      : 'wholesale-badge-neutral-dot'
+                  }
+                />
+                <span className="wholesale-switch-text">Wholesale Portal</span>
+                {isWholesaleApproved && (
+                  <span className="wholesale-micro-tier">
+                    {b2bProfile?.wholesaleTier === 'tier2' ? 'T2' : 'T1'}
+                  </span>
+                )}
+              </Link>
+
+              {isLandingPage && (
+                <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-4-4" />
+                  </svg>
+                </Link>
+              )}
+              {!isLandingPage && (
+                <>
+                  <Link
+                    href="/account?tab=garage"
+                    className="tool vehicle-tool"
+                    id="vehBtn"
+                    aria-label={`Change vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m}`}
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                      <circle cx="7" cy="17" r="2" />
+                      <path d="M9 17h6" />
+                      <circle cx="17" cy="17" r="2" />
+                    </svg>
+                    <span className="veh-status-dot" />
+                    <div className="veh-hover-tooltip" role="tooltip">
+                      <span className="veh-tt-title">Change Vehicle</span>
+                      <span className="veh-tt-sub">
+                        <span className="veh-tt-dot" />
+                        <span>{activeCar.y} {activeCar.b} {activeCar.m}</span>
+                      </span>
+                    </div>
+                  </Link>
+                  <Link href="/wishlist" className={`tool fav ${favBump ? 'bump' : ''}`} id="favBtn" aria-label="Favourites">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 20s-7-4.6-9-9A5.2 5.2 0 0 1 12 6.4 5.2 5.2 0 0 1 21 11c-2 4.4-9 9-9 9z" />
+                    </svg>
+                    <span className="lbl">Favourites</span>
+                    <span className={`badge-n ${fav.length > 0 ? 'on' : ''} ${favBump ? 'bump' : ''}`} id="favN">
+                      {fav.length}
+                    </span>
+                  </Link>
+                  <button className="tool" id="cartBtn" onClick={openCart} aria-label="Open cart">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M6 8h12l1 12H5L6 8z" />
+                      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                    </svg>
+                    <span className="lbl">Cart</span>
+                    <span className={`badge-n ${cartCount > 0 ? 'on' : ''} ${cartBump ? 'bump' : ''}`} id="cartN">
+                      {cartCount}
+                    </span>
+                  </button>
+                  <Link
+                    href={user ? '/account' : '/login'}
+                    className={`tool ${user ? 'on' : ''}`}
+                    id="acct"
+                    title={user ? `${user.name} — My account` : 'Log in'}
+                    aria-label="Account"
+                    style={{ overflow: 'hidden' }}
+                  >
+                    {user?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
+                      </svg>
+                    )}
+                  </Link>
+                </>
+              )}
+
+              {/* 'Shop now' button: only on landing page; removed on shop page */}
+              {isLandingPage && (
+                <Link href="/shop" className="sn">
+                  Shop now
+                </Link>
+              )}
+
+              <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
+                <svg viewBox="0 0 24 24">
+                  <path d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
     </div>
   );

@@ -150,6 +150,16 @@ interface AppContextType {
   refreshCustomerProfile: () => Promise<void>;
   coupons: StorefrontCoupon[];
   refreshCoupons: () => Promise<void>;
+  workspaceMode: 'retail' | 'wholesale';
+  setWorkspaceMode: (mode: 'retail' | 'wholesale') => void;
+  wholesaleBasket: Record<number, number>;
+  wholesaleBasketCount: number;
+  wholesaleBasketSkuCount: number;
+  wholesaleBasketSubtotal: number;
+  addToWholesaleBasket: (productId: number, qty?: number) => void;
+  updateWholesaleBasketQty: (productId: number, qty: number) => void;
+  removeFromWholesaleBasket: (productId: number) => void;
+  clearWholesaleBasket: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -178,6 +188,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
   const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
   const [b2bProfile, setB2bProfile] = useState<B2BProfile | null>(null);
+  const [workspaceMode, setWorkspaceModeState] = useState<'retail' | 'wholesale'>('retail');
+  const [wholesaleBasket, setWholesaleBasket] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('cx_workspace_mode');
+      if (savedMode === 'wholesale' || savedMode === 'retail') {
+        setWorkspaceModeState(savedMode);
+      }
+      const savedBasket = localStorage.getItem('cx_wholesale_basket');
+      if (savedBasket) {
+        setWholesaleBasket(JSON.parse(savedBasket));
+      }
+    } catch {}
+  }, []);
 
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
@@ -1091,6 +1116,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCart({});
   };
 
+  const setWorkspaceMode = useCallback((mode: 'retail' | 'wholesale') => {
+    setWorkspaceModeState(mode);
+    try {
+      localStorage.setItem('cx_workspace_mode', mode);
+    } catch {}
+  }, []);
+
+  const addToWholesaleBasket = useCallback((productId: number, qty = 1) => {
+    const p = products.find((x) => x.id === productId);
+    const moq = p?.b2bMoq || 5;
+
+    setWholesaleBasket((prev) => {
+      const current = prev[productId] || 0;
+      const initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      const next = { ...prev, [productId]: initialQty };
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    if (p) {
+      showToast(`Added to Wholesale Order Basket — ${p.n} (${qty} units)`);
+    }
+  }, [products]);
+
+  const updateWholesaleBasketQty = useCallback((productId: number, qty: number) => {
+    setWholesaleBasket((prev) => {
+      const copy = { ...prev };
+      if (qty <= 0) {
+        delete copy[productId];
+      } else {
+        copy[productId] = qty;
+      }
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(copy));
+      } catch {}
+      return copy;
+    });
+  }, []);
+
+  const removeFromWholesaleBasket = useCallback((productId: number) => {
+    setWholesaleBasket((prev) => {
+      const copy = { ...prev };
+      delete copy[productId];
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(copy));
+      } catch {}
+      return copy;
+    });
+    const p = products.find((x) => x.id === productId);
+    if (p) showToast(`Removed from Wholesale Basket — ${p.n}`);
+  }, [products]);
+
+  const clearWholesaleBasket = useCallback(() => {
+    setWholesaleBasket({});
+    try {
+      localStorage.removeItem('cx_wholesale_basket');
+    } catch {}
+  }, []);
+
+  const wholesaleBasketCount = useMemo(() => {
+    return Object.values(wholesaleBasket).reduce((a, b) => a + b, 0);
+  }, [wholesaleBasket]);
+
+  const wholesaleBasketSkuCount = useMemo(() => {
+    return Object.values(wholesaleBasket).filter((q) => q > 0).length;
+  }, [wholesaleBasket]);
+
+  const wholesaleBasketSubtotal = useMemo(() => {
+    return Object.entries(wholesaleBasket).reduce((sum, [idStr, q]) => {
+      const p = products.find((x) => x.id === Number(idStr));
+      if (!p) return sum;
+      return sum + calculateItemPriceWithOfferLimit(p, q, true).totalPrice;
+    }, 0);
+  }, [wholesaleBasket, products]);
+
   const toggleFav = (productId: number) => {
     setFav((prev) => {
       const exists = prev.includes(productId);
@@ -1294,6 +1395,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showToast,
         coupons,
         refreshCoupons,
+        workspaceMode,
+        setWorkspaceMode,
+        wholesaleBasket,
+        wholesaleBasketCount,
+        wholesaleBasketSkuCount,
+        wholesaleBasketSubtotal,
+        addToWholesaleBasket,
+        updateWholesaleBasketQty,
+        removeFromWholesaleBasket,
+        clearWholesaleBasket,
       }}
     >
       {children}
