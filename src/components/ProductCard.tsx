@@ -41,12 +41,13 @@ export function ProductCard({
       : 0;
 
   // Use the EXACT SAME color options that are displayed on the individual product page
-  const colorOptions = useMemo(() => {
+  const colorOptions: { name: string; hex: string; filter: string; images?: string[] }[] = useMemo(() => {
     if (product.colors && product.colors.length > 0) {
       return product.colors.map((c) => ({
         name: c.name,
         hex: c.hex,
         filter: c.filter || 'none',
+        images: Array.isArray(c.images) && c.images.length > 0 ? c.images : undefined,
       }));
     }
     const tints =
@@ -57,6 +58,7 @@ export function ProductCard({
       name: t[0],
       filter: t[1],
       hex: t[2],
+      images: undefined,
     }));
   }, [product]);
 
@@ -149,10 +151,15 @@ export function ProductCard({
 
         {/* Product Artwork with dynamic color filter reacting to swatch click */}
         <ProductArt
-          product={product}
+          product={{
+            ...product,
+            image: colorOptions[selectedColorIdx]?.images?.[0] || product.image,
+          }}
           style={{
             filter:
-              activeTintFilter && activeTintFilter !== 'none'
+              (!colorOptions[selectedColorIdx]?.images || colorOptions[selectedColorIdx]?.images.length === 0) &&
+              activeTintFilter &&
+              activeTintFilter !== 'none'
                 ? activeTintFilter
                 : undefined,
           }}

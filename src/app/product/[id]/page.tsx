@@ -224,6 +224,9 @@ function getEnrichedSpecifications(product: Product, activeCar: { b: string; m: 
   if (!existingSpecs.has('Country of Origin')) {
     existingSpecs.set('Country of Origin', 'India');
   }
+  if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
+    existingSpecs.set('Package Dimensions', product.packageDimensions);
+  }
 
   return Array.from(existingSpecs.entries());
 }
@@ -284,6 +287,37 @@ function ProductDetailContent({ product }: { product: Product }) {
     return [];
   }, [product]);
 
+  // Exact same color options used in ProductCard & initial listing
+  const colorOptions: { name: string; hex: string; filter: string; images?: string[] }[] = useMemo(() => {
+    if (product.colors && product.colors.length > 0) {
+      return product.colors.map((c) => ({
+        name: c.name,
+        hex: c.hex,
+        filter: c.filter || 'none',
+        images: Array.isArray(c.images) && c.images.length > 0 ? c.images : undefined,
+      }));
+    }
+    const tints =
+      product.tintOptions && product.tintOptions.length > 0
+        ? product.tintOptions
+        : TINT_OPTIONS;
+    return tints.map((t) => ({
+      name: t[0],
+      filter: t[1],
+      hex: t[2],
+      images: undefined,
+    }));
+  }, [product]);
+
+  // Default color index is 0 ('none') so image matches product listing card exactly!
+  const [selectedColorIdx, setSelectedColorIdx] = useState(0);
+  const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
+
+  // Automatically reset active gallery angle to primary when user changes color choice
+  useEffect(() => {
+    setActiveThumbIndex(0);
+  }, [selectedColorIdx]);
+
   // Curated automotive perspective angles with unique car icons for slider testing
   const galleryPerspectives = useMemo(() => {
     const defaultAngles = [
@@ -319,8 +353,19 @@ function ProductDetailContent({ product }: { product: Product }) {
       },
     ];
 
+    // Priority 1: Images uploaded specifically for the selected color choice!
+    if (activeColor?.images && activeColor.images.length > 0) {
+      return activeColor.images.map((img: string, idx: number) => ({
+        url: img,
+        title: `${activeColor.name} Perspective ${idx + 1}`,
+        badge: idx === 0 ? `${activeColor.name}` : `Angle ${idx + 1}`,
+        icon: defaultAngles[idx % defaultAngles.length]?.icon || 'car',
+      }));
+    }
+
+    // Priority 2: Base gallery images of the product
     if (Array.isArray(product.images) && product.images.length > 1) {
-      return product.images.map((img, idx) => ({
+      return product.images.map((img: string, idx: number) => ({
         url: img,
         title: defaultAngles[idx % defaultAngles.length].title,
         badge: defaultAngles[idx % defaultAngles.length].badge,
@@ -329,34 +374,10 @@ function ProductDetailContent({ product }: { product: Product }) {
     }
 
     return defaultAngles;
-  }, [product]);
+  }, [product, activeColor]);
 
   const [activeThumbIndex, setActiveThumbIndex] = useState(0);
   const [isFavPopping, setIsFavPopping] = useState(false);
-
-  // Exact same color options used in ProductCard & initial listing
-  const colorOptions = useMemo(() => {
-    if (product.colors && product.colors.length > 0) {
-      return product.colors.map((c) => ({
-        name: c.name,
-        hex: c.hex,
-        filter: c.filter || 'none',
-      }));
-    }
-    const tints =
-      product.tintOptions && product.tintOptions.length > 0
-        ? product.tintOptions
-        : TINT_OPTIONS;
-    return tints.map((t) => ({
-      name: t[0],
-      filter: t[1],
-      hex: t[2],
-    }));
-  }, [product]);
-
-  // Default color index is 0 ('none') so image matches product listing card exactly!
-  const [selectedColorIdx, setSelectedColorIdx] = useState(0);
-  const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
 
   const [quantity, setQuantity] = useState(1);
   const totalPrice = product.p * quantity;
@@ -939,7 +960,12 @@ function ProductDetailContent({ product }: { product: Product }) {
                   src={galleryPerspectives[activeThumbIndex]?.url || product.image}
                   alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title}`}
                   style={{
-                    filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined,
+                    filter:
+                      (!activeColor.images || activeColor.images.length === 0) &&
+                      activeColor.filter &&
+                      activeColor.filter !== 'none'
+                        ? activeColor.filter
+                        : undefined,
                   }}
                 />
               </div>

@@ -7,6 +7,7 @@ export type ProductColor = {
   name: string;
   hex: string;
   filter?: string;
+  images?: string[];
 };
 
 export type ProductInstallation = {
@@ -61,6 +62,7 @@ export interface Product {
     gstAmount: number;
   };
   wholesaleTier?: 'tier1' | 'tier2';
+  packageDimensions?: string | null;
 }
 
 // Product records are loaded from the storefront API. The remaining values are

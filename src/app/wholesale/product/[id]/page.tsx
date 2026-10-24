@@ -143,6 +143,35 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   const estimatedDealerProfit = retailResaleTotal - batchSubtotal;
   const profitMarginPercent = Math.round(((retailPrice - effectiveUnitPrice) / retailPrice) * 100);
 
+  // Color options
+  const colorOptions: { name: string; hex: string; filter: string; images?: string[] }[] = useMemo(() => {
+    if (product.colors && product.colors.length > 0) {
+      return product.colors.map((c) => ({
+        name: c.name,
+        hex: c.hex,
+        filter: c.filter || 'none',
+        images: Array.isArray(c.images) && c.images.length > 0 ? c.images : undefined,
+      }));
+    }
+    const tints =
+      product.tintOptions && product.tintOptions.length > 0
+        ? product.tintOptions
+        : TINT_OPTIONS;
+    return tints.map((t) => ({
+      name: t[0],
+      filter: t[1],
+      hex: t[2],
+      images: undefined,
+    }));
+  }, [product]);
+
+  const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
+
+  // Automatically reset active thumbnail to 0 when user changes color choice
+  useEffect(() => {
+    setActiveThumbIndex(0);
+  }, [selectedColorIdx]);
+
   // Gallery perspectives
   const galleryPerspectives = useMemo(() => {
     const defaultAngles = [
@@ -178,8 +207,19 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
       },
     ];
 
+    // Priority 1: Images uploaded specifically for the selected color choice!
+    if (activeColor?.images && activeColor.images.length > 0) {
+      return activeColor.images.map((img: string, idx: number) => ({
+        url: img,
+        title: `${activeColor.name} Angle ${idx + 1}`,
+        badge: idx === 0 ? `${activeColor.name}` : `Angle ${idx + 1}`,
+        icon: defaultAngles[idx % defaultAngles.length]?.icon || 'car',
+      }));
+    }
+
+    // Priority 2: Base gallery images of the product
     if (Array.isArray(product.images) && product.images.length > 1) {
-      return product.images.map((img, idx) => ({
+      return product.images.map((img: string, idx: number) => ({
         url: img,
         title: defaultAngles[idx % defaultAngles.length].title,
         badge: defaultAngles[idx % defaultAngles.length].badge,
@@ -188,29 +228,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
     }
 
     return defaultAngles;
-  }, [product]);
-
-  // Color options
-  const colorOptions = useMemo(() => {
-    if (product.colors && product.colors.length > 0) {
-      return product.colors.map((c) => ({
-        name: c.name,
-        hex: c.hex,
-        filter: c.filter || 'none',
-      }));
-    }
-    const tints =
-      product.tintOptions && product.tintOptions.length > 0
-        ? product.tintOptions
-        : TINT_OPTIONS;
-    return tints.map((t) => ({
-      name: t[0],
-      filter: t[1],
-      hex: t[2],
-    }));
-  }, [product]);
-
-  const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
+  }, [product, activeColor]);
 
   // Fitment string
   const fitmentLabel = useMemo(() => {
@@ -349,9 +367,17 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             {/* Main Image with dynamic tint filter */}
             <div className="ws-pdp-art-frame">
               <ProductArt
-                product={product}
+                product={{
+                  ...product,
+                  image: galleryPerspectives[activeThumbIndex]?.url || product.image,
+                }}
                 style={{
-                  filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined,
+                  filter:
+                    (!activeColor.images || activeColor.images.length === 0) &&
+                    activeColor.filter &&
+                    activeColor.filter !== 'none'
+                      ? activeColor.filter
+                      : undefined,
                 }}
               />
             </div>
@@ -800,6 +826,12 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   <span className="ws-spec-key">Country of Origin</span>
                   <span className="ws-spec-val">Made in India (CarXen Automotive Facilities)</span>
                 </div>
+                {product.packageDimensions && (
+                  <div className="ws-spec-item">
+                    <span className="ws-spec-key">Package Dimensions (L × W × H)</span>
+                    <span className="ws-spec-val">{product.packageDimensions}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

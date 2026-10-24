@@ -41,12 +41,13 @@ export function WholesaleProductCard({
   const marginPercent = Math.round(((retailPrice - t1) / retailPrice) * 100);
 
   // Use identical color options as storefront
-  const colorOptions = useMemo(() => {
+  const colorOptions: { name: string; hex: string; filter: string; images?: string[] }[] = useMemo(() => {
     if (product.colors && product.colors.length > 0) {
       return product.colors.map((c) => ({
         name: c.name,
         hex: c.hex,
         filter: c.filter || 'none',
+        images: Array.isArray(c.images) && c.images.length > 0 ? c.images : undefined,
       }));
     }
     const tints =
@@ -57,6 +58,7 @@ export function WholesaleProductCard({
       name: t[0],
       filter: t[1],
       hex: t[2],
+      images: undefined,
     }));
   }, [product]);
 
@@ -140,10 +142,15 @@ export function WholesaleProductCard({
 
         {/* Artwork */}
         <ProductArt
-          product={product}
+          product={{
+            ...product,
+            image: colorOptions[selectedColorIdx]?.images?.[0] || product.image,
+          }}
           style={{
             filter:
-              activeTintFilter && activeTintFilter !== 'none'
+              (!colorOptions[selectedColorIdx]?.images || colorOptions[selectedColorIdx]?.images.length === 0) &&
+              activeTintFilter &&
+              activeTintFilter !== 'none'
                 ? activeTintFilter
                 : undefined,
           }}

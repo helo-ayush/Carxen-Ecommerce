@@ -3,6 +3,7 @@ import type {
   Product,
   ProductArtKey,
   ProductCategory,
+  ProductColor,
   ProductSeries,
   ProductTintOption,
 } from '@/data/products';
@@ -51,6 +52,7 @@ export interface EcommerceProductRow {
   wholesalePrice?: number | string | null;
   b2bMoq?: number | string | null;
   discountLimitQty?: number | string | null;
+  packageDimensions?: string | null;
 }
 
 export class CatalogConfigurationError extends Error {
@@ -209,8 +211,12 @@ function asSpecifications(value: unknown): [string, string][] {
   }
 
   if (value && typeof value === 'object') {
+    if ('items' in value && Array.isArray((value as Record<string, unknown>).items)) {
+      return asSpecifications((value as Record<string, unknown>).items);
+    }
     const specifications: [string, string][] = [];
     for (const [k, v] of Object.entries(value)) {
+      if (k === 'discountLimitQty' || k === 'packageDimensions' || k === 'items') continue;
       const key = asNonEmptyString(k);
       const label = asNonEmptyString(v);
       if (key && label) specifications.push([key, label]);
@@ -244,6 +250,33 @@ function asTintOptions(value: unknown): ProductTintOption[] | undefined {
   }
 
   return options.length > 0 ? options : undefined;
+}
+
+function asColors(value: unknown): ProductColor[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const colors: ProductColor[] = [];
+  for (const item of value) {
+    if (item && typeof item === 'object') {
+      const option = item as Record<string, unknown>;
+      const name = asNonEmptyString(option.name ?? option.label);
+      const hex = asNonEmptyString(option.hex ?? option.color);
+      const filter = asNonEmptyString(option.filter ?? option.cssFilter);
+      const images = Array.isArray(option.images)
+        ? (option.images as unknown[]).map(String).filter((img) => img.trim().length > 0)
+        : undefined;
+      if (name && hex) {
+        colors.push({
+          name,
+          hex,
+          ...(filter ? { filter } : {}),
+          ...(images && images.length > 0 ? { images } : {}),
+        });
+      }
+    }
+  }
+
+  return colors.length > 0 ? colors : undefined;
 }
 
 function getFallbackTags(category: ProductCategory, isCustomFit: boolean, name: string): string[] {
@@ -317,7 +350,21 @@ function mapProductRow(
       .replace(/(^-|-$)/g, '');
   const categoryLabel =
     asNonEmptyString(row.categoryLabel) || asNonEmptyString(row.categoryKey) || 'Accessories';
+  const colors = asColors(row.colors);
   const tintOptions = asTintOptions(row.colors) || asTintOptions(row.tintOptions);
+  const packageDimensions = (() => {
+    if (row.specifications && typeof row.specifications === 'object') {
+      const s = row.specifications as Record<string, unknown>;
+      if (typeof s.packageDimensions === 'string' && s.packageDimensions.trim()) {
+        return s.packageDimensions.trim();
+      }
+    }
+    if (specifications) {
+      const item = specifications.find(([k]) => /dimension/i.test(k));
+      if (item && item[1]?.trim()) return item[1].trim();
+    }
+    return null;
+  })();
 
   return {
     id,
@@ -338,8 +385,10 @@ function mapProductRow(
     ...(row.isPickup ? { pk: 1 } : {}),
     d: description,
     sp: specifications,
+    packageDimensions,
     slug,
     categoryLabel,
+    ...(colors ? { colors } : {}),
     ...(tintOptions ? { tintOptions } : {}),
     fitment: row.fitment,
     installation: row.installation as any,
