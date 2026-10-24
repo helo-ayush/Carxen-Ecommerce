@@ -74,6 +74,11 @@ export async function GET(request: Request) {
       b2bAppliedAt: (customer as any).b2bAppliedAt || null,
       b2bReviewedAt: (customer as any).b2bReviewedAt || null,
       b2bRejectionReason: (customer as any).b2bRejectionReason || null,
+      referenceNumber:
+        meta.referenceNumber ||
+        ((customer as any).gstin
+          ? `CX-B2B-${(customer as any).gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+          : `CX-B2B-${((customer as any).id || '8841').slice(-6).toUpperCase()}`),
     };
 
     return NextResponse.json({

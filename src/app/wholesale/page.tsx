@@ -313,7 +313,7 @@ export default function WholesaleDashboardPage() {
   if (isWholesalePending) {
     const applicantName = b2bProfile?.businessName || user?.name || 'Apex Automotive';
     const applicantGstin = b2bProfile?.gstin || '22AAAAA0000A1Z5';
-    const refCode = `CX-B2B-${(applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) || '8841').toUpperCase()}`;
+    const refCode = b2bProfile?.referenceNumber || `CX-B2B-${(applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) || '8841').toUpperCase()}`;
 
     return (
       <div className="ws-page-container">

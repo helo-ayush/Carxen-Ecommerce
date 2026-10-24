@@ -137,6 +137,10 @@ export async function POST(request: Request) {
         ? [{ type: 'applicant_note', text: notes.trim(), date: now }]
         : [];
 
+    const referenceNumber = normalizedGstin
+      ? `CX-B2B-${normalizedGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4)}`
+      : `CX-B2B-${(customer?.id || authUser?.id || crypto.randomUUID()).replace(/[^A-Za-z0-9]/g, '').slice(-6).toUpperCase()}`;
+
     const b2bData = {
       name: name.trim(),
       email: normalizedEmail || null,
@@ -160,10 +164,13 @@ export async function POST(request: Request) {
     };
 
     if (customer?.id) {
-      // Update existing customer record
+      const existingMeta = (customer.metadata || {}) as Record<string, any>;
       const { error: updateError } = await supabase
         .from('ecommerce_customers')
-        .update(b2bData)
+        .update({
+          ...b2bData,
+          metadata: { ...existingMeta, referenceNumber },
+        })
         .eq('id', customer.id);
 
       if (updateError) {
@@ -174,6 +181,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         b2bStatus: 'PENDING',
+        referenceNumber,
         message: 'Your B2B application has been received and is under review in Carxen Veda.',
       });
     }
@@ -191,9 +199,13 @@ export async function POST(request: Request) {
       }
 
       if (existingCust) {
+        const existingMeta = ((existingCust as any).metadata || {}) as Record<string, any>;
         const { error: updateError } = await supabase
           .from('ecommerce_customers')
-          .update(b2bData)
+          .update({
+            ...b2bData,
+            metadata: { ...existingMeta, referenceNumber },
+          })
           .eq('id', existingCust.id);
 
         if (updateError) {
@@ -204,6 +216,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           b2bStatus: 'PENDING',
+          referenceNumber,
           message: 'Your B2B application has been received and is under review in Carxen Veda.',
         });
       }
@@ -223,6 +236,7 @@ export async function POST(request: Request) {
           tier: 'Wholesale Applicant',
           rewardPoints: 500,
           joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          referenceNumber,
         },
         createdAt: now,
         ...b2bData,
@@ -236,6 +250,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       b2bStatus: 'PENDING',
+      referenceNumber,
       message: 'Your B2B application has been received and is under review in Carxen Veda.',
     });
   } catch (err) {

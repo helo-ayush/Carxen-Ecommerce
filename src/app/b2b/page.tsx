@@ -482,7 +482,11 @@ export default function B2BWholesalePage() {
   // --------------------------------------------------------------------------
   if (isWholesalePending || justSubmitted) {
     const activeBusiness = b2bProfile?.businessName || formData.businessName || 'Your Dealership';
-    const referenceId = `CX-B2B-${(user?.id || 'APEX').slice(-6).toUpperCase()}`;
+    const referenceId =
+      b2bProfile?.referenceNumber ||
+      (b2bProfile?.gstin
+        ? `CX-B2B-${b2bProfile.gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+        : `CX-B2B-${(user?.id || 'APEX').slice(-6).toUpperCase()}`);
     const appliedDate = b2bProfile?.appliedAt
       ? new Date(b2bProfile.appliedAt).toLocaleDateString('en-IN', {
           day: 'numeric',

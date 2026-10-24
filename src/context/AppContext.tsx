@@ -75,6 +75,7 @@ export interface B2BProfile {
   rejectionReason?: string;
   inquiryMessage?: string;
   appliedAt?: string;
+  referenceNumber?: string;
 }
 
 export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
@@ -363,6 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               rejectionReason: data.profile.b2bRejectionReason || undefined,
               inquiryMessage: data.profile.b2bRejectionReason || undefined,
               appliedAt: data.profile.b2bAppliedAt || undefined,
+              referenceNumber: data.profile.referenceNumber || undefined,
             });
           }
         }
@@ -1333,6 +1335,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               expectedMonthlyVolume: applicationData.expectedMonthlyVolume,
               wholesaleTier: 'tier1',
               appliedAt: new Date().toISOString(),
+              referenceNumber:
+                data.referenceNumber ||
+                (applicationData.gstin
+                  ? `CX-B2B-${applicationData.gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+                  : 'CX-B2B-8841'),
             });
             showToast('Wholesale application submitted for review');
             return { success: true };
