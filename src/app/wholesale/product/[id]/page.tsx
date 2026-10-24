@@ -46,7 +46,9 @@ import {
   Clock,
   PhoneCall,
   ExternalLink,
+  Maximize2,
 } from 'lucide-react';
+import { ProductImageLightbox } from '@/components/ProductImageLightbox';
 import '../../wholesale.css';
 
 export default function WholesaleProductDetailPage() {
@@ -123,6 +125,17 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState<number>(initialQty);
   const [selectedColorIdx, setSelectedColorIdx] = useState<number>(0);
   const [activeThumbIndex, setActiveThumbIndex] = useState<number>(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
+  const [isHoverZooming, setIsHoverZooming] = useState<boolean>(false);
+  const [zoomOrigin, setZoomOrigin] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+
+  const handleShowcaseMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setZoomOrigin({ x, y });
+  };
+
   const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'install' | 'box' | 'commercial'>('specs');
   const [isAdding, setIsAdding] = useState<boolean>(false);
 
@@ -323,7 +336,14 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
       <div className="ws-pdp-hero-grid">
         {/* LEFT: Showcase Media, Perspectives & B2B Technical Highlights */}
         <div className="ws-pdp-gallery-col">
-          <div className="ws-pdp-showcase-box">
+          <div
+            className="ws-pdp-showcase-box zoomable group"
+            onClick={() => setIsLightboxOpen(true)}
+            onMouseEnter={() => setIsHoverZooming(true)}
+            onMouseLeave={() => setIsHoverZooming(false)}
+            onMouseMove={handleShowcaseMouseMove}
+            title="Click to view in full screen & 4x zoom"
+          >
             {/* Top Badges */}
             <div className="ws-pdp-badges-overlay">
               <span className="ws-pdp-overlay-chip moq">
@@ -350,7 +370,10 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             <button
               type="button"
               className="ws-pdp-arrow left"
-              onClick={() => setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1));
+              }}
               aria-label="Previous image perspective"
             >
               <ChevronLeft size={20} />
@@ -358,14 +381,39 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             <button
               type="button"
               className="ws-pdp-arrow right"
-              onClick={() => setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1));
+              }}
               aria-label="Next image perspective"
             >
               <ChevronRight size={20} />
             </button>
 
-            {/* Main Image with dynamic tint filter */}
-            <div className="ws-pdp-art-frame">
+            {/* Quick Full Screen & Zoom Trigger Button */}
+            <button
+              type="button"
+              className="ws-pdp-fullscreen-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLightboxOpen(true);
+              }}
+              title="Open Full Screen & Interactive Zoom"
+              aria-label="Open Full Screen and Zoom"
+            >
+              <Maximize2 size={13} />
+              <span>Full Screen / Zoom</span>
+            </button>
+
+            {/* Main Image with dynamic cursor-following zoom & tint filter */}
+            <div
+              className="ws-pdp-art-frame"
+              style={{
+                transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                transform: isHoverZooming ? 'scale(1.55)' : 'scale(1)',
+                transition: isHoverZooming ? 'transform 0.08s ease-out' : 'transform 0.3s ease',
+              }}
+            >
               <ProductArt
                 product={{
                   ...product,
@@ -1095,6 +1143,25 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
           </div>
         </div>
       )}
+
+      {/* Fullscreen & Interactive Zoom Lightbox Modal */}
+      <ProductImageLightbox
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        images={galleryPerspectives}
+        activeIndex={activeThumbIndex}
+        onIndexChange={setActiveThumbIndex}
+        productName={product.n}
+        categoryLabel={categoryName}
+        colorName={activeColor?.name}
+        colorFilter={
+          (!activeColor.images || activeColor.images.length === 0) &&
+          activeColor.filter &&
+          activeColor.filter !== 'none'
+            ? activeColor.filter
+            : undefined
+        }
+      />
     </div>
   );
 }

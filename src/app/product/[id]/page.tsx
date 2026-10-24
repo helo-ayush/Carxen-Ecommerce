@@ -62,8 +62,10 @@ import {
   ChevronRight,
   Gauge,
   Compass,
+  Maximize2,
 } from 'lucide-react';
 
+import { ProductImageLightbox } from '@/components/ProductImageLightbox';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import '@/components/storefront/product-subtle-layout.css';
 
@@ -377,6 +379,17 @@ function ProductDetailContent({ product }: { product: Product }) {
   }, [product, activeColor]);
 
   const [activeThumbIndex, setActiveThumbIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isHoverZooming, setIsHoverZooming] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
+
+  const handleShowcaseMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setZoomOrigin({ x, y });
+  };
+
   const [isFavPopping, setIsFavPopping] = useState(false);
 
   const [quantity, setQuantity] = useState(1);
@@ -910,8 +923,15 @@ function ProductDetailContent({ product }: { product: Product }) {
           <div className="ps-gallery-layout">
             {/* Showcase & Slider Column */}
             <div className="ps-showcase-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
-              {/* Main Showcase Hero Display with Hover Prev/Next Arrows */}
-              <div className="ps-showcase-box">
+              {/* Main Showcase Hero Display with Hover Prev/Next Arrows & Fullscreen Zoom */}
+              <div
+                className="ps-showcase-box zoomable group"
+                onClick={() => setIsLightboxOpen(true)}
+                onMouseEnter={() => setIsHoverZooming(true)}
+                onMouseLeave={() => setIsHoverZooming(false)}
+                onMouseMove={handleShowcaseMouseMove}
+                title="Click to view full screen & 4x zoom"
+              >
                 {/* High-Contrast Fitment & Series Overlay Badge */}
                 <div className="ps-badge-overlay">
                   <span className={`ps-overlay-pill ${custom ? 'ps-custom-fit' : ''}`}>
@@ -940,7 +960,10 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <button
                   type="button"
                   className="ps-showcase-arrow ps-arrow-left"
-                  onClick={() => setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1));
+                  }}
                   aria-label="Previous perspective"
                 >
                   <ChevronLeft size={20} />
@@ -948,18 +971,39 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <button
                   type="button"
                   className="ps-showcase-arrow ps-arrow-right"
-                  onClick={() => setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1));
+                  }}
                   aria-label="Next perspective"
                 >
                   <ChevronRight size={20} />
                 </button>
 
-                {/* Showcase Image or SVG Art */}
+                {/* Quick Full Screen & Zoom Trigger Button */}
+                <button
+                  type="button"
+                  className="ps-fullscreen-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLightboxOpen(true);
+                  }}
+                  title="Open Full Screen & Interactive Zoom"
+                  aria-label="Open Full Screen and Zoom"
+                >
+                  <Maximize2 size={13} />
+                  <span>Full Screen / Zoom</span>
+                </button>
+
+                {/* Showcase Image with interactive cursor-following zoom */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={galleryPerspectives[activeThumbIndex]?.url || product.image}
                   alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title}`}
                   style={{
+                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                    transform: isHoverZooming ? 'scale(1.55)' : 'scale(1)',
+                    transition: isHoverZooming ? 'transform 0.08s ease-out' : 'transform 0.3s ease',
                     filter:
                       (!activeColor.images || activeColor.images.length === 0) &&
                       activeColor.filter &&
@@ -2239,6 +2283,25 @@ function ProductDetailContent({ product }: { product: Product }) {
           </button>
         </div>
       </div>
+
+      {/* Fullscreen & Interactive Zoom Lightbox Modal */}
+      <ProductImageLightbox
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        images={galleryPerspectives}
+        activeIndex={activeThumbIndex}
+        onIndexChange={setActiveThumbIndex}
+        productName={product.n}
+        categoryLabel={product.c ? `${product.c.toUpperCase()} COLLECTION` : 'CARXEN SIGNATURE'}
+        colorName={activeColor?.name}
+        colorFilter={
+          (!activeColor.images || activeColor.images.length === 0) &&
+          activeColor.filter &&
+          activeColor.filter !== 'none'
+            ? activeColor.filter
+            : undefined
+        }
+      />
 
       {/* Footer at bottom with ZERO trailing whitespace */}
       <Footer />

@@ -3751,6 +3751,44 @@ body:has(.wholesale-sidebar) .ws-page-container {
   right: 12px;
 }
 
+.ws-pdp-showcase-box.zoomable {
+  cursor: zoom-in;
+}
+
+.ws-pdp-fullscreen-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 12;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ws-pdp-fullscreen-btn:hover {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.ws-pdp-fullscreen-btn svg {
+  color: var(--ws-red, #dc2626);
+}
+
 /* Perspective Thumbnails */
 .ws-pdp-thumbs-row {
   display: grid;
