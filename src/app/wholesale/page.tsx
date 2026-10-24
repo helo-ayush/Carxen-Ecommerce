@@ -4,8 +4,22 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { WholesaleIcon, WholesaleMark } from '@/components/wholesale/WholesaleIcon';
-import { ArrowRight, AlertCircle, ExternalLink, Send } from 'lucide-react';
+import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
+import { 
+  ArrowRight, 
+  AlertCircle, 
+  Send, 
+  Clock, 
+  Check, 
+  CheckCircle2, 
+  Building2, 
+  ShieldCheck, 
+  Sparkles, 
+  Lock, 
+  ExternalLink,
+  RefreshCw,
+  BadgeCheck
+} from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
@@ -22,6 +36,7 @@ export default function WholesaleDashboardPage() {
     setWorkspaceMode,
     logout,
     showToast,
+    refreshCustomerProfile,
   } = useApp();
 
   const [formData, setFormData] = useState({
@@ -42,6 +57,7 @@ export default function WholesaleDashboardPage() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -297,23 +313,274 @@ export default function WholesaleDashboardPage() {
 
   // 3. Application Gate: Verification In Progress
   if (isWholesalePending) {
+    const applicantName = b2bProfile?.businessName || user?.name || 'Apex Automotive';
+    const applicantGstin = b2bProfile?.gstin || '22AAAAA0000A1Z5';
+    const refCode = `CX-B2B-${(applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) || '8841').toUpperCase()}`;
+
     return (
       <div className="ws-page-container">
-        <div className="ws-empty-state-card" style={{ maxWidth: '640px', margin: '40px auto', padding: '48px 32px' }}>
-          <div className="ws-empty-icon-wrap" style={{ background: '#fffbeb', color: '#d97706' }}>
-            <WholesaleIcon name="shield" size={32} />
+        <div className="ws-review-wrapper">
+          {/* Top Header Card with Reference Badge */}
+          <div className="ws-review-header-card">
+            <div className="ws-review-header-left">
+              <div className="ws-review-status-pill">
+                <span className="ws-review-pulse-dot" />
+                <span>Verification In Progress · Commercial Desk Active</span>
+              </div>
+              <h1>Wholesale Partner Application Under Active Review</h1>
+              <p>
+                Your CarXen commercial partnership application for <strong>{applicantName}</strong> has been logged in our enterprise registry and assigned to our underwriting desk.
+              </p>
+            </div>
+            <div className="ws-review-header-right">
+              <div className="ws-ref-badge-card">
+                <span className="ws-ref-label">Enterprise Reference</span>
+                <span className="ws-ref-code">{refCode}</span>
+                <span className="ws-ref-sla">Priority SLA: &lt; 4 Hours</span>
+              </div>
+            </div>
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
-            Application Under Review
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '24px' }}>
-            Your CarXen wholesale partner account for <strong>{b2bProfile?.businessName || user?.name || 'Applicant'}</strong> is being verified by our commercial desk (GSTIN: {b2bProfile?.gstin || 'Submitted'}).
-          </p>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          {/* 4-Step Verification Tracker */}
+          <div className="ws-review-tracker-card">
+            <div className="ws-review-tracker-title">
+              <div className="ws-tracker-title-left">
+                <Clock size={16} color="#d97706" />
+                <span>Verification Milestones & Progress</span>
+              </div>
+              <div className="ws-review-sla-badge">
+                <span>Avg Decision Time: 2–4 Business Hours</span>
+              </div>
+            </div>
+
+            {/* Connecting progress bar */}
+            <div className="ws-tracker-pipeline-bar">
+              <div className="ws-tracker-pipeline-fill" />
+            </div>
+
+            <div className="ws-review-steps-grid">
+              {/* Step 1: Completed */}
+              <div className="ws-review-step completed">
+                <div className="ws-step-top">
+                  <div className="ws-review-step-icon">
+                    <Check size={16} strokeWidth={3} />
+                  </div>
+                  <span className="ws-step-status-tag done">01 · Done</span>
+                </div>
+                <div className="ws-review-step-content">
+                  <h4>Application Logged</h4>
+                  <p>Corporate profile, contact info & trade authorization recorded.</p>
+                </div>
+              </div>
+
+              {/* Step 2: Active */}
+              <div className="ws-review-step active">
+                <div className="ws-step-top">
+                  <div className="ws-review-step-icon">
+                    <span className="ws-step-inner-ping" />
+                  </div>
+                  <span className="ws-step-status-tag underway">02 · In Review</span>
+                </div>
+                <div className="ws-review-step-content">
+                  <h4>GSTIN & Identity Check</h4>
+                  <p>Verifying tax compliance, ITC eligibility & business jurisdiction.</p>
+                </div>
+              </div>
+
+              {/* Step 3: Next */}
+              <div className="ws-review-step pending">
+                <div className="ws-step-top">
+                  <div className="ws-review-step-icon">
+                    <Lock size={14} />
+                  </div>
+                  <span className="ws-step-status-tag queued">03 · Queued</span>
+                </div>
+                <div className="ws-review-step-content">
+                  <h4>Margin Tier Setup</h4>
+                  <p>Assigning Tier 1 (15%) or Tier 2 (25%) factory procurement pricing.</p>
+                </div>
+              </div>
+
+              {/* Step 4: Final */}
+              <div className="ws-review-step pending">
+                <div className="ws-step-top">
+                  <div className="ws-review-step-icon">
+                    <Sparkles size={14} />
+                  </div>
+                  <span className="ws-step-status-tag queued">04 · Final Step</span>
+                </div>
+                <div className="ws-review-step-content">
+                  <h4>Procurement Unlocked</h4>
+                  <p>Quick Order Matrix, volume quotes & offline tax invoice PO flow.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Symmetrical 2-Column Bento Layout */}
+          <div className="ws-review-symmetrical-grid">
+            {/* Left Column: Dossier Card */}
+            <div className="ws-review-dossier-card">
+              <div>
+                <div className="ws-dossier-header">
+                  <div className="ws-dossier-icon">
+                    <Building2 size={20} />
+                  </div>
+                  <div>
+                    <h3>Partner Application Dossier</h3>
+                    <p className="ws-dossier-subtext">Enterprise registry details submitted for underwriting</p>
+                  </div>
+                </div>
+
+                {/* 2x3 Balanced Data Tiles Grid */}
+                <div className="ws-dossier-tiles-grid">
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">Legal Business Entity</span>
+                    <strong className="ws-data-tile-value" title={applicantName}>{applicantName}</strong>
+                  </div>
+
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">GSTIN Identification</span>
+                    <div className="ws-data-tile-flex">
+                      <code>{applicantGstin}</code>
+                      <span className="ws-gstin-valid-badge">
+                        <Check size={11} strokeWidth={3} />
+                        Format Verified
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">Authorized Signatory</span>
+                    <strong className="ws-data-tile-value">{user?.name || 'Signatory on file'}</strong>
+                  </div>
+
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">Assigned Desk</span>
+                    <span className="ws-data-tile-value">Commercial Ops — Gurugram Hub</span>
+                  </div>
+
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">Turnaround Target</span>
+                    <span className="ws-turnaround-pill">Same-Day Review (&lt; 4h)</span>
+                  </div>
+
+                  <div className="ws-data-tile">
+                    <span className="ws-data-tile-label">Target Margin Tier</span>
+                    <span className="ws-data-tile-value">Tier 1 (15% Baseline)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ws-dossier-footer-note">
+                <ShieldCheck size={16} className="ws-footer-note-icon" />
+                <p>
+                  <strong>Automated Live Transition:</strong> When approved, your account instantly elevates to <em>Verified Wholesale Partner</em> with no re-login required.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column: Matched Height Perks & Fast Track */}
+            <div className="ws-review-right-column">
+              {/* Card 1: Unlocking Privileges */}
+              <div className="ws-review-perks-card">
+                <div className="ws-perks-header">
+                  <div className="ws-perks-header-icon">
+                    <BadgeCheck size={18} />
+                  </div>
+                  <div>
+                    <h4>Privileges Unlocking on Approval</h4>
+                    <p className="ws-perks-subtext">Commercial terms activated immediately upon approval</p>
+                  </div>
+                </div>
+
+                <div className="ws-perks-list">
+                  <div className="ws-perk-item">
+                    <div className="ws-perk-bullet">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <strong>Direct Factory Margins (15% – 25%)</strong>
+                      <span>Guaranteed bulk wholesale pricing on 7D mats, custom seat covers & wraps.</span>
+                    </div>
+                  </div>
+
+                  <div className="ws-perk-item">
+                    <div className="ws-perk-bullet">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <strong>Zero-Payment Online PO Flow</strong>
+                      <span>Place enterprise batch orders online instantly with offline tax invoice settlement.</span>
+                    </div>
+                  </div>
+
+                  <div className="ws-perk-item">
+                    <div className="ws-perk-bullet">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <strong>Priority Factory Line Allocation</strong>
+                      <span>Direct production batch queuing with priority 24–48h express carrier dispatch.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: WhatsApp Desk Assistance */}
+              <div className="ws-review-fasttrack-card">
+                <div className="ws-fasttrack-body">
+                  <div className="ws-fasttrack-icon">
+                    <WholesaleIcon name="phone" size={18} />
+                  </div>
+                  <div className="ws-fasttrack-text">
+                    <strong>Need Urgent Stock for Showroom?</strong>
+                    <p>Have an urgent opening or fleet order? Contact our commercial verification desk on WhatsApp for expedited review.</p>
+                  </div>
+                </div>
+
+                <div className="ws-fasttrack-action-row">
+                  <a
+                    href={`https://wa.me/919876543210?text=Hi%20CarXen,%20I%20have%20submitted%20my%20wholesale%20partner%20application%20for%20${encodeURIComponent(applicantName)}%20(GSTIN:%20${applicantGstin}).%20Please%20expedite%20my%20review.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ws-fasttrack-wa-btn"
+                  >
+                    <span>Expedite via WhatsApp Desk</span>
+                    <ExternalLink size={13} />
+                  </a>
+                  <span className="ws-desk-hours-note">Desk active Mon–Sat 9:30 AM – 7:00 PM IST</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Toolbar */}
+          <div className="ws-review-actions-bar">
+            <button
+              type="button"
+              className="ws-btn-status-check"
+              disabled={checkingStatus}
+              onClick={async () => {
+                setCheckingStatus(true);
+                try {
+                  await refreshCustomerProfile();
+                  showToast('Application status checked: Commercial review is currently in progress.');
+                } catch {
+                  showToast('Application is currently under commercial review.');
+                } finally {
+                  setTimeout(() => setCheckingStatus(false), 600);
+                }
+              }}
+            >
+              <RefreshCw size={14} className={checkingStatus ? 'ws-spin' : ''} />
+              <span>{checkingStatus ? 'Checking Status...' : 'Check Status Now'}</span>
+            </button>
+
             <Link href="/" className="ws-btn-secondary">
               CarXen Home
             </Link>
+
             <button
               type="button"
               className="ws-btn-secondary"
@@ -386,23 +653,27 @@ export default function WholesaleDashboardPage() {
       <div className="ws-bento-grid">
         <div className="ws-hero-card-clean">
           <div>
-            <span className="ws-hero-badge">Verified Partner</span>
+            <span className="ws-hero-badge">
+              <span className="ws-hero-badge-dot" />
+              <span>Verified Partner</span>
+            </span>
             <h2>{businessName}</h2>
             <p>
               Welcome back to the CarXen B2B Procurement Workspace. Bulk catalog access, volume margins, and CarXen factory fulfillment are active.
             </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Link href="/wholesale/quick-order" className="ws-btn-primary ws-btn-brand">
-                <WholesaleIcon name="quick-order" size={15} />
+            <div className="ws-hero-actions">
+              <Link href="/wholesale/quick-order" className="ws-hero-btn-primary">
+                <WholesaleIcon name="quick-order" size={16} />
                 <span>Open Quick Order Matrix</span>
               </Link>
-              <Link href="/wholesale/catalog" className="ws-btn-secondary" style={{ background: 'rgba(255,255,255,0.12)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)' }}>
+              <Link href="/wholesale/catalog" className="ws-hero-btn-catalogue">
+                <WholesaleIcon name="catalogue" size={16} />
                 <span>Browse Catalogue</span>
               </Link>
             </div>
           </div>
-          <div style={{ opacity: 0.85 }}>
-            <WholesaleMark size={84} />
+          <div className="ws-hero-logo-showcase">
+            <img src="/logo.png" alt="CARXEN" className="ws-hero-logo-img" />
           </div>
         </div>
 
@@ -443,21 +714,7 @@ export default function WholesaleDashboardPage() {
         </div>
       </div>
 
-      {/* Protocol Strip */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ color: '#059669' }}>
-            <WholesaleIcon name="shield" size={24} />
-          </div>
-          <div>
-            <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block' }}>Zero Online Payment by Design</strong>
-            <span style={{ fontSize: '12.5px', color: '#64748b' }}>Confirm bulk requests directly. CarXen coordinates factory allocation and offline commercial settlement.</span>
-          </div>
-        </div>
-        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#475569', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '6px' }}>
-          Commercial Protocol Active
-        </span>
-      </div>
+
 
       {/* Workspace Shortcuts */}
       <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -488,29 +745,6 @@ export default function WholesaleDashboardPage() {
             </div>
           </Link>
         ))}
-      </div>
-
-      {/* Commercial Desk Support Card */}
-      <div className="ws-table-card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff1f0', color: '#e2231a', display: 'grid', placeItems: 'center' }}>
-            <WholesaleIcon name="phone" size={20} />
-          </div>
-          <div>
-            <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block' }}>CarXen Commercial Desk</strong>
-            <span style={{ fontSize: '12.5px', color: '#64748b' }}>Custom vehicle orders, bulk proformas & priority allocation · <strong>+91 98765 43210</strong></span>
-          </div>
-        </div>
-
-        <a
-          href="https://wa.me/919876543210"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ws-btn-secondary"
-        >
-          <span>WhatsApp Commercial Desk</span>
-          <ExternalLink size={14} />
-        </a>
       </div>
     </div>
   );

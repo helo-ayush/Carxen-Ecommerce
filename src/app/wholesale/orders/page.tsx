@@ -260,30 +260,34 @@ export default function WholesaleOrdersPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+      <div className="ws-tabs-container">
         <button
           type="button"
           onClick={() => setActiveTab('all')}
-          className={`ws-btn-secondary ${activeTab === 'all' ? 'active' : ''}`}
-          style={activeTab === 'all' ? { background: '#0f172a', color: '#ffffff', borderColor: '#0f172a' } : undefined}
+          className={`ws-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
         >
-          All Orders ({allOrders.length})
+          <span>All Orders</span>
+          <span className="ws-tab-count">{allOrders.length}</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('active')}
-          className={`ws-btn-secondary ${activeTab === 'active' ? 'active' : ''}`}
-          style={activeTab === 'active' ? { background: '#0f172a', color: '#ffffff', borderColor: '#0f172a' } : undefined}
+          className={`ws-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
         >
-          Active in Pipeline (1)
+          <span>Active in Pipeline</span>
+          <span className="ws-tab-count">
+            {allOrders.filter((o) => o.status !== 'DELIVERED').length}
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('completed')}
-          className={`ws-btn-secondary ${activeTab === 'completed' ? 'active' : ''}`}
-          style={activeTab === 'completed' ? { background: '#0f172a', color: '#ffffff', borderColor: '#0f172a' } : undefined}
+          className={`ws-tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
         >
-          Delivered / Invoiced (1)
+          <span>Delivered / Invoiced</span>
+          <span className="ws-tab-count">
+            {allOrders.filter((o) => o.status === 'DELIVERED').length}
+          </span>
         </button>
       </div>
 

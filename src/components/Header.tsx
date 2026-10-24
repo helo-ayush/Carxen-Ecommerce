@@ -323,12 +323,31 @@ function HeaderContent() {
 
           <div className="wholesale-sidebar-spacer" />
 
-          <div className="wholesale-sidebar-card">
+          {/* CarXen Commercial Desk in Sidebar */}
+          <div className="wholesale-sidebar-card ws-sidebar-commercial-desk">
             <div className="ws-sidebar-card-header">
-              <WholesaleIcon name="shield" size={16} />
-              <span>Zero-Payment Flow</span>
+              <WholesaleIcon name="phone" size={14} />
+              <span>CarXen Commercial Desk</span>
             </div>
-            <p>Confirm orders online. CarXen issues commercial invoice on dispatch.</p>
+            <p className="ws-sidebar-desk-desc">
+              Custom vehicle orders, bulk proformas & priority allocation
+            </p>
+            <div className="ws-sidebar-desk-phone">
+              +91 98765 43210
+            </div>
+            <a
+              href="https://wa.me/919876543210"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ws-sidebar-desk-wa-btn"
+            >
+              <span>WhatsApp Commercial Desk</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
           </div>
 
           {/* Clean Logout button replacing Personal Shopping */}
