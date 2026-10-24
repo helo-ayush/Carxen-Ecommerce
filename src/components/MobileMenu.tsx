@@ -139,11 +139,8 @@ export function MobileMenu() {
             <Link href="/#reviews" onClick={closeMobileMenu} style={{ transitionDelay: '.38s' }}>
               <i>05</i>Reviews
             </Link>
-            <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.45s' }}>
-              <i>06</i>Wholesale Portal
-            </Link>
-            <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.52s' }}>
-              <i>07</i>Shop now
+            <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.45s' }}>
+              <i>06</i>Shop now
             </Link>
           </>
         ) : (

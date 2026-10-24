@@ -346,33 +346,41 @@ function mapProductRow(
     isCombo: Boolean(row.isCombo),
     comboItems: Array.isArray(row.comboItems) ? (row.comboItems as any) : undefined,
     customFit: isCustomFit,
-    discountLimitQty: (() => {
-      const specLimit = row.specifications && typeof (row.specifications as any).discountLimitQty === 'number'
-        ? (row.specifications as any).discountLimitQty
-        : null;
-      const parsedLimit = asFiniteNumber((row as any).discountLimitQty ?? specLimit);
-      return parsedLimit !== null && parsedLimit > 0 ? parsedLimit : null;
-    })(),
-    wholesalePrice: (() => {
-      const parsed = asFiniteNumber(row.wholesalePrice);
-      return parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
-    })(),
-    b2bMoq: (() => {
-      const parsed = asFiniteNumber(row.b2bMoq);
-      return parsed !== null && parsed > 0 ? parsed : 5;
-    })(),
-    taxBreakdown: (() => {
-      const parsed = asFiniteNumber(row.wholesalePrice);
-      const wsPrice = parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
-      const basePriceExGst = Math.round(wsPrice / 1.18);
-      const gstAmount = wsPrice - basePriceExGst;
-      return {
-        gstPercent: 18,
-        basePriceExGst,
-        gstAmount,
-      };
-    })(),
-    wholesaleTier: wholesaleTier || 'tier1',
+    discountLimitQty: isWholesale
+      ? (() => {
+          const specLimit = row.specifications && typeof (row.specifications as any).discountLimitQty === 'number'
+            ? (row.specifications as any).discountLimitQty
+            : null;
+          const parsedLimit = asFiniteNumber((row as any).discountLimitQty ?? specLimit);
+          return parsedLimit !== null && parsedLimit > 0 ? parsedLimit : null;
+        })()
+      : null,
+    wholesalePrice: isWholesale
+      ? (() => {
+          const parsed = asFiniteNumber(row.wholesalePrice);
+          return parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
+        })()
+      : undefined,
+    b2bMoq: isWholesale
+      ? (() => {
+          const parsed = asFiniteNumber(row.b2bMoq);
+          return parsed !== null && parsed > 0 ? parsed : 5;
+        })()
+      : undefined,
+    taxBreakdown: isWholesale
+      ? (() => {
+          const parsed = asFiniteNumber(row.wholesalePrice);
+          const wsPrice = parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
+          const basePriceExGst = Math.round(wsPrice / 1.18);
+          const gstAmount = wsPrice - basePriceExGst;
+          return {
+            gstPercent: 18,
+            basePriceExGst,
+            gstAmount,
+          };
+        })()
+      : undefined,
+    wholesaleTier: isWholesale ? (wholesaleTier || 'tier1') : undefined,
   };
 }
 

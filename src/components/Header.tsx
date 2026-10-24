@@ -477,33 +477,6 @@ function HeaderContent() {
 
             {/* Retail Tools */}
             <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
-              {/* Workspace Switcher to Wholesale - only on landing page */}
-              {isLandingPage && (
-                <Link
-                  href="/wholesale"
-                  className={`wholesale-workspace-switch-btn ${
-                    isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : ''
-                  }`}
-                  title="Switch to Wholesale Partner Workspace"
-                  onClick={() => setWorkspaceMode('wholesale')}
-                >
-                  <span
-                    className={
-                      isWholesaleApproved
-                        ? 'wholesale-badge-dot'
-                        : isWholesalePending
-                        ? 'wholesale-badge-amber-dot'
-                        : 'wholesale-badge-neutral-dot'
-                    }
-                  />
-                  <span className="wholesale-switch-text">Wholesale Portal</span>
-                  {isWholesaleApproved && (
-                    <span className="wholesale-micro-tier">
-                      {b2bProfile?.wholesaleTier === 'tier2' ? 'T2' : 'T1'}
-                    </span>
-                  )}
-                </Link>
-              )}
 
               {isLandingPage && (
                 <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">

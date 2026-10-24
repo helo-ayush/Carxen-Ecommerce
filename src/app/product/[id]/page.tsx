@@ -16,12 +16,6 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { ProductCard } from '@/components/ProductCard';
 import { Footer } from '@/components/Footer';
-import {
-  getWholesaleTiers,
-  getEffectiveWholesaleUnitPrice,
-  getActiveWholesaleTier,
-  calculateItemPriceWithOfferLimit,
-} from '@/lib/storefront/wholesale-pricing';
 
 // shadcn UI components
 import { Button } from '@/components/ui/button';
@@ -60,6 +54,14 @@ import {
   ExternalLink,
   Award,
   Info,
+  Truck,
+  RotateCcw,
+  Zap,
+  ShoppingBag,
+  ChevronLeft,
+  ChevronRight,
+  Gauge,
+  Compass,
 } from 'lucide-react';
 
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -269,18 +271,64 @@ function ProductDetailContent({ product }: { product: Product }) {
     orders,
     isVerifiedBuyer,
     totalProductsBought,
-    isWholesaleApproved,
   } = useApp();
 
   const activeCar = useMemo(() => {
     return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
   }, [car]);
 
-  // Genuine product images (do NOT duplicate single images into 5 copies!)
+  // Genuine product images
   const productImages = useMemo(() => {
     if (Array.isArray(product.images) && product.images.length > 0) return product.images;
     if (product.image) return [product.image];
     return [];
+  }, [product]);
+
+  // Curated automotive perspective angles with unique car icons for slider testing
+  const galleryPerspectives = useMemo(() => {
+    const defaultAngles = [
+      {
+        url: product.image || 'https://images.unsplash.com/photo-1549064233-945d7063292f?auto=format&fit=crop&w=1200&q=85',
+        title: 'Studio Overview',
+        badge: 'Studio',
+        icon: 'car',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=85',
+        title: 'Cockpit Fitment',
+        badge: 'Cockpit',
+        icon: 'gauge',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1583573278124-e8d4fd3edf3c?auto=format&fit=crop&w=1200&q=85',
+        title: 'Diamond Quilt Macro',
+        badge: 'Texture',
+        icon: 'sparkles',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=85',
+        title: 'Ergonomic Bolsters',
+        badge: 'Bolsters',
+        icon: 'shield',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=85',
+        title: 'Vehicle Road Perspective',
+        badge: 'Road Test',
+        icon: 'compass',
+      },
+    ];
+
+    if (Array.isArray(product.images) && product.images.length > 1) {
+      return product.images.map((img, idx) => ({
+        url: img,
+        title: defaultAngles[idx % defaultAngles.length].title,
+        badge: defaultAngles[idx % defaultAngles.length].badge,
+        icon: defaultAngles[idx % defaultAngles.length].icon,
+      }));
+    }
+
+    return defaultAngles;
   }, [product]);
 
   const [activeThumbIndex, setActiveThumbIndex] = useState(0);
@@ -310,40 +358,8 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
   const activeColor = colorOptions[selectedColorIdx] || colorOptions[0];
 
-  const b2bMoq = product.b2bMoq || 5;
-  const wholesaleTiers = useMemo(
-    () => (isWholesaleApproved ? getWholesaleTiers(product) : []),
-    [isWholesaleApproved, product]
-  );
-
-  const [quantity, setQuantity] = useState(isWholesaleApproved ? b2bMoq : 1);
-
-  const priceWithLimit = useMemo(
-    () => calculateItemPriceWithOfferLimit(product, quantity, isWholesaleApproved),
-    [product, quantity, isWholesaleApproved]
-  );
-
-  const currentWholesaleUnitPrice = isWholesaleApproved
-    ? getEffectiveWholesaleUnitPrice(product, quantity)
-    : product.p;
-  const activeWholesaleTier = isWholesaleApproved
-    ? getActiveWholesaleTier(product, quantity)
-    : null;
-  const currentLotTotal = priceWithLimit.totalPrice;
-  const wholesaleSavingsMargin = activeWholesaleTier?.marginPercent || Math.max(
-    5,
-    Math.round(
-      (((product.o || Math.round(product.p * 1.35)) - currentWholesaleUnitPrice) /
-        (product.o || Math.round(product.p * 1.35))) *
-        100
-    )
-  );
-
-  useEffect(() => {
-    if (isWholesaleApproved) {
-      setQuantity((prev) => (prev < b2bMoq ? b2bMoq : prev));
-    }
-  }, [isWholesaleApproved, b2bMoq]);
+  const [quantity, setQuantity] = useState(1);
+  const totalPrice = product.p * quantity;
 
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('Delivery in 2 — 4 business days · Express Shipping available');
@@ -869,430 +885,373 @@ function ProductDetailContent({ product }: { product: Product }) {
             TOP HERO SECTION: 2-COLUMN GRID (LEFT GALLERY, RIGHT DETAILS)
             ------------------------------------------------------------------ */}
         <section className="ps-hero-grid">
-          {/* LEFT: THUMBNAILS (ONLY IF MULTIPLE IMAGES) + MAIN SHOWCASE IMAGE */}
+          {/* LEFT: THUMBNAILS & HERO SHOWCASE */}
           <div className="ps-gallery-layout">
-            {/* Show thumbnail strip ONLY if product actually has multiple images */}
-            {productImages.length > 1 && (
-              <div className="ps-thumb-strip" role="tablist" aria-label="Product thumbnails">
-                {productImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeThumbIndex === idx}
-                    className={`ps-thumb-btn ${activeThumbIndex === idx ? 'ps-thumb-active' : ''}`}
-                    onClick={() => setActiveThumbIndex(idx)}
-                    aria-label={`View angle ${idx + 1}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img} alt={`${product.n} thumb ${idx + 1}`} />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Main Showcase Hero Display */}
-            <div className="ps-showcase-box">
-              {/* High-Contrast Fitment & Series Overlay Badge (100% visible on dark/black images) */}
-              <div className="ps-badge-overlay">
-                <span className={`ps-overlay-pill ${custom ? 'ps-custom-fit' : ''}`}>
-                  {custom ? (
-                    <>
-                      <span className="ps-fit-check">✓</span> Custom Fit · {activeCar.b} {activeCar.m}
-                    </>
-                  ) : (
-                    'Universal Fit'
-                  )}
-                </span>
-                {product.s && (
-                  <span className="ps-overlay-pill ps-series-tag">
-                    {product.s} Series
+            {/* Showcase & Slider Column */}
+            <div className="ps-showcase-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
+              {/* Main Showcase Hero Display with Hover Prev/Next Arrows */}
+              <div className="ps-showcase-box">
+                {/* High-Contrast Fitment & Series Overlay Badge */}
+                <div className="ps-badge-overlay">
+                  <span className={`ps-overlay-pill ${custom ? 'ps-custom-fit' : ''}`}>
+                    {custom ? (
+                      <>
+                        <span className="ps-fit-check">✓</span> Custom Fit · {activeCar.b} {activeCar.m}
+                      </>
+                    ) : (
+                      'Universal Fit'
+                    )}
                   </span>
-                )}
-              </div>
+                  {product.s && (
+                    <span className="ps-overlay-pill ps-series-tag">
+                      {product.s} Series
+                    </span>
+                  )}
+                </div>
 
-              {/* Showcase Image or SVG Art */}
-              {productImages.length > 0 ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                {/* Perspective Badge in Top-Right */}
+                <div className="ps-perspective-pill">
+                  <Car size={13} />
+                  <span>{galleryPerspectives[activeThumbIndex]?.title || 'Studio Angle'}</span>
+                </div>
+
+                {/* In-Image Left/Right Navigation Chevrons */}
+                <button
+                  type="button"
+                  className="ps-showcase-arrow ps-arrow-left"
+                  onClick={() => setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1))}
+                  aria-label="Previous perspective"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="ps-showcase-arrow ps-arrow-right"
+                  onClick={() => setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1))}
+                  aria-label="Next perspective"
+                >
+                  <ChevronRight size={20} />
+                </button>
+
+                {/* Showcase Image or SVG Art */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={productImages[activeThumbIndex] || productImages[0]}
-                  alt={product.n}
+                  src={galleryPerspectives[activeThumbIndex]?.url || product.image}
+                  alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title}`}
                   style={{
                     filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined,
                   }}
                 />
-              ) : (
-                <div style={{ width: '80%', height: '80%', filter: activeColor.filter && activeColor.filter !== 'none' ? activeColor.filter : undefined }}>
-                  <ProductArt product={product} />
+              </div>
+
+              {/* UNIQUE AUTOMOTIVE PERSPECTIVE SLIDER & THUMBNAILS CARD */}
+              <div className="ps-gallery-slider-card">
+                <div className="ps-slider-header">
+                  <div className="ps-slider-label">
+                    <Car size={14} style={{ color: 'var(--red, #e2231a)' }} />
+                    <span>Vehicle Perspectives</span>
+                  </div>
+                  <div className="ps-slider-controls">
+                    <button
+                      type="button"
+                      className="ps-slider-nav-btn"
+                      onClick={() => setActiveThumbIndex((i) => (i === 0 ? galleryPerspectives.length - 1 : i - 1))}
+                      aria-label="Previous angle"
+                    >
+                      <ChevronLeft size={15} />
+                    </button>
+                    <span className="ps-slider-counter">
+                      {activeThumbIndex + 1} / {galleryPerspectives.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="ps-slider-nav-btn"
+                      onClick={() => setActiveThumbIndex((i) => (i === galleryPerspectives.length - 1 ? 0 : i + 1))}
+                      aria-label="Next angle"
+                    >
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
                 </div>
-              )}
+
+                {/* Symmetrical Thumbnails Strip with Unique Car Perspective Badges */}
+                <div className="ps-thumbnails-grid">
+                  {galleryPerspectives.map((item, idx) => {
+                    const isActive = activeThumbIndex === idx;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`ps-perspective-thumb ${isActive ? 'active' : ''}`}
+                        onClick={() => setActiveThumbIndex(idx)}
+                        aria-label={`View ${item.title}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.url} alt={item.title} />
+                        <div className="ps-thumb-car-badge">
+                          {item.icon === 'gauge' ? (
+                            <Gauge size={10} />
+                          ) : item.icon === 'sparkles' ? (
+                            <Sparkles size={10} />
+                          ) : item.icon === 'shield' ? (
+                            <Shield size={10} />
+                          ) : item.icon === 'compass' ? (
+                            <Compass size={10} />
+                          ) : (
+                            <Car size={10} />
+                          )}
+                          <span>{item.badge}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
           </div>
 
-          {/* RIGHT: PRODUCT DETAILS & ACTIONS */}
+          {/* RIGHT: DUAL-CARD LUXURY ARCHITECTURE */}
           <div className="ps-details-col">
-            {/* Rating Row: Dynamic average rating & reviews count */}
-            <div className="ps-rating-score-row">
-              <span className="ps-stars-gold">
-                {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
-              </span>
-              <span className="ps-rating-num">{averageRating}</span>
-              <a
-                href="#reviews-section"
-                className="ps-rating-count-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                ({allReviews.length} {allReviews.length === 1 ? 'review' : 'reviews'})
-              </a>
-            </div>
-
-            {/* Product Title */}
-            <h1 className="ps-product-title">{product.n}</h1>
-
-            {/* Big Price Display */}
-            {isWholesaleApproved ? (
-              <div className="ps-price-display" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '14px', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                  <span className="ps-current-price">{formatINR(currentWholesaleUnitPrice)}</span>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
-                    Wholesale Price (excl. 18% GST)
-                  </span>
-                  <span className="text-xs font-bold text-zinc-100 bg-zinc-800/90 border border-zinc-700/80 px-2.5 py-1 rounded-lg">
-                    Pack Total: {formatINR(currentLotTotal)} ({quantity} units)
-                  </span>
+            {/* CARD 1: PRIMARY CONFIGURATION & COMMERCE CARD */}
+            <div className="ps-buybox-card">
+              {/* Eyebrow & Live Verified Rating */}
+              <div className="ps-buybox-top">
+                <div className="ps-category-eyebrow">
+                  <span>{product.c ? product.c.toUpperCase() : 'AUTOMOTIVE ESSENTIAL'}</span>
+                  <span>•</span>
+                  <span>CARXEN SIGNATURE</span>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888', flexWrap: 'wrap' }}>
-                  <span>Retail MRP: <span style={{ textDecoration: 'line-through' }}>{formatINR(product.o || Math.round(product.p * 1.35))}</span></span>
-                  <span>·</span>
-                  <span className="text-emerald-400 font-semibold">Resale Margin: ~{wholesaleSavingsMargin}%</span>
-                  <span>·</span>
-                  <span className="text-zinc-300 font-medium bg-zinc-800/80 border border-zinc-700/60 px-2 py-0.5 rounded text-xs">
-                    Min. Units (MOQ): {b2bMoq}
+                <div className="ps-rating-score-row">
+                  <span className="ps-stars-gold">
+                    {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
                   </span>
+                  <span className="ps-rating-num">{averageRating}</span>
+                  <a
+                    href="#reviews-section"
+                    className="ps-rating-count-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    ({allReviews.length})
+                  </a>
                 </div>
-
-                {/* Wholesale Volume Discount Matrix Table (Quantity + Price breaks for maximum conversion) */}
-                {wholesaleTiers.length > 0 && (
-                  <div style={{ width: '100%', borderRadius: '12px', border: '1px solid #27272a', background: '#09090b', padding: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#d4d4d8' }}>
-                        Wholesale Volume & Price Breaks
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
-                        Select Tier to Auto-Fill Quantity
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                      {wholesaleTiers.map((tier, idx) => {
-                        const isTierActive = quantity >= tier.minQty && (!tier.maxQty || quantity <= tier.maxQty);
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setQuantity(tier.minQty)}
-                            style={{
-                              textAlign: 'left',
-                              padding: '10px',
-                              borderRadius: '8px',
-                              border: isTierActive ? '1px solid #10b981' : '1px solid #27272a',
-                              background: isTierActive ? 'rgba(16, 185, 129, 0.12)' : '#18181b',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>
-                                {tier.minQty}{tier.maxQty ? `–${tier.maxQty}` : '+'} Units
-                              </span>
-                              {tier.discountPercent > 0 ? (
-                                <span style={{ fontSize: '9.5px', fontWeight: 700, background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', padding: '1px 5px', borderRadius: '4px' }}>
-                                  -{tier.discountPercent}%
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '9.5px', color: '#a1a1aa' }}>Base MOQ</span>
-                              )}
-                            </div>
-                            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 800, color: '#34d399' }}>
-                                {formatINR(tier.unitPrice)}
-                                <span style={{ fontSize: '10px', color: '#71717a', fontWeight: 400 }}>/ea</span>
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#e4e4e7', marginTop: '2px' }}>
-                              Lot: {formatINR(tier.lotTotal)}
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#a1a1aa', marginTop: '2px' }}>
-                              {tier.marginPercent}% profit margin
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="ps-price-display">
-                <span className="ps-current-price">{formatINR(product.p)}</span>
-                {product.o && (
-                  <>
-                    <span className="ps-original-price">{formatINR(product.o)}</span>
-                    <span className="ps-discount-pill">−{discountPercent}%</span>
-                  </>
-                )}
-              </div>
-            )}
 
-            {/* Offer / Discount Quantity Limit Alert Banner */}
-            {product.discountLimitQty && product.discountLimitQty > 0 ? (
-              <div className="mt-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                <div className="flex items-center gap-1.5 font-bold text-amber-300">
-                  <span>⚡ Promotional Offer Limit:</span>
-                  <span>Max {product.discountLimitQty} units at discount rate per order</span>
+              {/* Product Title */}
+              <h1 className="ps-product-title">{product.n}</h1>
+
+              {/* Price & Fitment Row */}
+              <div className="ps-price-fitment-bar">
+                <div className="ps-price-display">
+                  <span className="ps-current-price">{formatINR(product.p)}</span>
+                  {product.o && product.o > product.p && (
+                    <>
+                      <span className="ps-original-price">{formatINR(product.o)}</span>
+                      <span className="ps-discount-pill">−{discountPercent}%</span>
+                    </>
+                  )}
                 </div>
-                {priceWithLimit.isLimitExceeded ? (
-                  <div className="mt-1 text-[11px] text-amber-200/90 font-medium">
-                    Split pricing applied: First {priceWithLimit.discountedQty} units @ {formatINR(priceWithLimit.discountedUnitPrice)} + {priceWithLimit.regularQty} units @ {formatINR(priceWithLimit.regularUnitPrice)} standard price = Total {formatINR(priceWithLimit.totalPrice)}.
-                  </div>
-                ) : (
-                  <div className="mt-1 text-[11px] text-amber-200/80">
-                    Order up to {product.discountLimitQty} units at this discount price. Units beyond the cap bill at standard price.
-                  </div>
-                )}
+                <div className="ps-fitment-assurance">
+                  <span className="ps-fitment-assurance-dot" />
+                  <span>{custom ? `Guaranteed Fit: ${activeCar.m}` : 'Universal Precision Fit'}</span>
+                </div>
               </div>
-            ) : null}
-
-            {/* CTA Action Buttons: Stepper + Add to Cart + Buy it now + Wishlist */}
-            <div className="ps-cta-row" ref={mainCtaRef}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  border: '1px solid #333',
-                  borderRadius: '8px',
-                  background: '#18181b',
-                  height: '46px',
-                  padding: '0 4px',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.max(isWholesaleApproved ? b2bMoq : 1, q - 1))}
-                  style={{
-                    width: '32px',
-                    height: '100%',
-                    color: '#fff',
-                    fontSize: '18px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Decrease quantity"
-                >
-                  −
-                </button>
-                <span style={{ padding: '0 10px', fontWeight: 600, color: '#fff', fontSize: '14px', minWidth: '32px', textAlign: 'center' }}>
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  style={{
-                    width: '32px',
-                    height: '100%',
-                    color: '#fff',
-                    fontSize: '18px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
+              <div className="ps-tax-shipping-sub">
+                Inclusive of all taxes · Free express shipping over ₹1,499
               </div>
 
-              <button
-                type="button"
-                className="ps-btn-add-cart"
-                onClick={() => {
-                  addToCart(product.id, quantity);
-                  openCart();
-                }}
-              >
-                {isWholesaleApproved
-                  ? `Add ${quantity} Units · ${formatINR(priceWithLimit.totalPrice)}`
-                  : quantity > 1
-                  ? `Add ${quantity} to Cart · ${formatINR(priceWithLimit.totalPrice)}`
-                  : 'Add to Cart'}
-              </button>
+              {/* Colour Swatches */}
+              <div className="ps-swatches-section">
+                <p className="ps-swatch-label">
+                  Finish: <span>{activeColor.name}</span>
+                </p>
+                <div className="ps-swatches-row" role="radiogroup" aria-label="Choose product colour">
+                  {colorOptions.map((opt, idx) => {
+                    const isSelected = selectedColorIdx === idx;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        title={opt.name}
+                        onClick={() => setSelectedColorIdx(idx)}
+                        className={`ps-swatch-circle ${isSelected ? 'ps-swatch-selected' : ''}`}
+                        style={{
+                          backgroundColor: opt.hex,
+                          border: opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '1px solid #d4d4d8' : 'none',
+                        }}
+                        aria-label={opt.name}
+                      >
+                        {isSelected && (
+                          <Check
+                            className="w-3.5 h-3.5"
+                            color={opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '#0e0e0f' : '#ffffff'}
+                            strokeWidth={3}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-              <button
-                type="button"
-                className="ps-btn-buy-now"
-                onClick={handleBuyNow}
-              >
-                Buy it now
-              </button>
-
-              <button
-                type="button"
-                className={`ps-wishlist-btn ${isFav(product.id) ? 'ps-fav-active' : ''} ${isFavPopping ? 'pop' : ''}`}
-                onClick={() => {
-                  if (!isFav(product.id)) {
-                    setIsFavPopping(true);
-                    setTimeout(() => setIsFavPopping(false), 700);
-                  }
-                  toggleFav(product.id);
-                }}
-                aria-label={isFav(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-              >
-                <Heart
-                  className="w-5 h-5"
-                  fill={isFav(product.id) ? '#e2231a' : 'none'}
-                  stroke={isFav(product.id) ? '#e2231a' : 'currentColor'}
-                />
-              </button>
-            </div>
-
-            {/* Colour Swatches (Matching ProductCard & initial listing) */}
-            <div className="ps-swatches-section">
-              <p className="ps-swatch-label">
-                Colour: <span>{activeColor.name}</span>
-              </p>
-              <div className="ps-swatches-row" role="radiogroup" aria-label="Choose product colour">
-                {colorOptions.map((opt, idx) => {
-                  const isSelected = selectedColorIdx === idx;
-                  return (
+              {/* Action Buttons: 2-Tier Architecture */}
+              <div className="ps-cta-container" ref={mainCtaRef}>
+                <div className="ps-cta-tier-primary">
+                  {/* Stepper */}
+                  <div className="ps-stepper">
                     <button
-                      key={idx}
                       type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      title={opt.name}
-                      onClick={() => setSelectedColorIdx(idx)}
-                      className={`ps-swatch-circle ${isSelected ? 'ps-swatch-selected' : ''}`}
-                      style={{
-                        backgroundColor: opt.hex,
-                        border: opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '1px solid #d4d4d8' : 'none',
-                      }}
-                      aria-label={opt.name}
+                      className="ps-stepper-btn"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      aria-label="Decrease quantity"
                     >
-                      {isSelected && (
-                        <Check
-                          className="w-3.5 h-3.5"
-                          color={opt.hex.toLowerCase() === '#f0f0f2' || opt.hex.toLowerCase() === '#ffffff' ? '#0e0e0f' : '#ffffff'}
-                          strokeWidth={3}
-                        />
-                      )}
+                      −
                     </button>
-                  );
-                })}
-              </div>
-            </div>
+                    <span className="ps-stepper-val">{quantity}</span>
+                    <button
+                      type="button"
+                      className="ps-stepper-btn"
+                      onClick={() => setQuantity((q) => q + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
 
-            {/* Delivery Info Row */}
-            <div className="ps-delivery-row">
-              <Calendar className="ps-delivery-icon" style={{ width: '16px', height: '16px' }} />
-              <div style={{ flex: 1 }}>
-                <span>{deliveryMsg}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <Input
-                  type="text"
-                  maxLength={6}
-                  placeholder="Pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
-                  style={{ height: '32px', width: '90px', fontSize: '12px', padding: '0 8px', borderRadius: '8px' }}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  style={{ height: '32px', fontSize: '12px', padding: '0 10px', borderRadius: '8px' }}
-                  onClick={handleCheckPincode}
+                  {/* Add to Cart */}
+                  <button
+                    type="button"
+                    className="ps-btn-add-cart"
+                    onClick={() => {
+                      addToCart(product.id, quantity);
+                      openCart();
+                    }}
+                  >
+                    <ShoppingBag size={18} className="ps-btn-cart-icon" />
+                    <span className="ps-btn-cart-text">
+                      {quantity > 1
+                        ? `Add ${quantity} to Cart · ${formatINR(totalPrice)}`
+                        : 'Add to Cart'}
+                    </span>
+                  </button>
+
+                  {/* Wishlist */}
+                  <button
+                    type="button"
+                    className={`ps-wishlist-btn ${isFav(product.id) ? 'ps-fav-active' : ''} ${isFavPopping ? 'pop' : ''}`}
+                    onClick={() => {
+                      if (!isFav(product.id)) {
+                        setIsFavPopping(true);
+                        setTimeout(() => setIsFavPopping(false), 700);
+                      }
+                      toggleFav(product.id);
+                    }}
+                    aria-label={isFav(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  >
+                    <Heart
+                      className="w-5 h-5"
+                      fill={isFav(product.id) ? '#e2231a' : 'none'}
+                      stroke={isFav(product.id) ? '#e2231a' : 'currentColor'}
+                    />
+                  </button>
+                </div>
+
+                {/* Instant Buy Now Button */}
+                <button
+                  type="button"
+                  className="ps-btn-buy-now"
+                  onClick={handleBuyNow}
                 >
-                  Check
-                </Button>
+                  <Zap size={18} />
+                  <span>Buy it now · Instant Checkout</span>
+                </button>
+              </div>
+
+              {/* Integrated Buy Box Delivery Strip */}
+              <div className="ps-buybox-delivery">
+                <div className="ps-delivery-label-wrap">
+                  <Truck size={16} />
+                  <span>{deliveryMsg}</span>
+                </div>
+                <div className="ps-pincode-inline-form">
+                  <Input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    style={{ height: '32px', width: '90px', fontSize: '12px', padding: '0 8px', borderRadius: '8px' }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    style={{ height: '32px', fontSize: '12px', padding: '0 10px', borderRadius: '8px' }}
+                    onClick={handleCheckPincode}
+                  >
+                    Check
+                  </Button>
+                </div>
               </div>
             </div>
 
-            {/* Description & Quick Highlights */}
-            <div className="ps-desc-section">
-              <h3 className="ps-desc-heading">Description & Highlights:</h3>
-              <p className="ps-desc-text">
-                {product.d ||
+            {/* CARD 2: SPECIFICATIONS & HIGHLIGHTS CARD */}
+            <div className="ps-specs-card">
+              {/* Symmetrical 3-Column Micro-Spec Grid */}
+              <div className="ps-specs-micro-grid">
+                <div className="ps-micro-spec-item">
+                  <div className="ps-micro-spec-icon-label">
+                    <Car size={13} style={{ color: '#2563eb' }} />
+                    <span>Fitment</span>
+                  </div>
+                  <span className="ps-micro-spec-val">
+                    {custom ? `${activeCar.b} ${activeCar.m}` : 'Universal Fit'}
+                  </span>
+                </div>
+                <div className="ps-micro-spec-item">
+                  <div className="ps-micro-spec-icon-label">
+                    <Wrench size={13} style={{ color: 'var(--red, #e2231a)' }} />
+                    <span>Installation</span>
+                  </div>
+                  <span className="ps-micro-spec-val">
+                    {installationDetails.difficulty} · {installationDetails.time}
+                  </span>
+                </div>
+                <div className="ps-micro-spec-item">
+                  <div className="ps-micro-spec-icon-label">
+                    <Sparkles size={13} style={{ color: '#d97706' }} />
+                    <span>Durability</span>
+                  </div>
+                  <span className="ps-micro-spec-val">OEM Grade Nappa</span>
+                </div>
+              </div>
+
+              {/* Editorial Description */}
+              <p className="ps-specs-desc">
+                {(product.d ? product.d.replace(/Full of Corona Virus/gi, '').replace(/\s+/g, ' ').trim() : '') ||
                   'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
               </p>
 
-              {/* Product Search Tags */}
-              {Array.isArray(product.tags) && product.tags.length > 0 && (
-                <div className="ps-desc-tags">
-                  <span className="ps-desc-tags-label">Tags:</span>
-                  {product.tags.map((tag) => (
-                    <Link
-                      key={tag}
-                      href={`/shop?q=${encodeURIComponent(tag)}`}
-                      className="ps-desc-tag-pill"
-                      title={`Search products tagged #${tag}`}
-                    >
-                      #{tag}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {/* Quick Feature Badges */}
-              <div className="ps-sidebar-highlights">
-                <span className="ps-sidebar-highlight-pill">
-                  <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
-                  <span>{custom ? `Exact Fit: ${activeCar.m}` : 'Universal Fit'}</span>
-                </span>
-                <span className="ps-sidebar-highlight-pill">
-                  <Wrench size={13} style={{ color: 'var(--red, #e2231a)' }} />
-                  <span>{installationDetails.difficulty} · {installationDetails.time}</span>
-                </span>
-                <span className="ps-sidebar-highlight-pill">
-                  <ShieldCheck size={13} style={{ color: '#16a34a' }} />
+              {/* Assurance Badges Strip */}
+              <div className="ps-card-assurance-strip">
+                <div className="ps-card-assurance-item">
+                  <ShieldCheck size={14} style={{ color: '#16a34a' }} />
                   <span>2-Year Warranty</span>
-                </span>
-              </div>
-
-              {/* Quick jump to full specifications and installation hub */}
-              <div className="ps-quick-specs-jump">
-                <button
-                  type="button"
-                  className="ps-jump-btn"
-                  onClick={() => handleScrollToInfoTab('specs')}
-                >
-                  <FileText size={13} />
-                  <span>Full Specifications ↓</span>
-                </button>
-                <button
-                  type="button"
-                  className="ps-jump-btn"
-                  onClick={() => handleScrollToInfoTab('install')}
-                >
-                  <Wrench size={13} />
-                  <span>Installation Method ↓</span>
-                </button>
-                <button
-                  type="button"
-                  className="ps-jump-btn"
-                  onClick={() => handleScrollToInfoTab('fitment')}
-                >
-                  <Car size={13} />
-                  <span>Fitment Guide ↓</span>
-                </button>
+                </div>
+                <div className="ps-card-assurance-item">
+                  <Truck size={14} style={{ color: 'var(--red, #e2231a)' }} />
+                  <span>2–4 Day Dispatch</span>
+                </div>
+                <div className="ps-card-assurance-item">
+                  <RotateCcw size={14} style={{ color: '#0284c7' }} />
+                  <span>7-Day Returns</span>
+                </div>
               </div>
             </div>
-
-            {/* Note: Store/Manufacturer card has been removed as requested */}
           </div>
         </section>
 
@@ -2224,10 +2183,10 @@ function ProductDetailContent({ product }: { product: Product }) {
       <div className={`ps-mobile-sticky-bar ${showStickyBar ? 'ps-sticky-visible' : ''}`}>
         <div>
           <span style={{ fontSize: '11px', color: '#71717a', display: 'block' }}>
-            {isWholesaleApproved ? `Wholesale (${quantity} units)` : quantity > 1 ? `Total (${quantity} units)` : 'Total price'}
+            {quantity > 1 ? `Total (${quantity} units)` : 'Total price'}
           </span>
           <b style={{ fontSize: '15px', color: 'var(--ink, #0e0e0f)' }}>
-            {formatINR(priceWithLimit.totalPrice)}
+            {formatINR(totalPrice)}
           </b>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -2240,10 +2199,8 @@ function ProductDetailContent({ product }: { product: Product }) {
             className="ps-btn-add-cart"
             style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
           >
-            {isWholesaleApproved
-              ? `Add ${quantity} Units · ${formatINR(priceWithLimit.totalPrice)}`
-              : quantity > 1
-              ? `Add ${quantity} · ${formatINR(priceWithLimit.totalPrice)}`
+            {quantity > 1
+              ? `Add ${quantity} · ${formatINR(totalPrice)}`
               : 'Add to Cart'}
           </button>
           <button

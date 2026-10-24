@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
-import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
-import { useApp } from '@/context/AppContext';
 
 export interface ProductCardProps {
   product: Product;
@@ -34,21 +32,11 @@ export function ProductCard({
   className = '',
 }: ProductCardProps) {
   const router = useRouter();
-  const { isWholesaleApproved } = useApp();
   const [isAdding, setIsAdding] = useState(false);
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
 
-  const isB2B = Boolean(isWholesaleApproved && typeof product.wholesalePrice === 'number' && product.wholesalePrice > 0);
-  const wholesaleTiers = useMemo(() => (isB2B ? getWholesaleTiers(product) : []), [isB2B, product]);
-  const baseTier = wholesaleTiers[0];
-  const effectivePrice = isB2B && baseTier ? baseTier.unitPrice : product.p;
-  const comparePrice = isB2B ? (product.o || product.p) : (product.o && product.o > product.p ? product.o : 0);
-  const resaleMargin = isB2B && baseTier
-    ? baseTier.marginPercent
-    : 0;
-
   const discountPercent =
-    !isB2B && product.o && product.o > product.p
+    product.o && product.o > product.p
       ? Math.round(((product.o - product.p) / product.o) * 100)
       : 0;
 
@@ -81,8 +69,7 @@ export function ProductCard({
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsAdding(true);
-    const qty = isB2B ? (baseTier?.minQty || product.b2bMoq || 5) : 1;
-    onAddToCart(product.id, qty);
+    onAddToCart(product.id, 1);
     if (onOpenCart) {
       onOpenCart();
     }
@@ -99,7 +86,6 @@ export function ProductCard({
     }
     onToggleFav(product.id);
   };
-
 
   const categoryName = (() => {
     if (product.categoryLabel) return product.categoryLabel;
@@ -216,24 +202,12 @@ export function ProductCard({
           {/* Price & Swatches in a balanced, spacious row */}
           <div className="ref-bottom-row">
             <div className="ref-price-row">
-              <span className="ref-price-now">{formatINR(effectivePrice)}</span>
-              {isB2B && baseTier ? (
-                <span className="ref-b2b-unit-hint">
-                  / unit · Pack of {baseTier.minQty}
-                </span>
-              ) : (
-                product.o && product.o > product.p && (
-                  <span className="ref-price-old">{formatINR(product.o)}</span>
-                )
+              <span className="ref-price-now">{formatINR(product.p)}</span>
+              {product.o && product.o > product.p && (
+                <span className="ref-price-old">{formatINR(product.o)}</span>
               )}
-              {isB2B && resaleMargin > 0 ? (
-                <span className="ref-price-discount b2b-margin">
-                  {resaleMargin}% margin
-                </span>
-              ) : (
-                discountPercent > 0 && (
-                  <span className="ref-price-discount">-{discountPercent}%</span>
-                )
+              {discountPercent > 0 && (
+                <span className="ref-price-discount">-{discountPercent}%</span>
               )}
             </div>
 
@@ -258,30 +232,10 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Volume Tiers Matrix (Only for approved B2B Wholesale buyers) */}
-          {isB2B && wholesaleTiers.length > 1 && (
-            <div className="ref-b2b-tier-matrix">
-              <span className="ref-b2b-tier-chip active">
-                {wholesaleTiers[0].minQty}+ @ {formatINR(wholesaleTiers[0].unitPrice)}
-              </span>
-              <span className="ref-b2b-tier-chip">
-                {wholesaleTiers[1].minQty}+ @ {formatINR(wholesaleTiers[1].unitPrice)} (-{wholesaleTiers[1].discountPercent}%)
-              </span>
-            </div>
-          )}
-
-          {/* Offer / Discount Quantity Limit Badge (if applicable) */}
-          {product.discountLimitQty && product.discountLimitQty > 0 ? (
-            <div className="ref-limit-badge">
-              <span className="ref-limit-dot" />
-              <span>Offer Limit: Max {product.discountLimitQty} units at discount</span>
-            </div>
-          ) : null}
-
           {/* Primary Action Button */}
           <button
             type="button"
-            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''} ${isB2B ? 'mt-1' : ''}`}
+            className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''}`}
             onClick={handleAddClick}
             aria-label={`Add ${product.n} to cart`}
           >
@@ -299,11 +253,7 @@ export function ProductCard({
                   <circle cx="18" cy="20" r="1.5" />
                   <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
-                <span>
-                  {isB2B && baseTier
-                    ? `Add ${baseTier.minQty} Units · ${formatINR(baseTier.lotTotal)}`
-                    : 'Add to Cart'}
-                </span>
+                <span>Add to Cart</span>
               </>
             )}
           </button>
