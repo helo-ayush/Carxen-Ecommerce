@@ -1,22 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
+import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import {
-  FileText,
-  ShoppingBag,
-  Plus,
-  Check,
-  ArrowRight,
-  Download,
   Upload,
-  Copy,
-  Sparkles,
-  Layers,
+  ArrowRight,
   FileSpreadsheet,
+  X,
 } from 'lucide-react';
 import '../wholesale.css';
 
@@ -39,7 +33,7 @@ const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
   {
     id: 'list-fast-movers',
     title: 'Monthly Fast-Moving Showroom Assortment',
-    description: 'Top-selling 7D custom floor mats and steering wraps across India’s best-selling cars.',
+    description: 'Top-selling 7D custom floor mats and steering wraps across India’s best-selling car models.',
     tag: 'Recommended Stock',
     estimatedUnits: 45,
     estimatedValue: 185000,
@@ -52,7 +46,7 @@ const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
   {
     id: 'list-hyundai-pack',
     title: 'Hyundai Dealership Replenishment Pack',
-    description: 'Dedicated procurement pack for Hyundai Creta, Venue, Verna, and Alcazar accessories.',
+    description: 'Dedicated procurement pack tailored for Hyundai Creta, Venue, Verna, and Alcazar accessories.',
     tag: 'Brand Pack',
     estimatedUnits: 30,
     estimatedValue: 142000,
@@ -64,7 +58,7 @@ const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
   {
     id: 'list-suv-mahindra',
     title: 'Mahindra Scorpio-N & XUV700 Heavy-Duty Pack',
-    description: 'All-weather, heavy-duty 7D mats and reinforced memory foam cushions for rugged SUVs.',
+    description: 'All-weather, heavy-duty 7D mats and reinforced memory foam cushions for rugged full-size SUVs.',
     tag: 'SUV Specialists',
     estimatedUnits: 35,
     estimatedValue: 168000,
@@ -76,7 +70,7 @@ const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
   {
     id: 'list-monsoon',
     title: 'Monsoon All-Weather Protection Stock',
-    description: 'Water-impermeable 7D deep-dish mats designed for rain, mud, and intense showroom demand.',
+    description: 'Water-impermeable 7D deep-dish mats designed for rain, mud, and intense seasonal customer demand.',
     tag: 'Seasonal Rush',
     estimatedUnits: 50,
     estimatedValue: 245000,
@@ -89,9 +83,24 @@ const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
 
 export default function WholesaleQuotesPage() {
   const router = useRouter();
-  const { addToWholesaleBasket, showToast } = useApp();
+  const { user, isWholesaleApproved, authLoading, addToWholesaleBasket, showToast } = useApp();
   const [csvText, setCsvText] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Strict B2B verification gate
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.replace('/login?redirect=/wholesale/quotes');
+      } else if (!isWholesaleApproved) {
+        router.replace('/wholesale');
+      }
+    }
+  }, [authLoading, isWholesaleApproved, router, user]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
 
   const handleLoadListIntoBasket = (list: SavedProcurementList) => {
     list.items.forEach((item) => {
@@ -127,13 +136,17 @@ export default function WholesaleQuotesPage() {
       {/* Header Bar */}
       <div className="ws-header-bar">
         <div className="ws-header-titles">
+          <div className="ws-breadcrumb-kicker">
+            <WholesaleIcon name="spark" size={13} strokeWidth={2} />
+            <span>Assortments & Batch PO Templates</span>
+          </div>
           <h1>
-            <FileText size={26} color="#0f172a" />
-            Saved Procurement Lists & Proforma Templates
+            <WholesaleIcon name="lists" size={26} strokeWidth={2} />
+            <span>Saved Procurement Lists & Proforma Templates</span>
           </h1>
           <p>
-            One-click reorder templates, brand assortment packs, and bulk SKU sheet upload.
-            <strong> Direct offline commercial settlement with VEDA.</strong>
+            One-click reorder templates, brand assortment packs, and batch SKU sheet upload.{' '}
+            <strong>Direct offline commercial settlement with CarXen.</strong>
           </p>
         </div>
         <div className="ws-header-actions">
@@ -142,11 +155,11 @@ export default function WholesaleQuotesPage() {
             onClick={() => setShowUploadModal(true)}
             className="ws-btn-secondary"
           >
-            <Upload size={16} />
+            <Upload size={15} />
             <span>Upload SKU Sheet (CSV)</span>
           </button>
           <Link href="/wholesale/order-basket" className="ws-btn-primary">
-            <ShoppingBag size={16} />
+            <WholesaleIcon name="basket" size={15} strokeWidth={2} />
             <span>View Order Basket</span>
           </Link>
         </div>
@@ -158,7 +171,8 @@ export default function WholesaleQuotesPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -169,30 +183,62 @@ export default function WholesaleQuotesPage() {
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '560px',
+              borderRadius: '16px',
+              maxWidth: '540px',
               width: '100%',
-              padding: '32px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+              padding: '28px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <FileSpreadsheet size={24} color="#059669" />
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                Batch SKU Sheet Quick-Import
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
+                >
+                  <FileSpreadsheet size={20} />
+                </div>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                  Batch SKU Quick-Import
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUploadModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={18} />
+              </button>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', lineHeight: 1.5 }}>
-              Paste your procurement rows below in <code>ProductId, Quantity</code> format (e.g.{' '}
-              <code>1, 20</code> on each line):
+
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', lineHeight: 1.5 }}>
+              Paste your procurement rows below in <code>ProductId, Quantity</code> format:
             </p>
+
             <textarea
-              className="ws-form-textarea"
-              style={{ minHeight: '140px', fontFamily: 'monospace', fontSize: '12.5px', marginBottom: '18px' }}
+              className="ws-search-input"
+              style={{
+                width: '100%',
+                height: '130px',
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: '13px',
+                padding: '12px',
+                marginBottom: '18px',
+                resize: 'none',
+              }}
               placeholder={`1, 15\n2, 25\n3, 10\n4, 20`}
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
             />
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 type="button"
@@ -215,60 +261,24 @@ export default function WholesaleQuotesPage() {
       )}
 
       {/* Grid of Saved Lists */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '24px' }}>
+      <div className="ws-pack-grid">
         {PRESET_PROCUREMENT_LISTS.map((list) => (
-          <div
-            key={list.id}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '18px',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-            }}
-          >
+          <div key={list.id} className="ws-pack-card">
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span
-                  style={{
-                    background: '#ecfdf5',
-                    color: '#047857',
-                    border: '1px solid #a7f3d0',
-                    padding: '3px 9px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {list.tag}
-                </span>
-                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#64748b' }}>
+              <div className="ws-pack-header">
+                <span className="ws-pack-tag">{list.tag}</span>
+                <span className="ws-pack-count">
                   {list.items.length} SKUs · {list.estimatedUnits} units
                 </span>
               </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
-                {list.title}
-              </h3>
-              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-                {list.description}
-              </p>
+
+              <h3 className="ws-pack-title">{list.title}</h3>
+              <p className="ws-pack-desc">{list.description}</p>
 
               {/* Items preview */}
-              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px', marginBottom: '18px' }}>
+              <div className="ws-pack-preview-box">
                 {list.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: '12.5px',
-                      padding: '4px 0',
-                      borderBottom: idx < list.items.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    }}
-                  >
+                  <div key={idx} className="ws-pack-item-line">
                     <span style={{ color: '#334155', fontWeight: 600 }}>{item.name}</span>
                     <span style={{ color: '#0f172a', fontWeight: 700 }}>{item.quantity} pcs</span>
                   </div>
@@ -276,21 +286,13 @@ export default function WholesaleQuotesPage() {
               </div>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '16px',
-                borderTop: '1px solid #f1f5f9',
-              }}
-            >
+            <div className="ws-pack-footer">
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', display: 'block' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>
                   Est. Wholesale Value
                 </span>
-                <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
-                  {formatINR(list.estimatedValue)}
+                <span className="ws-pack-value">
+                  {formatINR(list.estimatedValue || 0)}
                 </span>
               </div>
               <button

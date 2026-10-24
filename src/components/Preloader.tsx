@@ -1,19 +1,30 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 export function Preloader() {
+  const pathname = usePathname();
   const { catalogStatus } = useApp();
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const [isUnmounted, setIsUnmounted] = useState(false);
+
+  // If on wholesale procurement workspace, bypass preloader for instant B2B productivity
+  const isWholesale = pathname?.startsWith('/wholesale');
 
   // Keep fresh ref to data readiness so timer interval sees current state
   const isDataReadyRef = useRef(false);
   isDataReadyRef.current = catalogStatus !== 'loading';
 
   useEffect(() => {
+    if (isWholesale) {
+      document.body.classList.add('ready');
+      document.body.style.overflow = '';
+      return;
+    }
+
     // Clear any previous session flag so preloader runs consistently on page load/refresh
     try {
       sessionStorage.removeItem('cx_loaded');
@@ -92,9 +103,9 @@ export function Preloader() {
       clearTimeout(fallback);
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [isWholesale]);
 
-  if (isUnmounted) return null;
+  if (isWholesale || isUnmounted) return null;
 
   return (
     <div

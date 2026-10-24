@@ -2,11 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 export function MobileMenu() {
-  const { isMobileMenuOpen, closeMobileMenu, user, car } = useApp();
+  const router = useRouter();
+  const { isMobileMenuOpen, closeMobileMenu, user, car, logout } = useApp();
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
@@ -17,7 +18,7 @@ export function MobileMenu() {
     <div className={`menu ${isMobileMenuOpen ? 'on' : ''}`} id="menu">
       <div className="wrap menu-top" style={{ width: '100%', display: 'flex' }}>
         <Link
-          href={isWholesaleMode ? '/wholesale' : '/'}
+          href="/"
           onClick={closeMobileMenu}
           className="logo logo-link"
           aria-label="CARXEN Homepage"
@@ -54,9 +55,30 @@ export function MobileMenu() {
             <Link href="/wholesale/account" onClick={closeMobileMenu} style={{ transitionDelay: '.46s' }}>
               <i>07</i>Business Account
             </Link>
-            <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.52s' }}>
-              <i>08</i>Switch to Personal Shopping
-            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                closeMobileMenu();
+                await logout();
+                router.push('/login');
+              }}
+              style={{
+                transitionDelay: '.52s',
+                background: 'none',
+                border: 'none',
+                color: '#ef4444',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                cursor: 'pointer',
+                font: 'inherit',
+                padding: '12px 0'
+              }}
+            >
+              <i style={{ color: '#ef4444' }}>08</i>Sign out
+            </button>
           </>
         ) : isLandingPage ? (
           <>
@@ -96,14 +118,11 @@ export function MobileMenu() {
             <Link href="/wishlist" onClick={closeMobileMenu} style={{ transitionDelay: '.34s' }}>
               <i>04</i>Wishlist
             </Link>
-            <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.40s' }}>
-              <i>05</i>Wholesale Portal
+            <Link href={user ? '/account' : '/login'} onClick={closeMobileMenu} style={{ transitionDelay: '.42s' }}>
+              <i>05</i>{user ? 'My Account' : 'Log in'}
             </Link>
-            <Link href={user ? '/account' : '/login'} onClick={closeMobileMenu} style={{ transitionDelay: '.46s' }}>
-              <i>06</i>{user ? 'My Account' : 'Log in'}
-            </Link>
-            <Link href="/" onClick={closeMobileMenu} style={{ transitionDelay: '.52s' }}>
-              <i>07</i>Back to Home
+            <Link href="/" onClick={closeMobileMenu} style={{ transitionDelay: '.50s' }}>
+              <i>06</i>Back to Home
             </Link>
           </>
         )}

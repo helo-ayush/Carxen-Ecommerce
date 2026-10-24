@@ -4,10 +4,12 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { WholesaleIcon, WholesaleMark } from '@/components/wholesale/WholesaleIcon';
 
 function HeaderContent() {
   const {
     user,
+    authLoading,
     fav,
     cartCount,
     openCart,
@@ -19,6 +21,8 @@ function HeaderContent() {
     b2bProfile,
     wholesaleBasketSkuCount,
     setWorkspaceMode,
+    logout,
+    showToast,
   } = useApp();
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
@@ -171,143 +175,210 @@ function HeaderContent() {
   };
 
   const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
-  const isWholesaleMode = pathname.startsWith('/wholesale') || pathname.startsWith('/b2b');
+  const isWholesaleMode = pathname.startsWith('/wholesale');
+
+  useEffect(() => {
+    if (isWholesaleMode && !authLoading) {
+      if (!user) {
+        router.replace(`/login?redirect=${encodeURIComponent(pathname || '/wholesale')}`);
+      } else if (pathname !== '/wholesale' && !isWholesaleApproved) {
+        router.replace('/wholesale');
+      }
+    }
+  }, [authLoading, isWholesaleApproved, isWholesaleMode, pathname, router, user]);
+
+  /* ==========================================================================
+     DEDICATED WHOLESALE MODE
+     No redundant top navbar duplicating the sidebar; sidebar is full-height
+     anchored from top: 0 with the original CARXEN logo.
+     ========================================================================== */
+  if (isWholesaleMode) {
+    return (
+      <>
+        {/* Mobile Header (Hidden on Desktop, only shown on screens <= 768px) */}
+        <header className="wholesale-mobile-header" aria-label="Wholesale Navigation">
+          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+            <img src="/logo.png" alt="CARXEN" className="logo-img" />
+          </Link>
+          <span className="wholesale-brand-tag" style={{ marginLeft: '4px' }}>B2B</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isWholesaleApproved && (
+              <Link
+                href="/wholesale/order-basket"
+                className="wholesale-mobile-basket-btn"
+                aria-label={`Order Basket with ${wholesaleBasketSkuCount} items`}
+              >
+                <WholesaleIcon name="basket" size={20} />
+                {wholesaleBasketSkuCount > 0 && (
+                  <span className="ws-sidebar-count">{wholesaleBasketSkuCount}</span>
+                )}
+              </Link>
+            )}
+            <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
+              <svg viewBox="0 0 24 24">
+                <path d="M3 7h18M3 12h18M3 17h18" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        {/* Full-Height Left Rail Sidebar (top: 0 to bottom: 0) */}
+        <aside className="wholesale-sidebar" aria-label="Wholesale workspace navigation">
+          {/* Brand Area with ORIGINAL CARXEN LOGO */}
+          <div className="wholesale-sidebar-brand">
+            <Link href="/" className="wholesale-sidebar-brand-link" aria-label="CARXEN Homepage">
+              <img src="/logo.png" alt="CARXEN" className="wholesale-sidebar-logo-img" />
+            </Link>
+            <span className="wholesale-sidebar-b2b-badge">B2B PORTAL</span>
+          </div>
+
+          <div className={`wholesale-sidebar-status ${isWholesaleApproved ? 'status-approved' : 'status-pending'}`}>
+            <span className="wholesale-status-ping" />
+            <span className="wholesale-status-text">
+              {isWholesaleApproved
+                ? (b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 · 25% Margin' : 'Tier 1 · 15% Margin')
+                : (isWholesalePending ? 'Verification Pending' : 'Registration Required')}
+            </span>
+          </div>
+
+          <div className="wholesale-nav-group">
+            <div className="wholesale-sidebar-label">Procurement</div>
+            {[
+              ['/wholesale', 'Overview', 'warehouse'],
+              ['/wholesale/catalog', 'Catalogue', 'catalogue'],
+              ['/wholesale/quick-order', 'Quick Order Matrix', 'quick-order'],
+              ['/wholesale/order-basket', 'Order Basket', 'basket'],
+            ].map(([href, label, icon]) => {
+              const active = href === '/wholesale' ? pathname === href : pathname.startsWith(href);
+              const isLocked = !isWholesaleApproved && href !== '/wholesale';
+
+              if (isLocked) {
+                return (
+                  <button
+                    type="button"
+                    key={href}
+                    onClick={() => {
+                      router.push('/wholesale');
+                      showToast('Wholesale procurement is strictly restricted to verified commercial partners.');
+                    }}
+                    className="wholesale-sidebar-link locked"
+                    title="Commercial partner verification required"
+                  >
+                    <WholesaleIcon name={icon as any} size={18} />
+                    <span>{label}</span>
+                    <span className="ws-locked-badge">🔒</span>
+                  </button>
+                );
+              }
+
+              return (
+                <Link href={href} key={href} className={`wholesale-sidebar-link ${active ? 'active' : ''}`}>
+                  <WholesaleIcon name={icon as any} size={18} />
+                  <span>{label}</span>
+                  {href === '/wholesale/order-basket' && wholesaleBasketSkuCount > 0 ? (
+                    <span className="ws-sidebar-count">{wholesaleBasketSkuCount}</span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="wholesale-nav-group">
+            <div className="wholesale-sidebar-label">Management</div>
+            {[
+              ['/wholesale/orders', 'Wholesale Orders', 'orders'],
+              ['/wholesale/quotes', 'Saved Assortments', 'lists'],
+              ['/wholesale/account', 'Business Account', 'account'],
+            ].map(([href, label, icon]) => {
+              const active = pathname.startsWith(href);
+              const isLocked = !isWholesaleApproved;
+
+              if (isLocked) {
+                return (
+                  <button
+                    type="button"
+                    key={href}
+                    onClick={() => {
+                      router.push('/wholesale');
+                      showToast('Wholesale management is strictly restricted to verified commercial partners.');
+                    }}
+                    className="wholesale-sidebar-link locked"
+                    title="Commercial partner verification required"
+                  >
+                    <WholesaleIcon name={icon as any} size={18} />
+                    <span>{label}</span>
+                    <span className="ws-locked-badge">🔒</span>
+                  </button>
+                );
+              }
+
+              return (
+                <Link href={href} key={href} className={`wholesale-sidebar-link ${active ? 'active' : ''}`}>
+                  <WholesaleIcon name={icon as any} size={18} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="wholesale-sidebar-spacer" />
+
+          <div className="wholesale-sidebar-card">
+            <div className="ws-sidebar-card-header">
+              <WholesaleIcon name="shield" size={16} />
+              <span>Zero-Payment Flow</span>
+            </div>
+            <p>Confirm orders online. CarXen issues commercial invoice on dispatch.</p>
+          </div>
+
+          {/* Clean Logout button replacing Personal Shopping */}
+          <button
+            type="button"
+            className="wholesale-sidebar-logout-btn"
+            onClick={async () => {
+              await logout();
+              router.push('/login');
+            }}
+            aria-label="Sign out of Wholesale Workspace"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Sign out</span>
+          </button>
+        </aside>
+      </>
+    );
+  }
 
   return (
     <div className={`top-nav-shell ${isRibbonHidden ? 'ribbon-hidden' : 'ribbon-visible'}`}>
-      {/* WHOLESALE BANNER vs RETAIL BANNER */}
-      {isWholesaleMode ? (
-        <div className={`ann ann-wholesale ${isRibbonHidden ? 'ann-hidden' : ''}`}>
+      {/* RETAIL BANNER */}
+      {showAnnouncement && (
+        <div className={`ann ${isRibbonHidden ? 'ann-hidden' : ''}`}>
           <div className="ann-inner">
-            <span className="ann-badge ann-badge-wholesale">B2B WORKSPACE</span>
+            {announcementConfig?.badge ? (
+              <span className="ann-badge">{announcementConfig.badge}</span>
+            ) : (
+              <span className="ann-badge">LIMITED OFFER</span>
+            )}
             <span className="ann-text">
-              Direct Factory Allocation · Verified GST Invoicing · Offline Commercial Terms (No Online Payment Required)
+              {announcementConfig?.text ||
+                '2-Year Warranty & Free Express Shipping Across India on all orders'}
             </span>
-            <span className="wholesale-desk-phone">Commercial Desk: +91 98765 43210</span>
+            {announcementConfig?.linkUrl && (
+              <Link href={announcementConfig.linkUrl} className="ann-link">
+                <span>Explore</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            )}
           </div>
         </div>
-      ) : (
-        showAnnouncement && (
-          <div className={`ann ${isRibbonHidden ? 'ann-hidden' : ''}`}>
-            <div className="ann-inner">
-              {announcementConfig?.badge ? (
-                <span className="ann-badge">{announcementConfig.badge}</span>
-              ) : (
-                <span className="ann-badge">LIMITED OFFER</span>
-              )}
-              <span className="ann-text">
-                {announcementConfig?.text ||
-                  '2-Year Warranty & Free Express Shipping Across India on all orders'}
-              </span>
-              {announcementConfig?.linkUrl && (
-                <Link href={announcementConfig.linkUrl} className="ann-link">
-                  <span>Explore</span>
-                  <span aria-hidden="true">&rarr;</span>
-                </Link>
-              )}
-            </div>
-          </div>
-        )
       )}
 
-      <header id="hdr" className={`${isScrolled ? 'sc' : ''} ${isWholesaleMode ? 'hdr-wholesale' : ''}`}>
-        {isWholesaleMode ? (
-          /* ==========================================================================
-             DEDICATED WHOLESALE B2B HEADER
-             No personal car garage, no favourites, no retail cart, no checkout
-             ========================================================================== */
-          <div className="wrap hd wholesale-hd-wrap">
-            <div className="wholesale-brand-group">
-              <Link href="/wholesale" className="logo logo-link" aria-label="CARXEN Wholesale Portal">
-                <img src="/logo.png" alt="CARXEN" className="logo-img" />
-              </Link>
-              <span className="wholesale-brand-tag">WHOLESALE</span>
-            </div>
-
-            <nav className="wholesale-nav-links" aria-label="Wholesale Navigation">
-              <Link href="/wholesale" className={pathname === '/wholesale' ? 'active' : ''}>
-                Dashboard
-              </Link>
-              <Link href="/wholesale/catalog" className={pathname.startsWith('/wholesale/catalog') ? 'active' : ''}>
-                Catalogue
-              </Link>
-              <Link
-                href="/wholesale/quick-order"
-                className={pathname.startsWith('/wholesale/quick-order') || pathname.startsWith('/b2b/quick-order') ? 'active' : ''}
-              >
-                Quick Order
-              </Link>
-              <Link
-                href="/wholesale/order-basket"
-                className={`wholesale-nav-basket-link ${pathname.startsWith('/wholesale/order-basket') ? 'active' : ''}`}
-              >
-                <span>Order Basket</span>
-                {wholesaleBasketSkuCount > 0 && (
-                  <span className="wholesale-nav-badge">{wholesaleBasketSkuCount}</span>
-                )}
-              </Link>
-              <Link href="/wholesale/orders" className={pathname.startsWith('/wholesale/orders') ? 'active' : ''}>
-                Orders
-              </Link>
-              <Link href="/wholesale/quotes" className={pathname.startsWith('/wholesale/quotes') ? 'active' : ''}>
-                Quotes
-              </Link>
-              <Link href="/wholesale/account" className={pathname.startsWith('/wholesale/account') ? 'active' : ''}>
-                Business Account
-              </Link>
-            </nav>
-
-            <div className="wholesale-hd-tools">
-              <div className="wholesale-partner-pill" title="Verified Wholesale Partner">
-                <span className="wholesale-badge-dot" />
-                <span className="wholesale-biz-name">
-                  {b2bProfile?.businessName || user?.name || 'Wholesale Partner'}
-                </span>
-                <span className="wholesale-tier-chip">
-                  {b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2' : 'Tier 1'}
-                </span>
-              </div>
-
-              <Link
-                href="/wholesale/order-basket"
-                className="wholesale-basket-action-btn"
-                title="Open Wholesale Order Basket"
-                aria-label={`Order Basket with ${wholesaleBasketSkuCount} items`}
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 8h12l1 12H5L6 8z" />
-                  <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-                </svg>
-                <span className="basket-lbl">Basket</span>
-                {wholesaleBasketSkuCount > 0 && (
-                  <span className="wholesale-basket-badge">{wholesaleBasketSkuCount}</span>
-                )}
-              </Link>
-
-              <Link
-                href="/shop"
-                className="wholesale-switch-retail-btn"
-                title="Switch to Personal Retail Shopping"
-                onClick={() => setWorkspaceMode('retail')}
-              >
-                <span>Personal Shopping</span>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </Link>
-
-              <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
-                <svg viewBox="0 0 24 24">
-                  <path d="M3 7h18M3 12h18M3 17h18" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* ==========================================================================
-             RETAIL B2C HEADER
-             Keeps vehicle garage, favourites, consumer cart, account & workspace switcher
-             ========================================================================== */
+      <header id="hdr" className={isScrolled ? 'sc' : ''}>
           <div className="wrap hd">
             <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="logo-img" />
@@ -358,31 +429,33 @@ function HeaderContent() {
 
             {/* Retail Tools */}
             <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
-              {/* Workspace Switcher to Wholesale */}
-              <Link
-                href="/wholesale"
-                className={`wholesale-workspace-switch-btn ${
-                  isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : ''
-                }`}
-                title="Switch to Wholesale Partner Workspace"
-                onClick={() => setWorkspaceMode('wholesale')}
-              >
-                <span
-                  className={
-                    isWholesaleApproved
-                      ? 'wholesale-badge-dot'
-                      : isWholesalePending
-                      ? 'wholesale-badge-amber-dot'
-                      : 'wholesale-badge-neutral-dot'
-                  }
-                />
-                <span className="wholesale-switch-text">Wholesale Portal</span>
-                {isWholesaleApproved && (
-                  <span className="wholesale-micro-tier">
-                    {b2bProfile?.wholesaleTier === 'tier2' ? 'T2' : 'T1'}
-                  </span>
-                )}
-              </Link>
+              {/* Workspace Switcher to Wholesale - only on landing page */}
+              {isLandingPage && (
+                <Link
+                  href="/wholesale"
+                  className={`wholesale-workspace-switch-btn ${
+                    isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : ''
+                  }`}
+                  title="Switch to Wholesale Partner Workspace"
+                  onClick={() => setWorkspaceMode('wholesale')}
+                >
+                  <span
+                    className={
+                      isWholesaleApproved
+                        ? 'wholesale-badge-dot'
+                        : isWholesalePending
+                        ? 'wholesale-badge-amber-dot'
+                        : 'wholesale-badge-neutral-dot'
+                    }
+                  />
+                  <span className="wholesale-switch-text">Wholesale Portal</span>
+                  {isWholesaleApproved && (
+                    <span className="wholesale-micro-tier">
+                      {b2bProfile?.wholesaleTier === 'tier2' ? 'T2' : 'T1'}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               {isLandingPage && (
                 <Link href="/shop" className="tool mobile-search-access" aria-label="Search products">
@@ -473,7 +546,6 @@ function HeaderContent() {
               </button>
             </div>
           </div>
-        )}
       </header>
     </div>
   );

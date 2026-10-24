@@ -319,8 +319,8 @@ export default function B2BWholesalePage() {
             <Link href="/login?mode=signup&redirect=/b2b" className="b2b-btn secondary">
               Register New Account
             </Link>
-            <Link href="/shop" className="b2b-btn ghost">
-              Browse Retail Shop
+            <Link href="/" className="b2b-btn ghost">
+              CarXen Home
             </Link>
           </div>
         </div>

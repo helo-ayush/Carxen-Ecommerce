@@ -1,22 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
-import {
-  Truck,
-  PackageCheck,
-  Clock,
-  ArrowRight,
-  ShieldCheck,
-  RotateCcw,
-  CheckCircle2,
-  FileText,
-  AlertCircle,
-  ExternalLink,
-} from 'lucide-react';
+import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
+import { RotateCcw, MapPin, Check, Plus } from 'lucide-react';
 import '../wholesale.css';
 
 interface WholesaleOrderMock {
@@ -26,6 +16,7 @@ interface WholesaleOrderMock {
   placedAt: string;
   status:
     | 'CONFIRMED_BY_BUYER'
+    | 'UNDER_CARXEN_REVIEW'
     | 'UNDER_VEDA_REVIEW'
     | 'ACCEPTED'
     | 'IN_PRODUCTION'
@@ -52,8 +43,8 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
     orderNumber: 'CX-B2B-10482',
     poNumber: 'PO-2026-OCT-8841',
     placedAt: '2026-10-23T14:30:00Z',
-    status: 'UNDER_VEDA_REVIEW',
-    statusLabel: 'Under VEDA Review',
+    status: 'UNDER_CARXEN_REVIEW',
+    statusLabel: 'Under CarXen Review',
     paymentStatus: 'OFFLINE_COMMERCIAL_TERMS (No Website Payment)',
     totalAmount: 141600,
     shippingAddress: 'Plot 42, Udyog Vihar Phase 4, Gurugram, Haryana - 122015',
@@ -115,27 +106,60 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
   },
 ];
 
+const STAGES = [
+  { id: 'CONFIRMED_BY_BUYER', label: '1. PO Placed', order: 1 },
+  { id: 'UNDER_CARXEN_REVIEW', label: '2. CarXen Review', order: 2 },
+  { id: 'ACCEPTED', label: '3. Accepted', order: 3 },
+  { id: 'IN_PRODUCTION', label: '4. Production', order: 4 },
+  { id: 'DELIVERED', label: '5. Dispatched & ITC', order: 5 },
+];
+
+function getStageLevel(status: WholesaleOrderMock['status']) {
+  switch (status) {
+    case 'CONFIRMED_BY_BUYER':
+      return 1;
+    case 'UNDER_CARXEN_REVIEW':
+    case 'UNDER_VEDA_REVIEW':
+      return 2;
+    case 'ACCEPTED':
+      return 3;
+    case 'IN_PRODUCTION':
+      return 4;
+    case 'READY_TO_DISPATCH':
+    case 'DISPATCHED':
+      return 4.5;
+    case 'DELIVERED':
+      return 5;
+    default:
+      return 1;
+  }
+}
+
 export default function WholesaleOrdersPage() {
   const router = useRouter();
-  const {
-    user,
-    orders: userOrders,
-    addToWholesaleBasket,
-    showToast,
-  } = useApp();
-
+  const { user, isWholesaleApproved, authLoading, addToWholesaleBasket, showToast } = useApp();
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
 
-  // Convert real orders that match wholesale or combine with wholesale records
+  // Strict B2B verification gate
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.replace('/login?redirect=/wholesale/orders');
+      } else if (!isWholesaleApproved) {
+        router.replace('/wholesale');
+      }
+    }
+  }, [authLoading, isWholesaleApproved, router, user]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
+
   const allOrders = DEFAULT_WHOLESALE_ORDERS;
 
   const filteredOrders = allOrders.filter((ord) => {
-    if (activeTab === 'active') {
-      return ord.status !== 'DELIVERED';
-    }
-    if (activeTab === 'completed') {
-      return ord.status === 'DELIVERED';
-    }
+    if (activeTab === 'active') return ord.status !== 'DELIVERED';
+    if (activeTab === 'completed') return ord.status === 'DELIVERED';
     return true;
   });
 
@@ -149,21 +173,63 @@ export default function WholesaleOrdersPage() {
 
   const getStatusBadge = (status: WholesaleOrderMock['status'], label: string) => {
     switch (status) {
-      case 'CONFIRMED_BY_BUYER':
-        return <span className="ws-order-status-badge ws-status-confirmed">Confirmed by Buyer</span>;
+      case 'UNDER_CARXEN_REVIEW':
       case 'UNDER_VEDA_REVIEW':
-        return <span className="ws-order-status-badge ws-status-review">Under VEDA Review</span>;
-      case 'ACCEPTED':
-        return <span className="ws-order-status-badge ws-status-accepted">Accepted by CarXen</span>;
-      case 'IN_PRODUCTION':
-        return <span className="ws-order-status-badge ws-status-production">In Factory Production</span>;
-      case 'READY_TO_DISPATCH':
-      case 'DISPATCHED':
-        return <span className="ws-order-status-badge ws-status-dispatched">Dispatched</span>;
+        return (
+          <span
+            style={{
+              background: 'var(--ws-amber-subtle)',
+              color: 'var(--ws-amber)',
+              border: '1px solid #fde68a',
+              padding: '3px 9px',
+              borderRadius: '6px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
+            <span>Under CarXen Review</span>
+          </span>
+        );
       case 'DELIVERED':
-        return <span className="ws-order-status-badge ws-status-delivered">Delivered</span>;
+        return (
+          <span
+            style={{
+              background: 'var(--ws-emerald-subtle)',
+              color: 'var(--ws-emerald)',
+              border: '1px solid #a7f3d0',
+              padding: '3px 9px',
+              borderRadius: '6px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <WholesaleIcon name="check" size={13} strokeWidth={2.5} />
+            <span>Delivered & Invoiced</span>
+          </span>
+        );
       default:
-        return <span className="ws-order-status-badge">{label}</span>;
+        return (
+          <span
+            style={{
+              background: '#f1f5f9',
+              color: '#475569',
+              border: '1px solid #cbd5e1',
+              padding: '3px 9px',
+              borderRadius: '6px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+            }}
+          >
+            {label}
+          </span>
+        );
     }
   };
 
@@ -172,18 +238,23 @@ export default function WholesaleOrdersPage() {
       {/* Header Bar */}
       <div className="ws-header-bar">
         <div className="ws-header-titles">
+          <div className="ws-breadcrumb-kicker">
+            <WholesaleIcon name="truck" size={13} strokeWidth={2} />
+            <span>Procurement Pipeline · CarXen Live Tracking</span>
+          </div>
           <h1>
-            <Truck size={26} color="#0f172a" />
-            Wholesale Order History & Live VEDA Tracking
+            <WholesaleIcon name="orders" size={26} strokeWidth={2} />
+            <span>Wholesale Orders & Factory Milestone Pipeline</span>
           </h1>
           <p>
-            Track factory operations, commercial proforma status, and repeat order procurement.
-            <strong> No website payment is required for wholesale orders.</strong>
+            Track factory operations, commercial proforma verification, and repeat order procurement.{' '}
+            <strong>No online payment required on website.</strong>
           </p>
         </div>
         <div className="ws-header-actions">
           <Link href="/wholesale/catalog" className="ws-btn-primary">
-            + New Wholesale Order
+            <Plus size={16} />
+            <span>New Wholesale Order</span>
           </Link>
         </div>
       </div>
@@ -204,7 +275,7 @@ export default function WholesaleOrdersPage() {
           className={`ws-btn-secondary ${activeTab === 'active' ? 'active' : ''}`}
           style={activeTab === 'active' ? { background: '#0f172a', color: '#ffffff', borderColor: '#0f172a' } : undefined}
         >
-          In Progress (1)
+          Active in Pipeline (1)
         </button>
         <button
           type="button"
@@ -217,170 +288,97 @@ export default function WholesaleOrdersPage() {
       </div>
 
       {/* Orders List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {filteredOrders.map((ord) => (
-          <div
-            key={ord.id}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-            }}
-          >
-            {/* Top row */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #f1f5f9',
-                marginBottom: '16px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', fontFamily: 'monospace' }}>
-                  {ord.orderNumber}
-                </span>
-                <span
-                  style={{
-                    background: '#f1f5f9',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#475569',
-                  }}
-                >
-                  Ref: {ord.poNumber}
-                </span>
-                {getStatusBadge(ord.status, ord.statusLabel)}
+      <div>
+        {filteredOrders.map((ord) => {
+          const currentLevel = getStageLevel(ord.status);
+
+          return (
+            <div key={ord.id} className="ws-order-card">
+              {/* Card Header */}
+              <div className="ws-order-header">
+                <div className="ws-order-title-group">
+                  <span className="ws-order-num">{ord.orderNumber}</span>
+                  <span className="ws-order-po-ref">{ord.poNumber}</span>
+                  {getStatusBadge(ord.status, ord.statusLabel)}
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => handleReorder(ord)}
+                    className="ws-btn-secondary"
+                    style={{ fontSize: '12.5px', padding: '6px 12px', minHeight: '32px' }}
+                  >
+                    <RotateCcw size={13} />
+                    <span>Reorder (Copy to Basket)</span>
+                  </button>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleReorder(ord)}
-                  className="ws-btn-secondary"
-                  style={{ fontSize: '12.5px', padding: '6px 12px' }}
-                >
-                  <RotateCcw size={14} />
-                  <span>Reorder (Copy to Basket)</span>
-                </button>
-              </div>
-            </div>
+              {/* Card Body */}
+              <div className="ws-order-body">
+                {/* Pipeline Stepper */}
+                <div className="ws-timeline-stepper">
+                  <div className="ws-timeline-track" />
+                  {STAGES.map((stg) => {
+                    const isCompleted = currentLevel > stg.order;
+                    const isActive = currentLevel === stg.order || (stg.order === 4 && currentLevel === 4.5);
 
-            {/* Pipeline Stage Bar */}
-            <div className="ws-pipeline-track" style={{ marginBottom: '18px', padding: '14px 18px' }}>
-              <div className="ws-pipeline-steps">
-                <div className={`ws-step-item active`}>
-                  <span className="ws-step-bullet">1</span>
-                  <span className="ws-step-title">Confirmed by Buyer</span>
+                    return (
+                      <div
+                        key={stg.id}
+                        className={`ws-timeline-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}
+                      >
+                        <div className="ws-timeline-bullet">
+                          {isCompleted ? <Check size={14} strokeWidth={3} /> : stg.order}
+                        </div>
+                        <span className="ws-timeline-label">{stg.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div
-                  className={`ws-step-item ${
-                    ['UNDER_VEDA_REVIEW', 'ACCEPTED', 'IN_PRODUCTION', 'READY_TO_DISPATCH', 'DISPATCHED', 'DELIVERED'].includes(
-                      ord.status
-                    )
-                      ? 'active'
-                      : ''
-                  }`}
-                >
-                  <span className="ws-step-bullet">2</span>
-                  <span className="ws-step-title">VEDA Review</span>
-                </div>
-                <div
-                  className={`ws-step-item ${
-                    ['ACCEPTED', 'IN_PRODUCTION', 'READY_TO_DISPATCH', 'DISPATCHED', 'DELIVERED'].includes(ord.status)
-                      ? 'active'
-                      : ''
-                  }`}
-                >
-                  <span className="ws-step-bullet">3</span>
-                  <span className="ws-step-title">Commercial Accepted</span>
-                </div>
-                <div
-                  className={`ws-step-item ${
-                    ['IN_PRODUCTION', 'READY_TO_DISPATCH', 'DISPATCHED', 'DELIVERED'].includes(ord.status) ? 'active' : ''
-                  }`}
-                >
-                  <span className="ws-step-bullet">4</span>
-                  <span className="ws-step-title">Factory Production</span>
-                </div>
-                <div
-                  className={`ws-step-item ${
-                    ['READY_TO_DISPATCH', 'DISPATCHED', 'DELIVERED'].includes(ord.status) ? 'active' : ''
-                  }`}
-                >
-                  <span className="ws-step-bullet">5</span>
-                  <span className="ws-step-title">Dispatched & ITC</span>
+
+                {/* Line Items */}
+                <div style={{ marginTop: '16px' }}>
+                  {ord.items.map((item, idx) => (
+                    <div key={idx} className="ws-order-item-strip">
+                      <div className="ws-order-item-left">
+                        <span className="ws-order-item-name">{item.name}</span>
+                        <span className="ws-order-item-sku">({item.sku})</span>
+                      </div>
+                      <div className="ws-order-item-right">
+                        <span style={{ color: 'var(--ws-text-muted)' }}>
+                          {item.quantity} pcs @ {formatINR(item.unitPrice || 0)}
+                        </span>
+                        <strong style={{ minWidth: '90px', textAlign: 'right', color: 'var(--ws-text)' }}>
+                          {formatINR(item.totalPrice || 0)}
+                        </strong>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Line Items List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-              {ord.items.map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '13.5px',
-                    padding: '8px 12px',
-                    background: '#f8fafc',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>{item.name}</strong>
-                    <span style={{ color: '#64748b', marginLeft: '8px', fontFamily: 'monospace', fontSize: '12px' }}>
-                      ({item.sku})
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <span style={{ color: '#475569' }}>
-                      {item.quantity} pcs @ {formatINR(item.unitPrice)}
-                    </span>
-                    <strong style={{ color: '#0f172a', minWidth: '90px', textAlign: 'right' }}>
-                      {formatINR(item.totalPrice)}
-                    </strong>
+              {/* Card Footer */}
+              <div className="ws-order-footer">
+                <div className="ws-order-footer-loc">
+                  <MapPin size={14} />
+                  <span>Dispatch Point:</span>
+                  <strong>{ord.shippingAddress}</strong>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--ws-emerald)', fontWeight: 600 }}>
+                    ✓ Direct Offline Commercial Settlement
+                  </span>
+                  <div className="ws-order-total-val">
+                    Total: {formatINR(ord.totalAmount || 0)}
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Footer Summary */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-                paddingTop: '14px',
-                borderTop: '1px solid #f1f5f9',
-                fontSize: '13px',
-              }}
-            >
-              <div>
-                <span style={{ color: '#64748b' }}>Delivery Location: </span>
-                <span style={{ color: '#334155', fontWeight: 600 }}>{ord.shippingAddress}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <span style={{ color: '#059669', fontWeight: 600 }}>{ord.paymentStatus}</span>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
-                  Total: {formatINR(ord.totalAmount)}
-                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,24 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import {
-  Building2,
-  ShieldCheck,
   PhoneCall,
   Mail,
   MapPin,
-  ExternalLink,
-  Layers,
-  ArrowRight,
-  Clock,
   CheckCircle2,
+  ShieldCheck,
+  Building2,
+  ArrowRight,
 } from 'lucide-react';
 import '../wholesale.css';
 
 export default function WholesaleAccountPage() {
-  const { user, b2bProfile, setWorkspaceMode } = useApp();
+  const router = useRouter();
+  const { user, b2bProfile, isWholesaleApproved, authLoading, logout } = useApp();
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.replace('/login?redirect=/wholesale/account');
+      } else if (!isWholesaleApproved) {
+        router.replace('/wholesale');
+      }
+    }
+  }, [authLoading, isWholesaleApproved, router, user]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
 
   const businessName = b2bProfile?.businessName || user?.name || 'Authorized Automotive Partner';
   const isTier2 = b2bProfile?.wholesaleTier === 'tier2';
@@ -28,21 +42,32 @@ export default function WholesaleAccountPage() {
       {/* Header Bar */}
       <div className="ws-header-bar">
         <div className="ws-header-titles">
+          <div className="ws-breadcrumb-kicker">
+            <WholesaleIcon name="shield" size={13} strokeWidth={2} />
+            <span>Enterprise Identity & Verified Commercial Terms</span>
+          </div>
           <h1>
-            <Building2 size={26} color="#0f172a" />
-            Wholesale Business Account & Commercial Terms
+            <WholesaleIcon name="account" size={26} strokeWidth={2} />
+            <span>Commercial Business Profile & Tax Registry</span>
           </h1>
           <p>
-            Enterprise profile, verified GSTIN identity, volume pricing tiers, and assigned VEDA account manager.
+            Enterprise profile, verified GSTIN identity, active volume pricing tiers, and assigned CarXen account manager.
           </p>
         </div>
         <div className="ws-header-actions">
-          <Link
-            href="/shop"
+          <button
+            type="button"
             className="ws-btn-secondary"
-            onClick={() => setWorkspaceMode('retail')}
+            onClick={async () => {
+              await logout();
+              router.push('/login');
+            }}
           >
-            Switch to Personal Shopping &rarr;
+            Sign out
+          </button>
+          <Link href="/wholesale/order-basket" className="ws-btn-primary">
+            <WholesaleIcon name="basket" size={15} strokeWidth={2} />
+            <span>Order Basket</span>
           </Link>
         </div>
       </div>
@@ -51,111 +76,91 @@ export default function WholesaleAccountPage() {
         {/* Left Column: Business Details & Warehouses */}
         <div>
           {/* Business Entity Card */}
-          <div className="ws-basket-items-card" style={{ marginBottom: '24px' }}>
-            <div className="ws-basket-header">
-              <h2>Enterprise Identity & Tax Registrations</h2>
+          <div className="ws-card">
+            <div className="ws-card-header">
+              <h2>
+                <WholesaleIcon name="invoice" size={18} strokeWidth={2} />
+                <span>Enterprise Identity & Tax Registrations</span>
+              </h2>
               <span
                 style={{
-                  background: '#ecfdf5',
-                  color: '#047857',
+                  background: 'var(--ws-emerald-subtle)',
+                  color: 'var(--ws-emerald)',
                   border: '1px solid #a7f3d0',
-                  padding: '3px 8px',
+                  padding: '3px 9px',
                   borderRadius: '6px',
                   fontSize: '11.5px',
                   fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
                 }}
               >
-                Verified Active Partner
+                <WholesaleIcon name="check" size={13} strokeWidth={2.5} />
+                <span>Verified Active Partner</span>
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '13.5px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  Legal Entity Name
-                </span>
-                <strong style={{ color: '#0f172a', fontSize: '15px' }}>{businessName}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  Trade / Outlet Name
-                </span>
-                <strong style={{ color: '#0f172a', fontSize: '15px' }}>
-                  {b2bProfile?.tradeName || 'CarXen Authorized Partner'}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  GSTIN (Input Tax Credit)
-                </span>
-                <strong style={{ fontFamily: 'monospace', color: '#0f172a', fontSize: '14px' }}>
-                  {b2bProfile?.gstin || '22AAAAA0000A1Z5'}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  PAN Number
-                </span>
-                <strong style={{ fontFamily: 'monospace', color: '#0f172a', fontSize: '14px' }}>
-                  {b2bProfile?.pan || 'ABCDE1234F'}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  Authorized Contact Person
-                </span>
-                <strong style={{ color: '#0f172a' }}>{user?.name || 'Authorized Buyer'}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                  Contact Phone & WhatsApp
-                </span>
-                <strong style={{ color: '#0f172a' }}>{user?.phone || '+91 98765 43210'}</strong>
+            <div className="ws-card-body">
+              <div className="ws-meta-grid">
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">Legal Entity Name</span>
+                  <div className="ws-meta-value">{businessName}</div>
+                </div>
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">Trade / Outlet Name</span>
+                  <div className="ws-meta-value">
+                    {b2bProfile?.tradeName || 'CarXen Authorized Partner'}
+                  </div>
+                </div>
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">GSTIN (Input Tax Credit)</span>
+                  <div className="ws-meta-value mono">
+                    {b2bProfile?.gstin || '22AAAAA0000A1Z5'}
+                  </div>
+                </div>
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">PAN Number</span>
+                  <div className="ws-meta-value mono">
+                    {b2bProfile?.pan || 'ABCDE1234F'}
+                  </div>
+                </div>
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">Authorized Contact Person</span>
+                  <div className="ws-meta-value">{user?.name || 'Authorized Buyer'}</div>
+                </div>
+                <div className="ws-meta-item">
+                  <span className="ws-meta-label">Contact Phone & WhatsApp</span>
+                  <div className="ws-meta-value">{user?.phone || '+91 98765 43210'}</div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Registered Warehouse / Delivery Locations */}
-          <div className="ws-basket-items-card">
-            <div className="ws-basket-header">
-              <h2>Registered Delivery Locations</h2>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>Primary Factory Dispatch Point</span>
+          <div className="ws-card">
+            <div className="ws-card-header">
+              <h2>
+                <WholesaleIcon name="warehouse" size={18} strokeWidth={2} />
+                <span>Registered Dispatch & Delivery Locations</span>
+              </h2>
+              <span style={{ fontSize: '12px', color: 'var(--ws-text-muted)' }}>
+                Primary Factory Dispatch Point
+              </span>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '14px',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-              }}
-            >
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: '#eff6ff',
-                  color: '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <MapPin size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-                  Central Workshop & Warehouse (Default)
+            <div className="ws-card-body">
+              <div className="ws-warehouse-card">
+                <div className="ws-warehouse-icon">
+                  <WholesaleIcon name="warehouse" size={22} strokeWidth={1.8} />
                 </div>
-                <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-                  {b2bProfile?.businessAddress || 'Plot 42, Udyog Vihar Phase 4'},{' '}
-                  {b2bProfile?.city || 'Gurugram'}, {b2bProfile?.state || 'Haryana'} -{' '}
-                  {b2bProfile?.pincode || '122015'}
+                <div className="ws-warehouse-details">
+                  <h4>Central Workshop & Warehouse (Primary Default)</h4>
+                  <p>
+                    {b2bProfile?.businessAddress || 'Plot 42, Udyog Vihar Phase 4'},{' '}
+                    {b2bProfile?.city || 'Gurugram'}, {b2bProfile?.state || 'Haryana'} -{' '}
+                    {b2bProfile?.pincode || '122015'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -163,82 +168,83 @@ export default function WholesaleAccountPage() {
         </div>
 
         {/* Right Column: Commercial Tier & Assigned Account Manager */}
-        <div className="ws-order-sidebar">
+        <div>
           {/* Active Wholesale Tier */}
-          <div className="ws-order-summary-card">
-            <h3>Active Commercial Tier</h3>
-            <div
-              style={{
-                background: '#0f172a',
-                borderRadius: '14px',
-                padding: '18px',
-                color: '#ffffff',
-                marginBottom: '16px',
-              }}
-            >
-              <div style={{ fontSize: '11.5px', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>
-                Assigned Level
-              </div>
-              <div style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 8px' }}>
-                {isTier2 ? 'Tier 2 (Volume Commercial)' : 'Tier 1 (Wholesale Partner)'}
-              </div>
-              <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
-                {isTier2
-                  ? 'Up to 25% margin across all categories for monthly volume ₹2L+'
-                  : 'Up to 15% wholesale margin with minimum order quantity (MOQ) validation'}
-              </div>
+          <div className="ws-card">
+            <div className="ws-card-header">
+              <h3>
+                <WholesaleIcon name="tier" size={18} strokeWidth={2} />
+                <span>Active Commercial Tier</span>
+              </h3>
             </div>
+            <div className="ws-card-body">
+              <div className="ws-tier-badge-card">
+                <div className="ws-tier-badge-level">
+                  CarXen Verified Margin Level
+                </div>
+                <div className="ws-tier-badge-title">
+                  {isTier2 ? 'Tier 2 · Volume Commercial' : 'Tier 1 · Wholesale Partner'}
+                </div>
+                <div className="ws-tier-badge-desc">
+                  {isTier2
+                    ? 'Up to 25% wholesale margin across all catalogue categories for monthly volume ₹2L+'
+                    : 'Up to 15% wholesale margin with minimum order quantity (MOQ) validation'}
+                </div>
+              </div>
 
-            <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-              ✓ Direct VEDA factory production batch allocation.
-              <br />
-              ✓ Zero online payment required on website.
-              <br />
-              ✓ Consolidated monthly GST invoices with full ITC eligibility.
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  fontSize: '13px',
+                  color: 'var(--ws-text-muted)',
+                  lineHeight: 1.45,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <WholesaleIcon name="check" size={15} strokeWidth={2.5} className="text-emerald-600" />
+                  <span>Direct factory production batch allocation</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <WholesaleIcon name="shield" size={15} strokeWidth={2} className="text-emerald-600" />
+                  <span>Zero online payment required on website</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <WholesaleIcon name="invoice" size={15} strokeWidth={2} className="text-emerald-600" />
+                  <span>Consolidated monthly GST tax invoices with ITC</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Dedicated VEDA Account Manager */}
-          <div className="ws-order-summary-card">
-            <h3>Assigned VEDA Commercial Manager</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: '#f1f5f9',
-                  color: '#0f172a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '16px',
-                }}
-              >
-                RK
-              </div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Rajesh Kumar</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>Head of Enterprise Procurement, CarXen VEDA</div>
-              </div>
+          {/* Dedicated CarXen Commercial Manager */}
+          <div className="ws-card">
+            <div className="ws-card-header">
+              <h3>
+                <WholesaleIcon name="account" size={18} strokeWidth={2} />
+                <span>Assigned CarXen Commercial Desk</span>
+              </h3>
             </div>
+            <div className="ws-card-body">
+              <div className="ws-manager-profile">
+                <div className="ws-manager-avatar">RK</div>
+                <div className="ws-manager-info">
+                  <h4>Rajesh Kumar</h4>
+                  <p>Head of Commercial Procurement, CarXen Automotive</p>
+                </div>
+              </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <a
-                href="tel:+919876543210"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', textDecoration: 'none' }}
-              >
-                <PhoneCall size={16} color="#059669" />
-                <span>+91 98765 43210</span>
-              </a>
-              <a
-                href="mailto:b2b@carxen.in"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', textDecoration: 'none' }}
-              >
-                <Mail size={16} color="#059669" />
-                <span>b2b@carxen.in</span>
-              </a>
+              <div className="ws-manager-actions">
+                <a href="tel:+919876543210" className="ws-manager-link">
+                  <WholesaleIcon name="phone" size={16} strokeWidth={2} />
+                  <span>+91 98765 43210 (Direct Line)</span>
+                </a>
+                <a href="mailto:b2b@carxen.in" className="ws-manager-link">
+                  <Mail size={16} />
+                  <span>b2b@carxen.in (PO Desk)</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

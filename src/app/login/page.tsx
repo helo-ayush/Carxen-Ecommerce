@@ -8,7 +8,7 @@ import { useApp } from '@/context/AppContext';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loginWithEmail, signUpWithEmail, logout, showToast } = useApp();
+  const { user, loginWithEmail, signUpWithEmail, logout, showToast, login } = useApp();
 
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [fullName, setFullName] = useState('');

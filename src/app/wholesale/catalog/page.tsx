@@ -1,29 +1,15 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
-import {
-  getWholesaleTiers,
-  calculateItemPriceWithOfferLimit,
-} from '@/lib/storefront/wholesale-pricing';
-import {
-  Search,
-  X,
-  ShoppingBag,
-  Plus,
-  Minus,
-  Layers,
-  ArrowRight,
-  Check,
-  Building2,
-  Filter,
-  PackageCheck,
-  CheckCheck,
-} from 'lucide-react';
+import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
+import { Plus, Minus, X, ArrowRight, Check } from 'lucide-react';
 import '../wholesale.css';
 
 const VEHICLE_BRANDS = [
@@ -45,23 +31,48 @@ const POPULAR_MODELS: Record<string, string[]> = {
   Toyota: ['Innova Hycross', 'Fortuner', 'Urban Cruiser Hyryder'],
 };
 
+const CATEGORIES = [
+  { id: 'all', label: 'All Categories' },
+  { id: 'mats', label: '7D Floor Mats' },
+  { id: 'seats', label: 'Seat Covers' },
+  { id: 'steering', label: 'Steering Wraps' },
+  { id: 'comfort', label: 'Comfort Cushions' },
+];
+
 export default function WholesaleCatalogPage() {
+  const router = useRouter();
   const {
-    products,
     user,
+    isWholesaleApproved,
+    authLoading,
+    products,
     b2bProfile,
     wholesaleBasket,
     wholesaleBasketSkuCount,
+    wholesaleBasketCount,
+    wholesaleBasketSubtotal,
     addToWholesaleBasket,
-    updateWholesaleBasketQty,
     showToast,
   } = useApp();
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.replace('/login?redirect=/wholesale/catalog');
+      } else if (!isWholesaleApproved) {
+        router.replace('/wholesale');
+      }
+    }
+  }, [authLoading, isWholesaleApproved, router, user]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
   const [selectedModel, setSelectedModel] = useState<string>('all');
-  // Local row quantity map
   const [rowQuantities, setRowQuantities] = useState<Record<number, number>>({});
 
   const getProductMoq = (p: Product) => Math.max(1, p.b2bMoq || 5);
@@ -89,7 +100,6 @@ export default function WholesaleCatalogPage() {
       if (selectedBrand !== 'All Brands') {
         const brandQuery = selectedBrand.toLowerCase();
         const brandMatch = fitmentStr.includes(brandQuery) || nameStr.includes(brandQuery);
-        // Universal items are compatible with all brands
         const isUniversal = fitmentStr.includes('universal');
         if (!brandMatch && !isUniversal) return false;
       }
@@ -162,33 +172,91 @@ export default function WholesaleCatalogPage() {
   };
 
   const availableModels = selectedBrand !== 'All Brands' ? POPULAR_MODELS[selectedBrand] || [] : [];
+  const tierName = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (25% Margin)' : 'Tier 1 (15% Margin)';
 
   return (
     <div className="ws-page-container">
       {/* Header Bar */}
       <div className="ws-header-bar">
         <div className="ws-header-titles">
+          <div className="ws-breadcrumb-kicker">
+            <WholesaleIcon name="catalogue" size={14} />
+            <span>Procurement Workspace / Catalogue</span>
+          </div>
           <h1>
-            <PackageCheck size={26} color="#0f172a" />
+            <WholesaleIcon name="catalogue" size={26} />
             Wholesale Procurement Catalogue
           </h1>
           <p>
-            Dense automotive procurement grid · Verified MOQs, tier pricing, and direct quantity entry.
-            <strong> No online payment required.</strong>
+            Full factory catalogue with multi-vehicle fitment filtering, commercial tier pricing, and instant MOQ validation.
+            <strong> Direct CarXen factory fulfillment with zero online payment.</strong>
           </p>
         </div>
+
         <div className="ws-header-actions">
-          <button type="button" onClick={handleFillAllVisibleMoqs} className="ws-btn-secondary">
-            Fill All Visible MOQs
+          <button type="button" onClick={handleFillAllVisibleMoqs} className="ws-btn-secondary" title="Fill MOQs for all visible products">
+            <WholesaleIcon name="spark" size={15} />
+            <span>Fill Visible MOQs</span>
           </button>
-          <button type="button" onClick={handleAddAllToBasket} className="ws-btn-secondary">
-            <CheckCheck size={16} />
-            <span>Add Visible to Basket</span>
+          <button type="button" onClick={handleAddAllToBasket} className="ws-btn-secondary" title="Add all visible products to basket">
+            <WholesaleIcon name="check" size={15} />
+            <span>Add All Visible ({filteredProducts.length})</span>
           </button>
-          <Link href="/wholesale/order-basket" className="ws-btn-primary">
-            <ShoppingBag size={16} />
-            <span>Order Basket ({wholesaleBasketSkuCount} SKUs)</span>
+          <Link href="/wholesale/order-basket" className="ws-btn-primary ws-btn-brand">
+            <WholesaleIcon name="basket" size={15} />
+            <span>Review Basket ({wholesaleBasketSkuCount} SKUs)</span>
           </Link>
+        </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="ws-metrics-grid">
+        <div className="ws-metric-card">
+          <div className="ws-metric-header">
+            <span className="ws-metric-title">Matching Parts</span>
+            <div className="ws-metric-icon-wrap">
+              <WholesaleIcon name="catalogue" size={16} />
+            </div>
+          </div>
+          <div className="ws-metric-value">{filteredProducts.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>/ {products.length} SKUs</span></div>
+          <div className="ws-metric-subtext">Automotive OEM precision fitments</div>
+        </div>
+
+        <div className="ws-metric-card">
+          <div className="ws-metric-header">
+            <span className="ws-metric-title">Wholesale Margin</span>
+            <div className="ws-metric-icon-wrap brand">
+              <WholesaleIcon name="tier" size={16} />
+            </div>
+          </div>
+          <div className="ws-metric-value">{tierName}</div>
+          <div className="ws-metric-subtext">Commercial invoicing via CarXen</div>
+        </div>
+
+        <div className="ws-metric-card">
+          <div className="ws-metric-header">
+            <span className="ws-metric-title">Factory Dispatch</span>
+            <div className="ws-metric-icon-wrap emerald">
+              <WholesaleIcon name="truck" size={16} />
+            </div>
+          </div>
+          <div className="ws-metric-value">24–48 Hours</div>
+          <div className="ws-metric-subtext">Priority freight dispatch from CarXen</div>
+        </div>
+
+        <div className="ws-metric-card">
+          <div className="ws-metric-header">
+            <span className="ws-metric-title">Active Order Basket</span>
+            <div className="ws-metric-icon-wrap">
+              <WholesaleIcon name="basket" size={16} />
+            </div>
+          </div>
+          <div className="ws-metric-value">
+            {wholesaleBasketSkuCount} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>SKUs ({wholesaleBasketCount} units)</span>
+          </div>
+          <div className="ws-metric-subtext">
+            {wholesaleBasketSubtotal > 0 ? `Est. Total: ${formatINR(wholesaleBasketSubtotal)}` : 'Zero online payment required'}
+          </div>
         </div>
       </div>
 
@@ -196,11 +264,13 @@ export default function WholesaleCatalogPage() {
       <div className="ws-filter-toolbar">
         <div className="ws-filter-row-primary">
           <div className="ws-search-input-wrap">
-            <Search size={18} />
+            <span className="ws-search-icon">
+              <WholesaleIcon name="search" size={17} />
+            </span>
             <input
               type="text"
               className="ws-search-input"
-              placeholder="Filter by SKU, part number, product title, or vehicle model…"
+              placeholder="Search by part number, title, or vehicle model (e.g. Creta, Thar, Scorpio, Nexon)…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -208,40 +278,45 @@ export default function WholesaleCatalogPage() {
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                }}
+                className="ws-search-clear"
+                title="Clear search"
+                aria-label="Clear search"
               >
                 <X size={16} />
               </button>
             )}
           </div>
 
-          <div className="ws-select-wrap">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              aria-label="Filter by Category"
-            >
-              <option value="all">All Categories</option>
-              <option value="mats">7D & All-Weather Mats</option>
-              <option value="seats">Leatherette Seat Covers</option>
-              <option value="steering">Sport Steering Wraps</option>
-              <option value="comfort">Ergonomic Comfort Cushions</option>
-            </select>
+          <div className="ws-category-chips">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`ws-category-chip ${selectedCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
 
           {availableModels.length > 0 && (
-            <div className="ws-select-wrap">
+            <div style={{ marginLeft: 'auto' }}>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
                 aria-label="Filter by Vehicle Model"
+                style={{
+                  height: '38px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  padding: '0 12px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#ffffff',
+                  outline: 'none',
+                }}
               >
                 <option value="all">All {selectedBrand} Models</option>
                 {availableModels.map((m) => (
@@ -254,14 +329,15 @@ export default function WholesaleCatalogPage() {
           )}
         </div>
 
-        {/* Multi-Vehicle Brand Filter Pills */}
-        <div className="ws-vehicle-pills">
-          <span className="ws-vehicle-pill-label">Vehicle Brand:</span>
+        {/* Multi-Vehicle Brand Filter Chips */}
+        <div className="ws-brand-chips-row">
+          <span className="ws-brand-chips-label">Vehicle Brand:</span>
           {VEHICLE_BRANDS.map((b) => (
             <button
               key={b}
               type="button"
-              className={`ws-vehicle-pill ${selectedBrand === b ? 'active' : ''}`}
+              className={`ws-category-chip ${selectedBrand === b ? 'active' : ''}`}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={() => {
                 setSelectedBrand(b);
                 setSelectedModel('all');
@@ -274,183 +350,186 @@ export default function WholesaleCatalogPage() {
       </div>
 
       {/* Procurement Table Card */}
-      <div className="ws-table-card">
-        <table className="ws-procurement-table">
-          <thead>
-            <tr>
-              <th>Product Details</th>
-              <th>SKU / Part #</th>
-              <th>Vehicle Fitment</th>
-              <th>Factory Stock</th>
-              <th>MOQ</th>
-              <th>Wholesale Unit Price</th>
-              <th style={{ textAlign: 'center' }}>Quantity</th>
-              <th style={{ textAlign: 'right' }}>Procurement Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((p) => {
-              const moq = getProductMoq(p);
-              const tiers = getWholesaleTiers(p);
-              const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
-              const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
-              const currentQty = rowQuantities[p.id] || wholesaleBasket[p.id] || moq;
-              const isInBasket = Boolean(wholesaleBasket[p.id]);
+      {filteredProducts.length === 0 ? (
+        <div className="ws-empty-state-card">
+          <div className="ws-empty-icon-wrap">
+            <WholesaleIcon name="search" size={28} />
+          </div>
+          <h3>No matching automotive parts found</h3>
+          <p>Try resetting vehicle brand filter or search term to view full inventory.</p>
+          <button
+            type="button"
+            className="ws-btn-secondary"
+            onClick={() => {
+              setSearch('');
+              setSelectedCategory('all');
+              setSelectedBrand('All Brands');
+              setSelectedModel('all');
+            }}
+          >
+            Reset All Filters
+          </button>
+        </div>
+      ) : (
+        <div className="ws-table-card">
+          <table className="ws-procurement-table">
+            <thead>
+              <tr>
+                <th style={{ width: '32%' }}>Product Details</th>
+                <th style={{ width: '13%' }}>SKU / Part #</th>
+                <th style={{ width: '15%' }}>Vehicle Fitment</th>
+                <th style={{ width: '10%' }}>MOQ</th>
+                <th style={{ width: '14%' }}>Wholesale Unit Price</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>Quantity</th>
+                <th style={{ width: '16%', textAlign: 'right' }}>Procurement Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.map((p) => {
+                const moq = getProductMoq(p);
+                const tiers = getWholesaleTiers(p);
+                const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
+                const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
+                const fitmentStr = getFitmentString(p);
+                const currentQty = rowQuantities[p.id] || wholesaleBasket[p.id] || moq;
+                const isInBasket = Boolean(wholesaleBasket[p.id]);
+                const isDraftDifferent = isInBasket && rowQuantities[p.id] && rowQuantities[p.id] !== wholesaleBasket[p.id];
 
-              return (
-                <tr key={p.id}>
-                  {/* Product Cell */}
-                  <td>
-                    <div className="ws-prod-cell">
-                      <div className="ws-prod-art">
-                        <ProductArt product={p} />
-                      </div>
-                      <div>
-                        <div className="ws-prod-name">{p.n}</div>
-                        <div className="ws-prod-cat">
-                          {p.s} Series · {p.categoryLabel || p.c}
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="ws-prod-cell">
+                        <div className="ws-prod-art-thumb">
+                          <ProductArt product={p} />
+                        </div>
+                        <div className="ws-prod-info">
+                          <div className="ws-prod-name">{p.n}</div>
+                          <div className="ws-prod-meta">
+                            <span className="ws-prod-series-badge">{p.s} Series</span>
+                            <span className="ws-stock-pill">
+                              <span className="ws-stock-dot" />
+                              <span>Ready to Dispatch</span>
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* SKU */}
-                  <td>
-                    <span className="ws-sku-badge">{p.slug || `CX-${p.id}`}</span>
-                  </td>
+                    <td>
+                      <span className="ws-sku-badge">{p.slug || `CX-${p.id}`}</span>
+                    </td>
 
-                  {/* Fitment */}
-                  <td>
-                    <span className="ws-fitment-badge" title={getFitmentString(p)}>
-                      {getFitmentString(p)}
-                    </span>
-                  </td>
-
-                  {/* Stock / Lead Time */}
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span className="wholesale-badge-dot" />
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#047857' }}>
-                        In Stock (Dispatch in 24h)
+                    <td>
+                      <span className="ws-fitment-badge" title={fitmentStr}>
+                        {fitmentStr}
                       </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* MOQ */}
-                  <td>
-                    <span className="ws-moq-pill">MOQ: {moq}</span>
-                  </td>
+                    <td>
+                      <span className="ws-moq-badge">MOQ: {moq}</span>
+                    </td>
 
-                  {/* Tier Pricing */}
-                  <td>
-                    <div>
-                      <span className="ws-price-retail">{formatINR(p.p)}</span>
-                      <div className="ws-price-wholesale">{formatINR(t1)}</div>
-                      <div className="ws-tier2-note">Tier 2: {formatINR(t2)} (20+ units)</div>
-                    </div>
-                  </td>
+                    <td>
+                      <div className="ws-price-stack">
+                        {p.p > t1 && (
+                          <span className="ws-price-retail-strike">{formatINR(p.p)}</span>
+                        )}
+                        <span className="ws-price-wholesale">{formatINR(t1)}</span>
+                        <span className="ws-price-tier2">Tier 2: {formatINR(t2)} (20+)</span>
+                      </div>
+                    </td>
 
-                  {/* Direct Quantity Entry */}
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="ws-qty-control">
-                      <button
-                        type="button"
-                        className="ws-qty-btn"
-                        onClick={() => handleRowQtyChange(p.id, currentQty - 1, moq)}
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <input
-                        type="number"
-                        min={moq}
-                        className="ws-qty-input"
-                        value={currentQty}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value, 10);
-                          if (!isNaN(v)) {
-                            handleRowQtyChange(p.id, v, moq);
-                          }
-                        }}
-                        aria-label={`Quantity for ${p.n}`}
-                      />
-                      <button
-                        type="button"
-                        className="ws-qty-btn"
-                        onClick={() => handleRowQtyChange(p.id, currentQty + 1, moq)}
-                        aria-label="Increase quantity"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div className="ws-stepper">
+                        <button
+                          type="button"
+                          className="ws-stepper-btn"
+                          onClick={() => handleRowQtyChange(p.id, currentQty - 1, moq)}
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <input
+                          type="number"
+                          min={moq}
+                          className="ws-stepper-input"
+                          value={currentQty}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!isNaN(v)) {
+                              handleRowQtyChange(p.id, v, moq);
+                            }
+                          }}
+                          aria-label={`Batch Quantity for ${p.n}`}
+                        />
+                        <button
+                          type="button"
+                          className="ws-stepper-btn"
+                          onClick={() => handleRowQtyChange(p.id, currentQty + 1, moq)}
+                          aria-label="Increase quantity"
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+                    </td>
 
-                  {/* Procurement Action */}
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleAddToBasket(p)}
-                      className={`ws-action-add-btn ${isInBasket ? 'in-basket' : ''}`}
-                    >
-                      {isInBasket ? `In Basket (${wholesaleBasket[p.id]})` : `Add ${currentQty} to Basket`}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td style={{ textAlign: 'right' }}>
+                      {isInBasket && !isDraftDifferent ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToBasket(p)}
+                          className="ws-row-action-btn in-basket"
+                          title="Currently in your wholesale basket"
+                        >
+                          <Check size={14} />
+                          <span>In Basket ({wholesaleBasket[p.id]})</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToBasket(p)}
+                          className="ws-row-action-btn"
+                          title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
+                        >
+                          <Plus size={14} />
+                          <span>{isDraftDifferent ? `Update to ${currentQty}` : `Add ${currentQty}`}</span>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        {filteredProducts.length === 0 && (
-          <div style={{ padding: '48px', textAlign: 'center', color: '#64748b' }}>
-            <p style={{ fontSize: '15px', fontWeight: 600 }}>No wholesale items matched your current filters.</p>
-            <button
-              type="button"
-              className="ws-btn-secondary"
-              onClick={() => {
-                setSearch('');
-                setSelectedCategory('all');
-                setSelectedBrand('All Brands');
-                setSelectedModel('all');
-              }}
-              style={{ marginTop: '12px' }}
-            >
-              Reset All Filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Bottom Quick-Action Bar */}
+      {/* Floating Bottom Order Summary Dock */}
       {wholesaleBasketSkuCount > 0 && (
-        <div
-          style={{
-            position: 'sticky',
-            bottom: '24px',
-            marginTop: '32px',
-            background: '#0f172a',
-            borderRadius: '16px',
-            padding: '16px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            color: '#ffffff',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.25)',
-            zIndex: 40,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 800 }}>
-              Wholesale Order Basket: {wholesaleBasketSkuCount} SKUs Selected
+        <div className="ws-dock-bar">
+          <div className="ws-dock-info">
+            <div className="ws-dock-icon">
+              <WholesaleIcon name="basket" size={20} />
             </div>
-            <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
-              Zero website payment required · Orders are confirmed and released directly to CarXen VEDA.
+            <div>
+              <div className="ws-dock-title">
+                {wholesaleBasketSkuCount} SKUs in Order Basket · {wholesaleBasketCount} Total Units
+              </div>
+              <div className="ws-dock-subtitle">
+                Commercial Estimate: {formatINR(wholesaleBasketSubtotal)} · Zero online payment required
+              </div>
             </div>
           </div>
-          <Link href="/wholesale/order-basket" className="ws-btn-primary" style={{ background: '#e2231a' }}>
-            <span>Review Order Basket</span>
-            <ArrowRight size={16} />
-          </Link>
+
+          <div className="ws-dock-actions">
+            <Link href="/wholesale/quick-order" className="ws-btn-secondary" style={{ background: 'rgba(255,255,255,0.1)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}>
+              Quick Order Matrix
+            </Link>
+            <Link href="/wholesale/order-basket" className="ws-btn-primary ws-btn-brand">
+              <span>Review Order Basket</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
       )}
     </div>
