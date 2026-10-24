@@ -243,6 +243,27 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
     return defaultAngles;
   }, [product, activeColor]);
 
+  // Fixed 6-in-a-row thumbnail row pagination
+  const THUMBS_PER_ROW = 6;
+  const [thumbPage, setThumbPage] = useState<number>(0);
+  const totalThumbPages = Math.max(1, Math.ceil(galleryPerspectives.length / THUMBS_PER_ROW));
+
+  // Sync thumbPage when activeThumbIndex changes externally
+  useEffect(() => {
+    const pageForActive = Math.floor(activeThumbIndex / THUMBS_PER_ROW);
+    setThumbPage(pageForActive);
+  }, [activeThumbIndex]);
+
+  // Reset to first page when color choice changes
+  useEffect(() => {
+    setThumbPage(0);
+  }, [selectedColorIdx]);
+
+  const visibleThumbnails = useMemo(() => {
+    const start = thumbPage * THUMBS_PER_ROW;
+    return galleryPerspectives.slice(start, start + THUMBS_PER_ROW);
+  }, [galleryPerspectives, thumbPage]);
+
   // Fitment string
   const fitmentLabel = useMemo(() => {
     if (!product.fitment) return 'Universal Multi-Vehicle Fitment';
@@ -431,38 +452,103 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             </div>
           </div>
 
-          {/* Perspective Thumbnails */}
-          <div className="ws-pdp-thumbs-row">
-            {galleryPerspectives.map((item, idx) => {
-              const isActive = activeThumbIndex === idx;
-              return (
+          {/* Perspective Thumbnails - Fixed 6 in a row with arrow pagination */}
+          <div className="ws-pdp-thumbs-container">
+            {galleryPerspectives.length > THUMBS_PER_ROW && (
+              <div className="ws-pdp-thumbs-header">
+                <div className="ws-pdp-thumbs-header-title">
+                  <Car size={13} style={{ color: 'var(--ws-red, #dc2626)' }} />
+                  <span>Vehicle Perspectives ({galleryPerspectives.length})</span>
+                </div>
+                <div className="ws-pdp-thumbs-header-nav">
+                  <button
+                    type="button"
+                    disabled={thumbPage === 0}
+                    onClick={() => setThumbPage((p) => Math.max(0, p - 1))}
+                    className="ws-pdp-thumbs-nav-arrow"
+                    aria-label="Previous row"
+                    title="Previous 6 thumbnails"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="ws-pdp-thumbs-page-badge">
+                    Row {thumbPage + 1} of {totalThumbPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={thumbPage >= totalThumbPages - 1}
+                    onClick={() => setThumbPage((p) => Math.min(totalThumbPages - 1, p + 1))}
+                    className="ws-pdp-thumbs-nav-arrow"
+                    aria-label="Next row"
+                    title={`Next ${Math.min(THUMBS_PER_ROW, galleryPerspectives.length - (thumbPage + 1) * THUMBS_PER_ROW)} thumbnails`}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="ws-pdp-thumbs-row-wrap">
+              {galleryPerspectives.length > THUMBS_PER_ROW && (
                 <button
-                  key={idx}
                   type="button"
-                  className={`ws-pdp-thumb-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => setActiveThumbIndex(idx)}
-                  aria-label={`View angle: ${item.title}`}
+                  disabled={thumbPage === 0}
+                  onClick={() => setThumbPage((p) => Math.max(0, p - 1))}
+                  className="ws-pdp-flank-arrow left"
+                  aria-label="Previous thumbnails row"
+                  title="Previous row"
                 >
-                  <div className="ws-pdp-thumb-img-wrap">
-                    <img src={item.url} alt={item.title} />
-                  </div>
-                  <div className="ws-pdp-thumb-label">
-                    {item.icon === 'gauge' ? (
-                      <Gauge size={11} />
-                    ) : item.icon === 'sparkles' ? (
-                      <Sparkles size={11} />
-                    ) : item.icon === 'shield' ? (
-                      <Shield size={11} />
-                    ) : item.icon === 'compass' ? (
-                      <Compass size={11} />
-                    ) : (
-                      <Car size={11} />
-                    )}
-                    <span>{item.badge}</span>
-                  </div>
+                  <ChevronLeft size={16} />
                 </button>
-              );
-            })}
+              )}
+
+              <div className="ws-pdp-thumbs-row">
+                {visibleThumbnails.map((item, localIdx) => {
+                  const actualIdx = thumbPage * THUMBS_PER_ROW + localIdx;
+                  const isActive = activeThumbIndex === actualIdx;
+                  return (
+                    <button
+                      key={actualIdx}
+                      type="button"
+                      className={`ws-pdp-thumb-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => setActiveThumbIndex(actualIdx)}
+                      aria-label={`View angle: ${item.title}`}
+                    >
+                      <div className="ws-pdp-thumb-img-wrap">
+                        <img src={item.url} alt={item.title} />
+                      </div>
+                      <div className="ws-pdp-thumb-label">
+                        {item.icon === 'gauge' ? (
+                          <Gauge size={11} />
+                        ) : item.icon === 'sparkles' ? (
+                          <Sparkles size={11} />
+                        ) : item.icon === 'shield' ? (
+                          <Shield size={11} />
+                        ) : item.icon === 'compass' ? (
+                          <Compass size={11} />
+                        ) : (
+                          <Car size={11} />
+                        )}
+                        <span>{item.badge}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {galleryPerspectives.length > THUMBS_PER_ROW && (
+                <button
+                  type="button"
+                  disabled={thumbPage >= totalThumbPages - 1}
+                  onClick={() => setThumbPage((p) => Math.min(totalThumbPages - 1, p + 1))}
+                  className="ws-pdp-flank-arrow right"
+                  aria-label="Next thumbnails row"
+                  title="Next row of thumbnails"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Vehicle Compatibility & OEM Verification Card */}
