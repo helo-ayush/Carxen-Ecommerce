@@ -4,10 +4,20 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { RefreshCw } from 'lucide-react';
 
 export function MobileMenu() {
   const router = useRouter();
-  const { isMobileMenuOpen, closeMobileMenu, user, car, logout } = useApp();
+  const {
+    isMobileMenuOpen,
+    closeMobileMenu,
+    user,
+    car,
+    logout,
+    isWholesaleApproved,
+    refreshCustomerProfile,
+    showToast,
+  } = useApp();
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
@@ -37,6 +47,38 @@ export function MobileMenu() {
             <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.1s' }}>
               <i>01</i>Wholesale Dashboard
             </Link>
+            {!isWholesaleApproved && (
+              <button
+                type="button"
+                onClick={async () => {
+                  closeMobileMenu();
+                  try {
+                    await refreshCustomerProfile();
+                    showToast('Application status checked: Commercial review is currently in progress.');
+                  } catch {
+                    showToast('Application is currently under commercial review.');
+                  }
+                }}
+                style={{
+                  transitionDelay: '.13s',
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  width: '100%',
+                  cursor: 'pointer',
+                  padding: '12px 0',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                <RefreshCw size={18} />
+                <span>Check Status</span>
+              </button>
+            )}
             <Link href="/wholesale/catalog" onClick={closeMobileMenu} style={{ transitionDelay: '.16s' }}>
               <i>02</i>Wholesale Catalogue
             </Link>

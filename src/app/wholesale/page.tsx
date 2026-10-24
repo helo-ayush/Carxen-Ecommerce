@@ -17,7 +17,6 @@ import {
   Sparkles, 
   Lock, 
   ExternalLink,
-  RefreshCw,
   BadgeCheck
 } from 'lucide-react';
 import './wholesale.css';
@@ -57,7 +56,6 @@ export default function WholesaleDashboardPage() {
   });
 
   const [submitting, setSubmitting] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -555,44 +553,6 @@ export default function WholesaleDashboardPage() {
             </div>
           </div>
 
-          {/* Action Toolbar */}
-          <div className="ws-review-actions-bar">
-            <button
-              type="button"
-              className="ws-btn-status-check"
-              disabled={checkingStatus}
-              onClick={async () => {
-                setCheckingStatus(true);
-                try {
-                  await refreshCustomerProfile();
-                  showToast('Application status checked: Commercial review is currently in progress.');
-                } catch {
-                  showToast('Application is currently under commercial review.');
-                } finally {
-                  setTimeout(() => setCheckingStatus(false), 600);
-                }
-              }}
-            >
-              <RefreshCw size={14} className={checkingStatus ? 'ws-spin' : ''} />
-              <span>{checkingStatus ? 'Checking Status...' : 'Check Status Now'}</span>
-            </button>
-
-            <Link href="/" className="ws-btn-secondary">
-              CarXen Home
-            </Link>
-
-            <button
-              type="button"
-              className="ws-btn-secondary"
-              style={{ color: '#ef4444' }}
-              onClick={async () => {
-                await logout();
-                router.push('/login');
-              }}
-            >
-              Sign out
-            </button>
-          </div>
         </div>
       </div>
     );

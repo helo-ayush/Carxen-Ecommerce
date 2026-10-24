@@ -901,6 +901,42 @@ body:has(.wholesale-sidebar) {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
+.wholesale-sidebar-check-status-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: -6px 0 16px;
+  padding: 8px 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  border-radius: var(--ws-radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.wholesale-sidebar-check-status-btn:hover:not(:disabled) {
+  background: #1e293b;
+  border-color: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.18);
+}
+
+.wholesale-sidebar-check-status-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.wholesale-sidebar-check-status-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
 .wholesale-nav-group {
   margin-bottom: 14px;
 }
@@ -1523,6 +1559,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
   }
   .wholesale-sidebar-brand,
   .wholesale-sidebar-status,
+  .wholesale-sidebar-check-status-btn,
   .wholesale-sidebar-label,
   .wholesale-sidebar-card,
   .wholesale-sidebar-retail-link,

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { WholesaleIcon, WholesaleMark } from '@/components/wholesale/WholesaleIcon';
+import { RefreshCw } from 'lucide-react';
 
 function HeaderContent() {
   const {
@@ -23,6 +24,7 @@ function HeaderContent() {
     setWorkspaceMode,
     logout,
     showToast,
+    refreshCustomerProfile,
   } = useApp();
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
@@ -39,6 +41,20 @@ function HeaderContent() {
   const [searchVal, setSearchVal] = useState(currentQuery);
   const [cartBump, setCartBump] = useState(false);
   const [favBump, setFavBump] = useState(false);
+  const [checkingWholesaleStatus, setCheckingWholesaleStatus] = useState(false);
+
+  const handleCheckWholesaleStatus = async () => {
+    if (checkingWholesaleStatus) return;
+    setCheckingWholesaleStatus(true);
+    try {
+      await refreshCustomerProfile();
+      showToast('Application status checked: Commercial review is currently in progress.');
+    } catch {
+      showToast('Application is currently under commercial review.');
+    } finally {
+      setTimeout(() => setCheckingWholesaleStatus(false), 600);
+    }
+  };
 
   useEffect(() => {
     setSearchVal(currentQuery);
@@ -240,6 +256,19 @@ function HeaderContent() {
                 : (isWholesalePending ? 'Verification Pending' : 'Registration Required')}
             </span>
           </div>
+
+          {!isWholesaleApproved && (
+            <button
+              type="button"
+              className="wholesale-sidebar-check-status-btn"
+              disabled={checkingWholesaleStatus}
+              onClick={handleCheckWholesaleStatus}
+              title="Check wholesale verification status"
+            >
+              <RefreshCw size={13} className={checkingWholesaleStatus ? 'ws-spin' : ''} />
+              <span>{checkingWholesaleStatus ? 'Checking Status...' : 'Check Status'}</span>
+            </button>
+          )}
 
           <div className="wholesale-nav-group">
             <div className="wholesale-sidebar-label">Procurement</div>
