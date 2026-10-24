@@ -109,7 +109,7 @@ interface AppContextType {
   login: (name?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: string | null; requiresEmailConfirmation?: boolean }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithGoogle: (redirectTarget?: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   updateUserProfile: (profile: Partial<User>) => Promise<void>;
   addAddress: (addr: Omit<CustomerAddress, 'id'>) => void;
@@ -655,11 +655,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async () => {
-    showToast('Google Sign-In will be available soon.');
-    return {
-      error: 'Google Sign-In will be available soon. Please use email and password to sign in.',
-    };
+  const signInWithGoogle = async (redirectTarget: string = '/account'): Promise<{ error: string | null }> => {
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const target = redirectTarget.startsWith('/') && !redirectTarget.startsWith('//') ? redirectTarget : '/account';
+      const callbackUrl = `${origin}/auth/callback?redirect=${encodeURIComponent(target)}`;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { error: null };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Google sign-in could not be initiated.';
+      return { error: msg };
+    }
   };
 
   const logout = async () => {

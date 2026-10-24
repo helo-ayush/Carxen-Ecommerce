@@ -8,7 +8,7 @@ import { useApp } from '@/context/AppContext';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loginWithEmail, signUpWithEmail, logout, showToast } = useApp();
+  const { user, loginWithEmail, signUpWithEmail, logout, showToast, signInWithGoogle } = useApp();
 
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [fullName, setFullName] = useState('');
@@ -23,8 +23,13 @@ function LoginForm() {
 
   useEffect(() => {
     const errorParam = searchParams.get('error');
-    if (errorParam === 'auth_failed') {
-      setErrorMessage('Authentication could not be completed. Please try again.');
+    if (errorParam) {
+      const errorMap: Record<string, string> = {
+        auth_failed: 'Authentication could not be completed. Please try again.',
+        unverified_email: 'Your Google email is not verified. Please verify your Google account before signing in.',
+        no_code: 'No authorization code returned from Google. Please try again.',
+      };
+      setErrorMessage(errorMap[errorParam] || decodeURIComponent(errorParam));
     }
   }, [searchParams]);
 
@@ -34,10 +39,23 @@ function LoginForm() {
     }
   }, [user, redirectUrl, router]);
 
-  const handleGoogleSignIn = () => {
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
     setErrorMessage(null);
-    setInfoMessage('Google Sign-In will be available soon. Please use your email to sign in or create an account.');
-    showToast('Google Sign-In will be available soon.');
+    setInfoMessage(null);
+    setIsGoogleLoading(true);
+
+    try {
+      const res = await signInWithGoogle(redirectUrl);
+      if (res?.error) {
+        setErrorMessage(res.error);
+        setIsGoogleLoading(false);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to initialize Google sign-in.');
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -437,46 +455,55 @@ function LoginForm() {
                   className="lg-alt"
                   type="button"
                   onClick={handleGoogleSignIn}
-                  title="Google Sign-In will be available soon"
+                  disabled={loading || isGoogleLoading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
                     position: 'relative',
+                    cursor: isGoogleLoading ? 'wait' : 'pointer',
+                    opacity: isGoogleLoading ? 0.75 : 1,
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2 3.1v2.6h3.3c2-1.8 3.1-4.4 3.1-7.5z"
+                  {isGoogleLoading ? (
+                    <span
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        border: '2px solid rgba(0,0,0,0.15)',
+                        borderTopColor: '#e2231a',
+                        borderRadius: '50%',
+                        display: 'inline-block',
+                        animation: 'spin 0.8s linear infinite',
+                      }}
                     />
-                    <path
-                      fill="#34A853"
-                      d="M12 22c2.7 0 5-.9 6.6-2.4l-3.3-2.6c-.9.6-2 1-3.3 1-2.6 0-4.7-1.7-5.5-4.1H3.1v2.6A10 10 0 0 0 12 22z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M6.5 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2L6.5 14z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.5 10c.8-2.4 2.9-4.1 5.5-4.1z"
-                    />
-                  </svg>
-                  <span>Continue with Google</span>
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      background: 'rgba(0,0,0,0.06)',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Soon
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2 3.1v2.6h3.3c2-1.8 3.1-4.4 3.1-7.5z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 22c2.7 0 5-.9 6.6-2.4l-3.3-2.6c-.9.6-2 1-3.3 1-2.6 0-4.7-1.7-5.5-4.1H3.1v2.6A10 10 0 0 0 12 22z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M6.5 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2L6.5 14z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.5 10c.8-2.4 2.9-4.1 5.5-4.1z"
+                      />
+                    </svg>
+                  )}
+                  <span>
+                    {isGoogleLoading
+                      ? 'Connecting to Google...'
+                      : mode === 'up'
+                      ? 'Sign up with Google'
+                      : 'Continue with Google'}
                   </span>
                 </button>
 
