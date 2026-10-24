@@ -4566,18 +4566,20 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 .ws-pdp-tabs-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--ws-border);
   background: #f8fafc;
-  overflow-x: auto;
+  width: 100%;
 }
 
 .ws-pdp-tab-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 16px 20px;
-  font-size: 13.5px;
+  padding: 16px 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #64748b;
   background: transparent;
@@ -4586,6 +4588,21 @@ body:has(.wholesale-sidebar) .ws-page-container {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .ws-pdp-tabs-header {
+    display: flex;
+    overflow-x: auto;
+  }
+  .ws-pdp-tab-btn {
+    flex: 1 0 auto;
+    min-width: max-content;
+    padding: 14px 18px;
+  }
 }
 
 .ws-pdp-tab-btn:hover {
@@ -4634,6 +4651,10 @@ body:has(.wholesale-sidebar) .ws-page-container {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 13px;
+}
+
+.ws-spec-item:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .ws-spec-key {

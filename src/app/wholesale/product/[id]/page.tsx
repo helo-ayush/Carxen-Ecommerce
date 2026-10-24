@@ -960,10 +960,15 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   <span className="ws-spec-key">Country of Origin</span>
                   <span className="ws-spec-val">Made in India (CarXen Automotive Facilities)</span>
                 </div>
-                {product.packageDimensions && (
+                {product.packageDimensions ? (
                   <div className="ws-spec-item">
                     <span className="ws-spec-key">Package Dimensions (L × W × H)</span>
                     <span className="ws-spec-val">{product.packageDimensions}</span>
+                  </div>
+                ) : (
+                  <div className="ws-spec-item">
+                    <span className="ws-spec-key">Production Quality Standard</span>
+                    <span className="ws-spec-val">IATF 16949 / ISO 9001 Automotive Certified</span>
                   </div>
                 )}
               </div>
