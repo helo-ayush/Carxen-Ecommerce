@@ -450,6 +450,8 @@ body:has(.wholesale-sidebar) {
 
 .ws-procurement-table {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   text-align: left;
@@ -458,13 +460,15 @@ body:has(.wholesale-sidebar) {
 .ws-procurement-table thead th {
   background: #f8fafc;
   color: var(--ws-text-muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 12px 16px;
+  letter-spacing: 0.04em;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--ws-border);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ws-procurement-table tbody tr {
@@ -476,10 +480,11 @@ body:has(.wholesale-sidebar) {
 }
 
 .ws-procurement-table tbody td {
-  padding: 14px 16px;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--ws-border-light);
   vertical-align: middle;
-  font-size: 13.5px;
+  font-size: 13px;
+  overflow: hidden;
 }
 
 .ws-procurement-table tbody tr:last-child td {
@@ -490,13 +495,14 @@ body:has(.wholesale-sidebar) {
 .ws-prod-cell {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .ws-prod-art-thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
   border: 1px solid var(--ws-border);
   background: #f8fafc;
   overflow: hidden;
@@ -508,31 +514,39 @@ body:has(.wholesale-sidebar) {
 .ws-prod-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .ws-prod-name {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--ws-text);
-  line-height: 1.35;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .ws-prod-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 11px;
   color: var(--ws-text-muted);
+  flex-wrap: wrap;
 }
 
 .ws-prod-series-badge {
   display: inline-block;
   background: #f1f5f9;
   color: var(--ws-text-muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 1px 7px;
+  padding: 1px 6px;
   border-radius: 4px;
 }
 
@@ -540,40 +554,44 @@ body:has(.wholesale-sidebar) {
 .ws-sku-badge {
   display: inline-block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #334155;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .ws-moq-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
+  gap: 3px;
+  font-size: 11px;
   font-weight: 700;
   color: #475569;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   white-space: nowrap;
 }
 
 .ws-fitment-badge {
   display: inline-block;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   color: #0369a1;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
-  max-width: 180px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -631,9 +649,10 @@ body:has(.wholesale-sidebar) {
   background: #ffffff;
   border: 1px solid var(--ws-border);
   border-radius: var(--ws-radius-sm);
-  padding: 2px;
+  padding: 1px;
   box-shadow: var(--ws-shadow-sm);
   transition: border-color 0.15s ease;
+  max-width: 100%;
 }
 
 .ws-stepper:focus-within {
@@ -642,16 +661,17 @@ body:has(.wholesale-sidebar) {
 }
 
 .ws-stepper-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 26px;
   display: grid;
   place-items: center;
   background: transparent;
   border: none;
   color: var(--ws-text-muted);
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .ws-stepper-btn:hover {
@@ -664,11 +684,11 @@ body:has(.wholesale-sidebar) {
 }
 
 .ws-stepper-input {
-  width: 44px;
-  height: 28px;
+  width: 34px;
+  height: 26px;
   border: none;
   background: transparent;
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--ws-text);
   text-align: center;
@@ -687,11 +707,11 @@ body:has(.wholesale-sidebar) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 4px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 6px 14px;
-  min-height: 32px;
+  padding: 5px 8px;
+  min-height: 28px;
   border-radius: var(--ws-radius-sm);
   cursor: pointer;
   border: 1px solid var(--ws-border);
@@ -699,6 +719,9 @@ body:has(.wholesale-sidebar) {
   color: var(--ws-text);
   transition: all 0.18s ease;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ws-row-action-btn:hover {
@@ -1521,6 +1544,25 @@ body:has(.wholesale-sidebar) .ws-page-container {
 /* --------------------------------------------------------------------------
    Responsive Media Queries
    -------------------------------------------------------------------------- */
+@media (max-width: 1366px) {
+  .wholesale-sidebar {
+    width: 220px;
+  }
+  body:has(.wholesale-sidebar) .ws-page-container {
+    margin-left: 220px;
+    max-width: calc(100% - 220px);
+    padding: 24px 20px 120px;
+  }
+  .ws-procurement-table thead th {
+    padding: 10px 7px;
+    font-size: 10.5px;
+  }
+  .ws-procurement-table tbody td {
+    padding: 10px 7px;
+    font-size: 12.5px;
+  }
+}
+
 @media (max-width: 1200px) {
   .ws-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1536,13 +1578,86 @@ body:has(.wholesale-sidebar) .ws-page-container {
   }
 }
 
-@media (max-width: 1060px) {
+@media (max-width: 1160px) {
   .wholesale-sidebar {
-    width: 200px;
-    left: 12px;
+    width: 195px;
   }
   body:has(.wholesale-sidebar) .ws-page-container {
-    margin-left: 220px;
+    margin-left: 195px;
+    max-width: calc(100% - 195px);
+    padding: 20px 14px 120px;
+  }
+  .ws-procurement-table thead th {
+    padding: 8px 5px;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .ws-procurement-table tbody td {
+    padding: 8px 5px;
+    font-size: 12px;
+  }
+  .ws-prod-cell {
+    gap: 7px;
+  }
+  .ws-prod-art-thumb {
+    width: 36px;
+    height: 36px;
+  }
+  .ws-prod-name {
+    font-size: 12px;
+  }
+  .ws-stepper-btn {
+    width: 20px;
+    height: 24px;
+  }
+  .ws-stepper-input {
+    width: 26px;
+    height: 24px;
+    font-size: 11.5px;
+  }
+  .ws-row-action-btn {
+    padding: 4px 5px;
+    font-size: 10.5px;
+    min-height: 26px;
+    gap: 3px;
+  }
+  .ws-price-wholesale {
+    font-size: 12.5px;
+  }
+  .ws-price-tier2 {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 960px) {
+  .wholesale-sidebar {
+    width: 175px;
+  }
+  body:has(.wholesale-sidebar) .ws-page-container {
+    margin-left: 175px;
+    max-width: calc(100% - 175px);
+    padding: 16px 10px 120px;
+  }
+  .ws-procurement-table thead th {
+    padding: 7px 4px;
+    font-size: 9.5px;
+  }
+  .ws-procurement-table tbody td {
+    padding: 7px 4px;
+    font-size: 11.5px;
+  }
+  .ws-prod-art-thumb {
+    width: 30px;
+    height: 30px;
+  }
+  .ws-prod-name {
+    font-size: 11.5px;
+  }
+  .ws-sku-badge,
+  .ws-fitment-badge,
+  .ws-moq-badge {
+    font-size: 10px;
+    padding: 1px 4px;
   }
 }
 
@@ -1576,7 +1691,8 @@ body:has(.wholesale-sidebar) .ws-page-container {
   }
   body:has(.wholesale-sidebar) .ws-page-container {
     margin-left: 0;
-    padding: 16px;
+    max-width: 100%;
+    padding: 16px 12px 120px;
   }
   .ws-metrics-grid {
     grid-template-columns: 1fr;
@@ -1591,6 +1707,47 @@ body:has(.wholesale-sidebar) .ws-page-container {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
+  }
+
+  /* Card block layout for tables on small screens - never scrollable, always 100% visible */
+  .ws-procurement-table thead {
+    display: none;
+  }
+  .ws-procurement-table,
+  .ws-procurement-table tbody,
+  .ws-procurement-table tbody tr {
+    display: block;
+    width: 100%;
+  }
+  .ws-procurement-table tbody tr {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--ws-border);
+    background: #ffffff;
+  }
+  .ws-procurement-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .ws-procurement-table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: none;
+    font-size: 13px;
+    width: 100% !important;
+  }
+  .ws-procurement-table tbody td:first-child {
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--ws-border-light);
+    margin-bottom: 6px;
+  }
+  .ws-procurement-table tbody td:last-child {
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+  .ws-procurement-table tbody td .ws-row-action-btn {
+    width: 100%;
+    max-width: 100%;
   }
 }
 

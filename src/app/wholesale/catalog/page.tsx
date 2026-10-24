@@ -375,13 +375,13 @@ export default function WholesaleCatalogPage() {
           <table className="ws-procurement-table">
             <thead>
               <tr>
-                <th style={{ width: '32%' }}>Product Details</th>
-                <th style={{ width: '13%' }}>SKU / Part #</th>
-                <th style={{ width: '15%' }}>Vehicle Fitment</th>
-                <th style={{ width: '10%' }}>MOQ</th>
-                <th style={{ width: '14%' }}>Wholesale Unit Price</th>
+                <th style={{ width: '28%' }}>Product Details</th>
+                <th style={{ width: '14%' }}>SKU / Part #</th>
+                <th style={{ width: '13%' }}>Vehicle Fitment</th>
+                <th style={{ width: '8%' }}>MOQ</th>
+                <th style={{ width: '13%' }}>Wholesale Price</th>
                 <th style={{ width: '10%', textAlign: 'center' }}>Quantity</th>
-                <th style={{ width: '16%', textAlign: 'right' }}>Procurement Action</th>
+                <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -416,7 +416,9 @@ export default function WholesaleCatalogPage() {
                     </td>
 
                     <td>
-                      <span className="ws-sku-badge">{p.slug || `CX-${p.id}`}</span>
+                      <span className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>
+                        {p.slug || `CX-${p.id}`}
+                      </span>
                     </td>
 
                     <td>
@@ -481,7 +483,7 @@ export default function WholesaleCatalogPage() {
                           className="ws-row-action-btn in-basket"
                           title="Currently in your wholesale basket"
                         >
-                          <Check size={14} />
+                          <Check size={13} />
                           <span>In Basket ({wholesaleBasket[p.id]})</span>
                         </button>
                       ) : (
@@ -491,8 +493,8 @@ export default function WholesaleCatalogPage() {
                           className="ws-row-action-btn"
                           title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
                         >
-                          <Plus size={14} />
-                          <span>{isDraftDifferent ? `Update to ${currentQty}` : `Add ${currentQty}`}</span>
+                          <Plus size={13} />
+                          <span>{isDraftDifferent ? `Update (${currentQty})` : `Add (${currentQty})`}</span>
                         </button>
                       )}
                     </td>

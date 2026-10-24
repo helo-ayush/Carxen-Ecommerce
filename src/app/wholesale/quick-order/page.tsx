@@ -270,13 +270,13 @@ export default function WholesaleQuickOrderPage() {
           <table className="ws-procurement-table">
             <thead>
               <tr>
-                <th style={{ width: '34%' }}>Product Line</th>
-                <th style={{ width: '15%' }}>SKU / Part #</th>
-                <th style={{ width: '10%' }}>MOQ</th>
-                <th style={{ width: '14%' }}>Tier 1 (Wholesale)</th>
+                <th style={{ width: '27%' }}>Product Line</th>
+                <th style={{ width: '14%' }}>SKU / Part #</th>
+                <th style={{ width: '8%' }}>MOQ</th>
+                <th style={{ width: '13%' }}>Tier 1 (Wholesale)</th>
                 <th style={{ width: '14%' }}>Tier 2 (Volume 20+)</th>
-                <th style={{ width: '12%', textAlign: 'center' }}>Batch Quantity</th>
-                <th style={{ width: '13%', textAlign: 'right' }}>Procurement Action</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>Batch Qty</th>
+                <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -309,7 +309,7 @@ export default function WholesaleQuickOrderPage() {
                     </td>
 
                     <td>
-                      <span className="ws-sku-badge">{p.slug || `CX-${p.id}`}</span>
+                      <span className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>{p.slug || `CX-${p.id}`}</span>
                     </td>
 
                     <td>
@@ -375,7 +375,7 @@ export default function WholesaleQuickOrderPage() {
                           className="ws-row-action-btn in-basket"
                           title="Currently in your wholesale basket"
                         >
-                          <Check size={14} />
+                          <Check size={13} />
                           <span>In Basket ({wholesaleBasket[p.id]})</span>
                         </button>
                       ) : (
@@ -385,8 +385,8 @@ export default function WholesaleQuickOrderPage() {
                           className="ws-row-action-btn"
                           title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
                         >
-                          <Plus size={14} />
-                          <span>{isDraftDifferent ? `Update to ${currentQty}` : `Add ${currentQty}`}</span>
+                          <Plus size={13} />
+                          <span>{isDraftDifferent ? `Update (${currentQty})` : `Add (${currentQty})`}</span>
                         </button>
                       )}
                     </td>
