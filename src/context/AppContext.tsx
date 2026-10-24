@@ -148,6 +148,7 @@ interface AppContextType {
   isWholesalePending: boolean;
   isWholesaleInquiry: boolean;
   applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
+  updateB2bProfile: (updates: Partial<B2BProfile> & { name?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   refreshCustomerProfile: () => Promise<void>;
   coupons: StorefrontCoupon[];
   refreshCoupons: () => Promise<void>;
@@ -201,6 +202,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedBasket = localStorage.getItem('cx_wholesale_basket');
       if (savedBasket) {
         setWholesaleBasket(JSON.parse(savedBasket));
+      }
+      const savedB2b = localStorage.getItem('cx_b2b_profile');
+      if (savedB2b) {
+        setB2bProfile(JSON.parse(savedB2b));
       }
     } catch {}
   }, []);
@@ -1348,6 +1353,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               success: false,
               error: formatUserFriendlyB2BError(err),
             };
+          }
+        },
+        updateB2bProfile: async (updates: Partial<B2BProfile> & { name?: string; phone?: string }) => {
+          try {
+            setB2bProfile((prev) => {
+              const next: B2BProfile = {
+                status: prev?.status || 'APPROVED',
+                wholesaleTier: prev?.wholesaleTier || 'tier1',
+                ...prev,
+                ...updates,
+              };
+              try {
+                localStorage.setItem('cx_b2b_profile', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+
+            if (updates.name || updates.phone) {
+              setUser((prev) => {
+                if (!prev) return prev;
+                const updatedUser = {
+                  ...prev,
+                  name: updates.name !== undefined && updates.name.trim() ? updates.name.trim() : prev.name,
+                  phone: updates.phone !== undefined ? updates.phone.trim() : prev.phone,
+                };
+                try {
+                  localStorage.setItem('cx_user_profile', JSON.stringify(updatedUser));
+                  localStorage.setItem('cx_demo_user', JSON.stringify(updatedUser));
+                } catch {}
+                return updatedUser;
+              });
+            }
+
+            const headers = await getAuthHeaders();
+            const res = await fetch('/api/storefront/customer/profile', {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify(updates),
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              showToast(data.error || 'Saved locally (server sync issue)');
+              return { success: true };
+            }
+
+            showToast('Business profile updated successfully');
+            return { success: true };
+          } catch (err) {
+            console.warn('Backend business profile update error:', err);
+            showToast('Business profile saved locally');
+            return { success: true };
           }
         },
         refreshCustomerProfile: async () => {

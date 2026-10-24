@@ -20,6 +20,7 @@ export default function WholesaleOrderBasketPage() {
     b2bProfile,
     isWholesaleApproved,
     authLoading,
+    addresses,
     wholesaleBasket,
     wholesaleBasketSkuCount,
     wholesaleBasketCount,
@@ -59,6 +60,33 @@ export default function WholesaleOrderBasketPage() {
   const [shippingCity, setShippingCity] = useState(b2bProfile?.city || '');
   const [shippingState, setShippingState] = useState(b2bProfile?.state || '');
   const [shippingPincode, setShippingPincode] = useState(b2bProfile?.pincode || '');
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+
+  useEffect(() => {
+    if (addresses.length > 0) {
+      const primary = addresses.find((a) => a.isPrimary) || addresses[0];
+      setSelectedAddressId(primary.id);
+      setShippingLine1(primary.addressLine1 + (primary.addressLine2 ? `, ${primary.addressLine2}` : ''));
+      setShippingCity(primary.city);
+      setShippingState(primary.state);
+      setShippingPincode(primary.postalCode);
+      if (primary.name) setRepresentativeName(primary.name);
+      if (primary.phone) setPhone(primary.phone);
+    }
+  }, [addresses]);
+
+  const handleSelectWarehouseAddress = (addrId: string) => {
+    setSelectedAddressId(addrId);
+    const target = addresses.find((a) => a.id === addrId);
+    if (target) {
+      setShippingLine1(target.addressLine1 + (target.addressLine2 ? `, ${target.addressLine2}` : ''));
+      setShippingCity(target.city);
+      setShippingState(target.state);
+      setShippingPincode(target.postalCode);
+      if (target.name) setRepresentativeName(target.name);
+      if (target.phone) setPhone(target.phone);
+    }
+  };
 
   // PO & Factory Terms
   const [poNumber, setPoNumber] = useState('');
@@ -483,6 +511,51 @@ export default function WholesaleOrderBasketPage() {
                   />
                 </div>
               </div>
+
+              {addresses.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      Select Registered Warehouse Destination:
+                    </label>
+                    <Link
+                      href="/wholesale/account"
+                      style={{ fontSize: '11.5px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      + Manage Warehouses
+                    </Link>
+                  </div>
+                  <div className="ws-warehouse-selector-grid">
+                    {addresses.map((addr) => {
+                      const isSelected = selectedAddressId === addr.id;
+                      return (
+                        <div
+                          key={addr.id}
+                          className={`ws-warehouse-select-box ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleSelectWarehouseAddress(addr.id)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
+                              {addr.label || 'Warehouse'}
+                            </span>
+                            {addr.isPrimary && (
+                              <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                Primary
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ fontSize: '11.5px', color: '#64748b', margin: '0 0 4px 0', lineHeight: 1.4 }}>
+                            {addr.addressLine1}, {addr.city} - {addr.postalCode}
+                          </p>
+                          <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>
+                            Attn: {addr.name} ({addr.phone})
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Warehouse Delivery Address *</label>

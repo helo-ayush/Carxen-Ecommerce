@@ -9,7 +9,8 @@ import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
-import { Plus, Minus, X, ArrowRight, Check } from 'lucide-react';
+import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
+import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter } from 'lucide-react';
 import '../wholesale.css';
 
 const VEHICLE_BRANDS = [
@@ -65,14 +66,11 @@ export default function WholesaleCatalogPage() {
     }
   }, [authLoading, isWholesaleApproved, router, user]);
 
-  if (authLoading || !user || !isWholesaleApproved) {
-    return null;
-  }
-
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
   const [selectedModel, setSelectedModel] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [rowQuantities, setRowQuantities] = useState<Record<number, number>>({});
 
   const getProductMoq = (p: Product) => Math.max(1, p.b2bMoq || 5);
@@ -141,9 +139,9 @@ export default function WholesaleCatalogPage() {
     }));
   };
 
-  const handleAddToBasket = (p: Product) => {
+  const handleAddToBasket = (p: Product, customQty?: number) => {
     const moq = getProductMoq(p);
-    const qty = rowQuantities[p.id] || moq;
+    const qty = customQty || rowQuantities[p.id] || moq;
     addToWholesaleBasket(p.id, qty);
     showToast(`Added ${qty} units of "${p.n}" to Wholesale Order Basket.`);
   };
@@ -171,6 +169,10 @@ export default function WholesaleCatalogPage() {
     showToast(`Added ${addedCount} wholesale products to your Order Basket.`);
   };
 
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
+
   const availableModels = selectedBrand !== 'All Brands' ? POPULAR_MODELS[selectedBrand] || [] : [];
   const tierName = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (25% Margin)' : 'Tier 1 (15% Margin)';
 
@@ -194,9 +196,31 @@ export default function WholesaleCatalogPage() {
         </div>
 
         <div className="ws-header-actions">
+          {/* View Mode Toggle: Cards View vs Table View */}
+          <div className="ws-view-toggle-group">
+            <button
+              type="button"
+              className={`ws-view-toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+              title="Product Cards View (Like Shop Page)"
+            >
+              <LayoutGrid size={15} />
+              <span>Cards View</span>
+            </button>
+            <button
+              type="button"
+              className={`ws-view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Procurement Table View"
+            >
+              <TableProperties size={15} />
+              <span>Table View</span>
+            </button>
+          </div>
+
           <button type="button" onClick={handleFillAllVisibleMoqs} className="ws-btn-secondary" title="Fill MOQs for all visible products">
             <WholesaleIcon name="spark" size={15} />
-            <span>Fill Visible MOQs</span>
+            <span>Fill MOQs</span>
           </button>
           <button type="button" onClick={handleAddAllToBasket} className="ws-btn-secondary" title="Add all visible products to basket">
             <WholesaleIcon name="check" size={15} />
@@ -204,7 +228,7 @@ export default function WholesaleCatalogPage() {
           </button>
           <Link href="/wholesale/order-basket" className="ws-btn-primary ws-btn-brand">
             <WholesaleIcon name="basket" size={15} />
-            <span>Review Basket ({wholesaleBasketSkuCount} SKUs)</span>
+            <span>Review Basket ({wholesaleBasketSkuCount})</span>
           </Link>
         </div>
       </div>
@@ -218,7 +242,9 @@ export default function WholesaleCatalogPage() {
               <WholesaleIcon name="catalogue" size={16} />
             </div>
           </div>
-          <div className="ws-metric-value">{filteredProducts.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>/ {products.length} SKUs</span></div>
+          <div className="ws-metric-value">
+            {filteredProducts.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>/ {products.length} SKUs</span>
+          </div>
           <div className="ws-metric-subtext">Automotive OEM precision fitments</div>
         </div>
 
@@ -349,7 +375,7 @@ export default function WholesaleCatalogPage() {
         </div>
       </div>
 
-      {/* Procurement Table Card */}
+      {/* Main Inventory Display: Cards View vs Table View */}
       {filteredProducts.length === 0 ? (
         <div className="ws-empty-state-card">
           <div className="ws-empty-icon-wrap">
@@ -370,7 +396,28 @@ export default function WholesaleCatalogPage() {
             Reset All Filters
           </button>
         </div>
+      ) : viewMode === 'cards' ? (
+        /* CARDS VIEW: Product cards like Shop page */
+        <div className="ws-card-grid">
+          {filteredProducts.map((p) => {
+            const moq = getProductMoq(p);
+            const inBasketQty = wholesaleBasket[p.id] || 0;
+            const draftQty = rowQuantities[p.id] || (inBasketQty > 0 ? inBasketQty : moq);
+
+            return (
+              <WholesaleProductCard
+                key={p.id}
+                product={p}
+                quantity={draftQty}
+                inBasketQty={inBasketQty}
+                onQuantityChange={(prodId, val) => handleRowQtyChange(prodId, val, moq)}
+                onAddToBasket={(prod, q) => handleAddToBasket(prod, q)}
+              />
+            );
+          })}
+        </div>
       ) : (
+        /* TABLE VIEW: Dense procurement spreadsheet */
         <div className="ws-table-card">
           <table className="ws-procurement-table">
             <thead>
@@ -399,11 +446,13 @@ export default function WholesaleCatalogPage() {
                   <tr key={p.id}>
                     <td>
                       <div className="ws-prod-cell">
-                        <div className="ws-prod-art-thumb">
+                        <Link href={`/wholesale/product/${p.id}`} className="ws-prod-art-thumb">
                           <ProductArt product={p} />
-                        </div>
+                        </Link>
                         <div className="ws-prod-info">
-                          <div className="ws-prod-name">{p.n}</div>
+                          <Link href={`/wholesale/product/${p.id}`} className="ws-prod-name">
+                            {p.n}
+                          </Link>
                           <div className="ws-prod-meta">
                             <span className="ws-prod-series-badge">{p.s} Series</span>
                             <span className="ws-stock-pill">
