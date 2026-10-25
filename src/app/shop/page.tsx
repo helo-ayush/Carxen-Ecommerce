@@ -18,7 +18,6 @@ import {
   X,
   SlidersHorizontal,
   RotateCcw,
-  Star,
   Layers,
   ChevronDown,
   ChevronUp,
@@ -78,7 +77,6 @@ function ShopContent() {
   const [category, setCategory] = useState(catParam);
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
   const [priceTier, setPriceTier] = useState<'all' | 'lo' | 'mid' | 'hi'>('all');
-  const [ratingFilter, setRatingFilter] = useState(false);
   const [seriesFilter, setSeriesFilter] = useState(seriesParam);
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [sortBy, setSortBy] = useState(sortParam);
@@ -90,7 +88,6 @@ function ShopContent() {
     tags: true,
     fit: true,
     price: true,
-    rating: true,
     series: true,
   });
 
@@ -207,11 +204,10 @@ function ShopContent() {
         fitType === 'all' || (fitType === 'c') === isCustomFit(p);
       const [minP, maxP] = priceRanges[priceTier];
       const matchPrice = p.p >= minP && p.p <= maxP;
-      const matchRating = !ratingFilter || p.r >= 4.6;
       const matchSeries = seriesFilter === 'all' || p.s === seriesFilter;
       const matchDeals = !dealsOnly || Boolean(p.isCombo || (p.o && p.o > p.p));
 
-      if (!matchCat || !matchFit || !matchPrice || !matchRating || !matchSeries || !matchDeals) {
+      if (!matchCat || !matchFit || !matchPrice || !matchSeries || !matchDeals) {
         return false;
       }
 
@@ -261,7 +257,6 @@ function ShopContent() {
     category,
     fitType,
     priceTier,
-    ratingFilter,
     seriesFilter,
     searchQuery,
     sortBy,
@@ -275,7 +270,7 @@ function ShopContent() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, fitType, priceTier, ratingFilter, seriesFilter, searchQuery, sortBy, dealsOnly]);
+  }, [category, fitType, priceTier, seriesFilter, searchQuery, sortBy, dealsOnly]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
   const paginatedProducts = useMemo(() => {
@@ -287,7 +282,6 @@ function ShopContent() {
     category !== 'all' ||
     fitType !== 'all' ||
     priceTier !== 'all' ||
-    ratingFilter ||
     seriesFilter !== 'all' ||
     dealsOnly ||
     Boolean(searchQuery.trim());
@@ -296,7 +290,6 @@ function ShopContent() {
     category !== 'all',
     fitType !== 'all',
     priceTier !== 'all',
-    ratingFilter,
     seriesFilter !== 'all',
     dealsOnly,
     Boolean(searchQuery.trim()),
@@ -306,7 +299,6 @@ function ShopContent() {
     setCategory('all');
     setFitType('all');
     setPriceTier('all');
-    setRatingFilter(false);
     setSeriesFilter('all');
     setSearchQuery('');
     setDealsOnly(false);
@@ -436,7 +428,7 @@ function ShopContent() {
             </div>
 
             {/* Section 1: Search Tags */}
-            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+            <div className="shop-filter-group">
               <button
                 type="button"
                 className="shop-filter-group-header"
@@ -476,7 +468,7 @@ function ShopContent() {
             </div>
 
             {/* Section 2: Fit type */}
-            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+            <div className="shop-filter-group">
               <button
                 type="button"
                 className="shop-filter-group-header"
@@ -524,7 +516,7 @@ function ShopContent() {
             </div>
 
             {/* Section 3: Price */}
-            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
+            <div className="shop-filter-group">
               <button
                 type="button"
                 className="shop-filter-group-header"
@@ -566,40 +558,8 @@ function ShopContent() {
               )}
             </div>
 
-            {/* Section 4: Rating */}
-            <div className="shop-filter-group" style={{ marginBottom: '16px' }}>
-              <button
-                type="button"
-                className="shop-filter-group-header"
-                onClick={() => setExpandedSections((prev) => ({ ...prev, rating: !prev.rating }))}
-                aria-expanded={expandedSections.rating}
-              >
-                <div className="shop-filter-group-title">
-                  <Star style={{ width: 13, height: 13, color: '#0f172a' }} />
-                  <span>Rating</span>
-                </div>
-                {expandedSections.rating ? (
-                  <ChevronDown className="shop-filter-chevron" />
-                ) : (
-                  <ChevronUp className="shop-filter-chevron" />
-                )}
-              </button>
-              {expandedSections.rating && (
-                <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
-                  <button
-                    type="button"
-                    className={`shop-pill-chip ${ratingFilter ? 'active' : ''}`}
-                    onClick={() => setRatingFilter(!ratingFilter)}
-                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
-                  >
-                    4.6+ &amp; up
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Section 5: Series */}
-            <div className="shop-filter-group" style={{ marginBottom: '0px' }}>
+            {/* Section 4: Series */}
+            <div className="shop-filter-group">
               <button
                 type="button"
                 className="shop-filter-group-header"
@@ -744,16 +704,7 @@ function ShopContent() {
                     <X style={{ width: 12, height: 12 }} />
                   </button>
                 )}
-                {ratingFilter && (
-                  <button
-                    type="button"
-                    className="active-filter-chip"
-                    onClick={() => setRatingFilter(false)}
-                  >
-                    <span>Rating: 4.6★+</span>
-                    <X style={{ width: 12, height: 12 }} />
-                  </button>
-                )}
+
                 {seriesFilter !== 'all' && (
                   <button
                     type="button"
