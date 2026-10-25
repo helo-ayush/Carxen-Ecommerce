@@ -153,7 +153,7 @@ function LoginForm() {
               </span>
             </div>
           </div>
-          <div>
+          <div className="lg-l-foot">
             <h2 className="disp">
               Parts that fit
               <br />
@@ -181,6 +181,11 @@ function LoginForm() {
           </button>
 
           <div className="lg-f">
+            <div className="lg-m-logo">
+              <Link href="/" className="logo-link" aria-label="CARXEN Homepage">
+                <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '34px', width: 'auto' }} />
+              </Link>
+            </div>
             {user ? (
               <div
                 style={{
