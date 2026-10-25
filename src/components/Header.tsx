@@ -379,7 +379,7 @@ function HeaderContent() {
               <span>CarXen Commercial Desk</span>
             </div>
             <p className="ws-sidebar-desk-desc">
-              Custom vehicle orders, bulk proformas & priority allocation
+              Custom vehicle orders, bulk procurement &amp; priority allocation
             </p>
             <div className="ws-sidebar-desk-phone">
               +91 98765 43210

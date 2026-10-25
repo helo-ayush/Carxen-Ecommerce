@@ -272,9 +272,9 @@ export default function WholesaleDashboardPage() {
                   <WholesaleIcon name="shield" size={20} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Zero Website Payment</strong>
+                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Instant Checkout &amp; COD</strong>
                   <span style={{ fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
-                    Orders are confirmed online and released directly to CarXen for offline commercial billing and credit terms.
+                    Seamless checkout with Razorpay online payment (UPI, cards, NetBanking) and Cash on Delivery at your warehouse.
                   </span>
                 </div>
               </div>
@@ -409,7 +409,7 @@ export default function WholesaleDashboardPage() {
                 </div>
                 <div className="ws-review-step-content">
                   <h4>Procurement Unlocked</h4>
-                  <p>Quick Order Matrix, volume quotes & offline tax invoice PO flow.</p>
+                  <p>Quick Order Matrix, volume quotes &amp; instant online checkout.</p>
                 </div>
               </div>
             </div>
@@ -488,7 +488,7 @@ export default function WholesaleDashboardPage() {
                   </div>
                   <div>
                     <h4>Privileges Unlocking on Approval</h4>
-                    <p className="ws-perks-subtext">Commercial terms activated immediately upon approval</p>
+                    <p className="ws-perks-subtext">Wholesale benefits activated immediately upon approval</p>
                   </div>
                 </div>
 
@@ -508,8 +508,8 @@ export default function WholesaleDashboardPage() {
                       <CheckCircle2 size={16} />
                     </div>
                     <div>
-                      <strong>Zero-Payment Online PO Flow</strong>
-                      <span>Place enterprise batch orders online instantly with offline tax invoice settlement.</span>
+                      <strong>Online Payment &amp; COD Checkout</strong>
+                      <span>Checkout seamlessly online via Razorpay (UPI/Cards) or Cash on Delivery for all wholesale orders.</span>
                     </div>
                   </div>
 

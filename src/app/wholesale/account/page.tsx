@@ -291,7 +291,7 @@ export default function WholesaleAccountPage() {
         <div className="ws-header-titles">
           <div className="ws-breadcrumb-kicker">
             <WholesaleIcon name="shield" size={13} strokeWidth={2} />
-            <span>Enterprise Identity & Verified Commercial Terms</span>
+            <span>Enterprise Identity &amp; Verified Wholesale Account</span>
           </div>
           <h1>
             <WholesaleIcon name="account" size={26} strokeWidth={2} />

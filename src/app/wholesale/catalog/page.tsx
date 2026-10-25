@@ -191,7 +191,7 @@ export default function WholesaleCatalogPage() {
           </h1>
           <p>
             Full factory catalogue with multi-vehicle fitment filtering, commercial tier pricing, and instant MOQ validation.
-            <strong> Direct CarXen factory fulfillment with zero online payment.</strong>
+            <strong> Direct CarXen factory fulfillment with Razorpay and COD checkout.</strong>
           </p>
         </div>
 
@@ -281,7 +281,7 @@ export default function WholesaleCatalogPage() {
             {wholesaleBasketSkuCount} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>SKUs ({wholesaleBasketCount} units)</span>
           </div>
           <div className="ws-metric-subtext">
-            {wholesaleBasketSubtotal > 0 ? `Est. Total: ${formatINR(wholesaleBasketSubtotal)}` : 'Zero online payment required'}
+            {wholesaleBasketSubtotal > 0 ? `Est. Total: ${formatINR(wholesaleBasketSubtotal)}` : 'Razorpay & COD Checkout Available'}
           </div>
         </div>
       </div>
@@ -567,7 +567,7 @@ export default function WholesaleCatalogPage() {
                 {wholesaleBasketSkuCount} SKUs in Order Basket · {wholesaleBasketCount} Total Units
               </div>
               <div className="ws-dock-subtitle">
-                Commercial Estimate: {formatINR(wholesaleBasketSubtotal)} · Zero online payment required
+                Commercial Estimate: {formatINR(wholesaleBasketSubtotal)} · Razorpay &amp; COD Available
               </div>
             </div>
           </div>

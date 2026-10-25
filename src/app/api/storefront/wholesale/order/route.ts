@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { getAuthenticatedCustomer, STORE_ID, FACTORY_ID } from '@/lib/server/customer';
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
+import { createRazorpayOrder, getRazorpayConfig, verifyRazorpaySignature } from '@/lib/server/razorpay';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +13,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const {
+      action,
       items,
       businessName,
       tradeName,
@@ -25,6 +28,10 @@ export async function POST(request: Request) {
       requestedDeliveryDate,
       partialShipmentAllowed,
       factoryNotes,
+      paymentMethod,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
     } = body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -39,25 +46,6 @@ export async function POST(request: Request) {
         { error: 'Legal Business Name is required for wholesale orders.' },
         { status: 400 }
       );
-    }
-
-    if (!shippingAddress?.line1 || !shippingAddress?.city || !shippingAddress?.postalCode) {
-      return NextResponse.json(
-        { error: 'Complete delivery address (line 1, city, and 6-digit PIN) is required.' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseAdmin();
-    let authUser: any = null;
-    let customer: any = null;
-
-    try {
-      const auth = await getAuthenticatedCustomer(request);
-      authUser = auth.user;
-      customer = auth.customer;
-    } catch {
-      // Unauthenticated
     }
 
     // Load catalog to get authoritative wholesale pricing & verify MOQs
@@ -115,10 +103,84 @@ export async function POST(request: Request) {
       );
     }
 
-    // 18% GST estimate for automotive components
+    // 18% GST for wholesale components
     const gstRate = 0.18;
     const gstAmount = Math.round(subtotal * gstRate);
     const totalOrderValue = subtotal + gstAmount;
+
+    // ACTION: Create Razorpay Order for B2B Checkout
+    if (action === 'create-razorpay-order') {
+      const amountInPaise = Math.round(totalOrderValue * 100);
+      const receipt = `cx_ws_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      const rzpOrder = await createRazorpayOrder({
+        amountInPaise,
+        currency: 'INR',
+        receipt,
+        notes: {
+          storeSlug: 'carxen',
+          channel: 'WHOLESALE_PORTAL',
+          businessName: businessName?.trim() || '',
+          customerName: representativeName?.trim() || businessName?.trim() || 'Wholesale Buyer',
+          customerEmail: email?.trim() || '',
+          customerPhone: phone?.trim() || '',
+          gstin: gstin?.trim().toUpperCase() || '',
+        },
+      });
+
+      const { keyId } = getRazorpayConfig();
+
+      return NextResponse.json({
+        success: true,
+        razorpayOrderId: rzpOrder.id,
+        amount: amountInPaise,
+        currency: 'INR',
+        keyId,
+        isMock: rzpOrder.isMock,
+        subtotal,
+        gstAmount,
+        totalAmount: totalOrderValue,
+      });
+    }
+
+    // ORDER PLACEMENT FLOW
+    if (!shippingAddress?.line1 || !shippingAddress?.city || !shippingAddress?.postalCode) {
+      return NextResponse.json(
+        { error: 'Complete delivery address (line 1, city, and 6-digit PIN) is required.' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    let authUser: any = null;
+    let customer: any = null;
+
+    try {
+      const auth = await getAuthenticatedCustomer(request);
+      authUser = auth.user;
+      customer = auth.customer;
+    } catch {
+      // Unauthenticated
+    }
+
+    const isRazorpay = paymentMethod === 'Razorpay' || paymentMethod === 'razorpay';
+    const paymentStatus: 'PAID' | 'PENDING' = isRazorpay ? 'PAID' : 'PENDING';
+    const resolvedPaymentMethod = isRazorpay ? 'Razorpay Secure (UPI / Cards / NetBanking)' : 'Cash on delivery';
+
+    // Verify signature if payment is via Razorpay
+    if (isRazorpay && razorpayOrderId && razorpayPaymentId) {
+      const isValid = verifyRazorpaySignature({
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        razorpay_signature: razorpaySignature || '',
+      });
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Payment signature verification failed. Please try again.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Generate B2B order identifier
     const randNum = Math.floor(10000 + Math.random() * 90000);
@@ -137,6 +199,7 @@ export async function POST(request: Request) {
       wholesaleTier: customer?.wholesaleTier || 'tier1',
       b2bStatus: customer?.b2bStatus || 'APPROVED',
       isB2BWholesale: true,
+      paymentMethod: resolvedPaymentMethod,
     };
 
     const shippingSnapshot = {
@@ -171,11 +234,10 @@ export async function POST(request: Request) {
       poNumber ? `PO Reference: ${poNumber.trim()}` : null,
       requestedDeliveryDate ? `Requested Delivery Date: ${requestedDeliveryDate.trim()}` : null,
       partialShipmentAllowed ? 'Partial batch shipment accepted' : 'Ship complete consignment only',
-      factoryNotes?.trim() ? `Factory Notes: ${factoryNotes.trim()}` : null,
+      factoryNotes?.trim() ? `Order Notes: ${factoryNotes.trim()}` : null,
     ].filter(Boolean).join(' | ');
 
     // Insert authoritative wholesale order in ecommerce_orders
-    // PAYMENT IS OFFLINE / COMMERCIAL TERMS (ZERO ONLINE PAYMENT)
     const { error: orderInsertErr } = await supabase
       .from('ecommerce_orders')
       .insert({
@@ -185,8 +247,8 @@ export async function POST(request: Request) {
         orderNumber,
         customerId: customer?.id || null,
         channel: 'WHOLESALE_PORTAL',
-        status: 'CONFIRMED_BY_BUYER',
-        paymentStatus: 'OFFLINE_COMMERCIAL_TERMS',
+        status: 'CONFIRMED',
+        paymentStatus,
         fulfillmentStatus: 'PENDING',
         currency: 'INR',
         subtotal,
@@ -197,7 +259,7 @@ export async function POST(request: Request) {
         customerSnapshot,
         shippingAddressSnapshot: shippingSnapshot,
         billingAddressSnapshot: billingSnapshot,
-        notes: formattedNotes || 'Wholesale Order Request submitted via /wholesale portal.',
+        notes: formattedNotes || 'Wholesale Order placed via /wholesale portal.',
         placedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -206,7 +268,7 @@ export async function POST(request: Request) {
     if (orderInsertErr) {
       console.error('Failed to create wholesale order in database:', orderInsertErr);
       return NextResponse.json(
-        { error: 'Could not record wholesale order request. Please review your details and try again.' },
+        { error: 'Could not record wholesale order. Please review your details and try again.' },
         { status: 500 }
       );
     }
@@ -236,6 +298,32 @@ export async function POST(request: Request) {
       console.warn('Could not insert wholesale order line items:', itemsInsertErr);
     }
 
+    // If paid via Razorpay, insert payment record
+    if (isRazorpay && razorpayPaymentId) {
+      try {
+        await supabase.from('ecommerce_payments').insert({
+          id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+          orderId,
+          storeId: STORE_ID,
+          factoryId: FACTORY_ID,
+          paymentMethod: 'ONLINE',
+          provider: 'razorpay',
+          status: 'CAPTURED',
+          amount: totalOrderValue,
+          currency: 'INR',
+          transactionId: razorpayPaymentId,
+          rawResponse: {
+            razorpayOrderId,
+            razorpayPaymentId,
+          },
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch (payErr) {
+        console.warn('Could not record ecommerce_payments row:', payErr);
+      }
+    }
+
     // Insert initial factory shipment tracking stub
     try {
       await supabase.from('ecommerce_shipments').insert({
@@ -250,6 +338,8 @@ export async function POST(request: Request) {
         shippingAddressSnapshot: shippingSnapshot,
         metadata: {
           orderType: 'Wholesale B2B Batch Consignment',
+          paymentMethod: resolvedPaymentMethod,
+          paymentStatus,
           requestedDeliveryDate: requestedDeliveryDate || 'Standard Factory Lead Time (3–5 Days)',
         },
         createdAt: now,
@@ -262,8 +352,9 @@ export async function POST(request: Request) {
       order: {
         id: orderId,
         orderNumber,
-        status: 'CONFIRMED_BY_BUYER',
-        paymentStatus: 'OFFLINE_COMMERCIAL_TERMS',
+        status: 'CONFIRMED',
+        paymentStatus,
+        paymentMethod: resolvedPaymentMethod,
         subtotal,
         taxAmount: gstAmount,
         totalAmount: totalOrderValue,
@@ -272,12 +363,12 @@ export async function POST(request: Request) {
         poNumber: poNumber || null,
         placedAt: now,
       },
-      message: 'Wholesale order request submitted successfully. Awaiting CarXen Veda verification & proforma issuance.',
+      message: 'Wholesale order placed successfully.',
     });
   } catch (err) {
     console.error('Unexpected error in wholesale order placement:', err);
     return NextResponse.json(
-      { error: 'An unexpected issue occurred while submitting your order request. Please try again.' },
+      { error: 'An unexpected issue occurred while submitting your order. Please try again.' },
       { status: 500 }
     );
   }

@@ -133,7 +133,7 @@ export default function WholesaleQuickOrderPage() {
           </h1>
           <p>
             High-speed SKU batch ordering with automatic MOQ enforcement and volume tier pricing.
-            <strong> Direct factory fulfillment via CarXen with zero online payment required.</strong>
+            <strong> Direct factory fulfillment via CarXen with Razorpay online and COD checkout.</strong>
           </p>
         </div>
 

@@ -43,6 +43,7 @@ import {
   Percent,
   CheckCircle2,
   Info,
+  CreditCard,
   Clock,
   PhoneCall,
   ExternalLink,
@@ -136,7 +137,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
     setZoomOrigin({ x, y });
   };
 
-  const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'install' | 'box' | 'commercial'>('specs');
+  const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'install' | 'box' | 'procurement'>('specs');
   const [isAdding, setIsAdding] = useState<boolean>(false);
 
   // Keep stepper synced if basket updates externally
@@ -629,7 +630,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
               </div>
               <div className="ws-card-assurance-item">
                 <CheckCircle2 size={14} style={{ color: '#2563eb' }} />
-                <span>Zero Online Checkout</span>
+                <span>Razorpay &amp; COD Available</span>
               </div>
             </div>
           </div>
@@ -672,7 +673,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
               </div>
 
               <div className="ws-pdp-tax-note">
-                Commercial invoicing with 18% GST Input Tax Credit (ITC) · Zero online checkout payment
+                Commercial invoicing with 18% GST Input Tax Credit (ITC) · Online Payment &amp; COD
               </div>
             </div>
 
@@ -874,8 +875,8 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
               <div className="ws-pdp-perk-item">
                 <CheckCircle2 size={16} />
                 <div>
-                  <strong>Commercial Settlement</strong>
-                  <span>Zero online checkout payment</span>
+                  <strong>Flexible Payment</strong>
+                  <span>Razorpay online &amp; Cash on Delivery</span>
                 </div>
               </div>
             </div>
@@ -891,7 +892,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             { id: 'fitment', label: 'Vehicle Compatibility Matrix', icon: Car },
             { id: 'install', label: 'Dealership Installation Guide', icon: Wrench },
             { id: 'box', label: 'Master Carton & Packaging', icon: Package },
-            { id: 'commercial', label: 'Commercial Terms & Invoicing', icon: ShieldCheck },
+            { id: 'procurement', label: 'Procurement & Invoicing', icon: ShieldCheck },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1087,16 +1088,16 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             </div>
           )}
 
-          {activeTab === 'commercial' && (
+          {activeTab === 'procurement' && (
             <div className="ws-commercial-tab-content">
-              <h3>CarXen B2B Commercial Terms & Settlement</h3>
-              <p>Transparent wholesale commercial terms for registered automotive dealerships and distributors.</p>
+              <h3>CarXen B2B Procurement &amp; Invoicing</h3>
+              <p>Transparent wholesale procurement for registered automotive dealerships and distributors.</p>
 
               <div className="ws-terms-grid">
                 <div className="ws-term-card">
-                  <div className="ws-term-icon"><FileText size={18} /></div>
-                  <h4>Zero Online Payment</h4>
-                  <p>Orders submitted through the portal generate an official Commercial Purchase Order (PO). Settlement is conducted via direct bank NEFT/RTGS after Proforma validation.</p>
+                  <div className="ws-term-icon"><CreditCard size={18} /></div>
+                  <h4>Online Payment &amp; COD</h4>
+                  <p>Orders placed through the wholesale portal can be completed seamlessly via Razorpay online payment (instant UPI, cards, NetBanking) or Cash on Delivery at your warehouse.</p>
                 </div>
                 <div className="ws-term-card">
                   <div className="ws-term-icon"><Truck size={18} /></div>

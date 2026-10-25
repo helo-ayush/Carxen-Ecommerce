@@ -45,7 +45,7 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
     placedAt: '2026-10-23T14:30:00Z',
     status: 'UNDER_CARXEN_REVIEW',
     statusLabel: 'Under CarXen Review',
-    paymentStatus: 'OFFLINE_COMMERCIAL_TERMS (No Website Payment)',
+    paymentStatus: 'PAID (Razorpay Online)',
     totalAmount: 141600,
     shippingAddress: 'Plot 42, Udyog Vihar Phase 4, Gurugram, Haryana - 122015',
     items: [
@@ -74,7 +74,7 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
     placedAt: '2026-09-28T11:15:00Z',
     status: 'DELIVERED',
     statusLabel: 'Delivered & ITC Settled',
-    paymentStatus: 'OFFLINE_COMMERCIAL_TERMS (Settled via RTGS)',
+    paymentStatus: 'PAID (Razorpay UPI)',
     totalAmount: 218400,
     shippingAddress: 'Plot 42, Udyog Vihar Phase 4, Gurugram, Haryana - 122015',
     items: [
@@ -247,8 +247,7 @@ export default function WholesaleOrdersPage() {
             <span>Wholesale Orders & Factory Milestone Pipeline</span>
           </h1>
           <p>
-            Track factory operations, commercial proforma verification, and repeat order procurement.{' '}
-            <strong>No online payment required on website.</strong>
+            Track factory operations, dispatch fulfillment status, and repeat order procurement.
           </p>
         </div>
         <div className="ws-header-actions">
@@ -377,7 +376,7 @@ export default function WholesaleOrdersPage() {
 
                 <div className="ws-order-footer-settlement-row">
                   <span className="ws-order-settlement-tag">
-                    ✓ Direct Offline Commercial Settlement
+                    ✓ Verified Wholesale Consignment
                   </span>
                   <div className="ws-order-total-val">
                     Total: {formatINR(ord.totalAmount || 0)}
