@@ -399,7 +399,7 @@ function ShopContent() {
 
           {/* LEFT COLUMN: FILTERS CARD */}
           <aside className={`shop-sidebar-card ${isFilterOpen ? 'open' : ''}`} aria-label="Product filters" role={isFilterOpen ? 'dialog' : undefined} aria-modal={isFilterOpen || undefined}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div className="shop-filter-header-bar">
               <div className="shop-filter-heading-actions">
                 <h2 className="shop-filter-title" style={{ margin: 0, fontSize: '18px' }}>Filters</h2>
                 <div className="shop-filter-actions">
@@ -427,7 +427,8 @@ function ShopContent() {
               </div>
             </div>
 
-            {/* Section 1: Search Tags */}
+            <div className="shop-filter-groups-scroll">
+              {/* Section 1: Search Tags */}
             <div className="shop-filter-group">
               <button
                 type="button"
@@ -604,6 +605,7 @@ function ShopContent() {
                   </button>
                 </div>
               )}
+            </div>
             </div>
             <div className="mobile-filter-drawer-actions">
               <button type="button" className="btn dark" onClick={() => setIsFilterOpen(false)}>Apply filters</button>
