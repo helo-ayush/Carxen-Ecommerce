@@ -458,41 +458,41 @@ export default function WholesaleOrderBasketPage() {
     const isPaidOnline = submittedOrder.paymentStatus === 'PAID' || submittedOrder.paymentMethod?.toLowerCase().includes('razorpay');
     return (
       <div className="ws-page-container">
-        <div className="ws-empty-state-card" style={{ maxWidth: '640px', margin: '40px auto', padding: '48px 32px' }}>
+        <div className="ws-empty-state-card" style={{ maxWidth: '640px', width: '100%', boxSizing: 'border-box', margin: '30px auto', padding: '36px 20px' }}>
           <div className="ws-empty-icon-wrap" style={{ background: '#ecfdf5', color: '#059669' }}>
             <CheckCircle2 size={32} />
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
             Wholesale Order Confirmed
           </h2>
-          <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '24px' }}>
+          <p style={{ color: '#64748b', fontSize: '13.5px', lineHeight: 1.5, marginBottom: '24px' }}>
             Your wholesale consignment order for <strong>{businessName}</strong> has been confirmed and scheduled for factory dispatch.
           </p>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 22px', width: '100%', marginBottom: '24px', textAlign: 'left', fontSize: '13px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', width: '100%', boxSizing: 'border-box', marginBottom: '24px', textAlign: 'left', fontSize: '13px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ color: '#64748b' }}>Order Reference:</span>
               <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{submittedOrder.orderNumber || submittedOrder.id}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ color: '#64748b' }}>Total Value (inc. 18% GST):</span>
               <strong style={{ color: '#0f172a' }}>{formatINR(submittedOrder.totalAmount || totalOrderValue)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ color: '#64748b' }}>Payment Method:</span>
               <strong style={{ color: isPaidOnline ? '#059669' : '#0284c7' }}>
                 {isPaidOnline ? 'Razorpay Secure Online (PAID)' : 'Cash on Delivery (Pay at Handover)'}
               </strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ color: '#64748b' }}>Warehouse Destination:</span>
-              <strong style={{ color: '#0f172a', textAlign: 'right', maxWidth: '300px' }}>
+              <strong style={{ color: '#0f172a', textAlign: 'right', maxWidth: '60%', wordBreak: 'break-word' }}>
                 {shippingLine1}, {shippingCity} - {shippingPincode}
               </strong>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/wholesale/orders" className="ws-btn-primary ws-btn-brand">
               <span>View Wholesale Orders</span>
               <ArrowRight size={15} />
@@ -510,7 +510,7 @@ export default function WholesaleOrderBasketPage() {
   if (basketLineItems.length === 0) {
     return (
       <div className="ws-page-container">
-        <div className="ws-empty-state-card" style={{ maxWidth: '540px', margin: '40px auto', padding: '48px 32px' }}>
+        <div className="ws-empty-state-card" style={{ maxWidth: '540px', width: '100%', boxSizing: 'border-box', margin: '30px auto', padding: '36px 20px' }}>
           <div className="ws-empty-icon-wrap">
             <WholesaleIcon name="basket" size={32} />
           </div>
@@ -520,7 +520,7 @@ export default function WholesaleOrderBasketPage() {
           <p style={{ color: '#64748b', fontSize: '13.5px', lineHeight: 1.5, marginBottom: '24px' }}>
             Select automotive parts from the procurement catalogue or use the Quick Order Matrix to build your batch order.
           </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/wholesale/catalog" className="ws-btn-primary ws-btn-brand">
               <span>Open Catalogue</span>
               <ArrowRight size={15} />
@@ -587,114 +587,206 @@ export default function WholesaleOrderBasketPage() {
                 </div>
               </div>
 
-              <div className="ws-basket-table-wrap">
-                <table className="ws-basket-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '42%' }}>Part &amp; Specifications</th>
-                      <th style={{ width: '13%', textAlign: 'center' }}>MOQ Status</th>
-                      <th style={{ width: '15%', textAlign: 'right' }}>Wholesale Price</th>
-                      <th style={{ width: '15%', textAlign: 'center' }}>Batch Quantity</th>
-                      <th style={{ width: '11%', textAlign: 'right' }}>Line Total</th>
-                      <th style={{ width: '4%', textAlign: 'center' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {basketLineItems.map(({ product: p, quantity, moq, isMoqMet, unitPrice, totalPrice }) => (
-                      <tr key={p.id}>
-                        <td>
-                          <div className="ws-item-cell">
-                            <div className="ws-item-thumb">
-                              <ProductArt product={p} />
-                            </div>
-                            <div className="ws-item-details">
-                              <Link href={`/wholesale/product/${p.id}`} className="ws-item-name">
-                                {p.n}
-                              </Link>
-                              <div className="ws-item-meta">
-                                <span className="ws-item-sku-badge">
-                                  Part #{p.slug || `CX-${p.id}`}
-                                </span>
-                                <span>•</span>
-                                <span>{p.c || 'Accessories'}</span>
+              {/* Desktop Table View */}
+              <div className="ws-basket-desktop-table">
+                <div className="ws-basket-table-wrap">
+                  <table className="ws-basket-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '42%' }}>Part &amp; Specifications</th>
+                        <th style={{ width: '13%', textAlign: 'center' }}>MOQ Status</th>
+                        <th style={{ width: '15%', textAlign: 'right' }}>Wholesale Price</th>
+                        <th style={{ width: '15%', textAlign: 'center' }}>Batch Quantity</th>
+                        <th style={{ width: '11%', textAlign: 'right' }}>Line Total</th>
+                        <th style={{ width: '4%', textAlign: 'center' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {basketLineItems.map(({ product: p, quantity, moq, isMoqMet, unitPrice, totalPrice }) => (
+                        <tr key={p.id}>
+                          <td>
+                            <div className="ws-item-cell">
+                              <div className="ws-item-thumb">
+                                <ProductArt product={p} />
+                              </div>
+                              <div className="ws-item-details">
+                                <Link href={`/wholesale/product/${p.id}`} className="ws-item-name">
+                                  {p.n}
+                                </Link>
+                                <div className="ws-item-meta">
+                                  <span className="ws-item-sku-badge">
+                                    Part #{p.slug || `CX-${p.id}`}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{p.c || 'Accessories'}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td style={{ textAlign: 'center' }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`ws-moq-pill ${isMoqMet ? 'valid' : 'invalid'}`}>
+                              {isMoqMet ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                              <span>MOQ: {moq}</span>
+                            </span>
+                            {!isMoqMet && (
+                              <div style={{ fontSize: '10.5px', color: '#dc2626', marginTop: '3px', fontWeight: 600 }}>
+                                Min {moq} req.
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
+                              {formatINR(unitPrice)}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>/ unit (excl. GST)</div>
+                          </td>
+
+                          <td style={{ textAlign: 'center' }}>
+                            <div className="ws-stepper-wrap" style={{ margin: '0 auto' }}>
+                              <button
+                                type="button"
+                                className="ws-stepper-btn"
+                                onClick={() => updateWholesaleBasketQty(p.id, Math.max(1, quantity - 1))}
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <input
+                                type="number"
+                                min={1}
+                                className="ws-stepper-input"
+                                value={quantity}
+                                onChange={(e) => {
+                                  const v = parseInt(e.target.value, 10);
+                                  if (!isNaN(v)) {
+                                    updateWholesaleBasketQty(p.id, v);
+                                  }
+                                }}
+                                aria-label={`Quantity for ${p.n}`}
+                              />
+                              <button
+                                type="button"
+                                className="ws-stepper-btn"
+                                onClick={() => updateWholesaleBasketQty(p.id, quantity + 1)}
+                                aria-label="Increase quantity"
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
+                              {formatINR(totalPrice)}
+                            </div>
+                          </td>
+
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => removeFromWholesaleBasket(p.id)}
+                              className="ws-item-remove-btn"
+                              title="Remove item"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Card List View (No horizontal scrolling on phone screens) */}
+              <div className="ws-basket-mobile-list">
+                {basketLineItems.map(({ product: p, quantity, moq, isMoqMet, unitPrice, totalPrice }) => (
+                  <div key={p.id} className="ws-mobile-item-card">
+                    <div className="ws-mobile-item-top">
+                      <div className="ws-mobile-item-thumb">
+                        <ProductArt product={p} />
+                      </div>
+                      <div className="ws-mobile-item-info">
+                        <Link href={`/wholesale/product/${p.id}`} className="ws-mobile-item-name">
+                          {p.n}
+                        </Link>
+                        <div className="ws-mobile-item-meta">
+                          <span className="ws-item-sku-badge">
+                            Part #{p.slug || `CX-${p.id}`}
+                          </span>
                           <span className={`ws-moq-pill ${isMoqMet ? 'valid' : 'invalid'}`}>
-                            {isMoqMet ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                            {isMoqMet ? <Check size={10} strokeWidth={3} /> : <AlertCircle size={10} />}
                             <span>MOQ: {moq}</span>
                           </span>
-                          {!isMoqMet && (
-                            <div style={{ fontSize: '10.5px', color: '#dc2626', marginTop: '3px', fontWeight: 600 }}>
-                              Min {moq} req.
-                            </div>
-                          )}
-                        </td>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromWholesaleBasket(p.id)}
+                        className="ws-item-remove-btn ws-mobile-remove-btn"
+                        title="Remove item"
+                        aria-label={`Remove ${p.n}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
 
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
-                            {formatINR(unitPrice)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>/ unit (excl. GST)</div>
-                        </td>
+                    {!isMoqMet && (
+                      <div className="ws-mobile-moq-warning">
+                        <AlertCircle size={12} />
+                        <span>Minimum batch quantity of {moq} units required for wholesale dispatch.</span>
+                      </div>
+                    )}
 
-                        <td style={{ textAlign: 'center' }}>
-                          <div className="ws-stepper-wrap" style={{ margin: '0 auto' }}>
-                            <button
-                              type="button"
-                              className="ws-stepper-btn"
-                              onClick={() => updateWholesaleBasketQty(p.id, Math.max(1, quantity - 1))}
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus size={13} />
-                            </button>
-                            <input
-                              type="number"
-                              min={1}
-                              className="ws-stepper-input"
-                              value={quantity}
-                              onChange={(e) => {
-                                const v = parseInt(e.target.value, 10);
-                                if (!isNaN(v)) {
-                                  updateWholesaleBasketQty(p.id, v);
-                                }
-                              }}
-                              aria-label={`Quantity for ${p.n}`}
-                            />
-                            <button
-                              type="button"
-                              className="ws-stepper-btn"
-                              onClick={() => updateWholesaleBasketQty(p.id, quantity + 1)}
-                              aria-label="Increase quantity"
-                            >
-                              <Plus size={13} />
-                            </button>
-                          </div>
-                        </td>
+                    <div className="ws-mobile-item-bottom">
+                      <div className="ws-mobile-pricing">
+                        <span className="ws-mobile-unit-price">{formatINR(unitPrice)}</span>
+                        <span className="ws-mobile-unit-label">/ unit (excl. GST)</span>
+                      </div>
 
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
-                            {formatINR(totalPrice)}
-                          </div>
-                        </td>
-
-                        <td style={{ textAlign: 'center' }}>
+                      <div className="ws-mobile-actions-right">
+                        <div className="ws-stepper-wrap">
                           <button
                             type="button"
-                            onClick={() => removeFromWholesaleBasket(p.id)}
-                            className="ws-item-remove-btn"
-                            title="Remove item"
+                            className="ws-stepper-btn"
+                            onClick={() => updateWholesaleBasketQty(p.id, Math.max(1, quantity - 1))}
+                            aria-label="Decrease quantity"
                           >
-                            <Trash2 size={15} />
+                            <Minus size={12} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <input
+                            type="number"
+                            min={1}
+                            className="ws-stepper-input"
+                            value={quantity}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (!isNaN(v)) {
+                                updateWholesaleBasketQty(p.id, v);
+                              }
+                            }}
+                            aria-label={`Quantity for ${p.n}`}
+                          />
+                          <button
+                            type="button"
+                            className="ws-stepper-btn"
+                            onClick={() => updateWholesaleBasketQty(p.id, quantity + 1)}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+
+                        <div className="ws-mobile-line-total">
+                          <span className="ws-mobile-total-label">Subtotal</span>
+                          <span className="ws-mobile-total-val">{formatINR(totalPrice)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -711,7 +803,7 @@ export default function WholesaleOrderBasketPage() {
               </div>
 
               <div className="ws-basket-card-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
                   <div className="ws-form-group">
                     <label className="ws-form-label">Legal Business Entity Name *</label>
                     <input
@@ -735,7 +827,7 @@ export default function WholesaleOrderBasketPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div className="ws-form-grid ws-form-grid-3" style={{ marginBottom: '16px' }}>
                   <div className="ws-form-group">
                     <label className="ws-form-label">Contact Person *</label>
                     <input
@@ -825,7 +917,7 @@ export default function WholesaleOrderBasketPage() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
+                <div className="ws-form-grid ws-form-grid-3">
                   <div className="ws-form-group">
                     <label className="ws-form-label">City *</label>
                     <input
@@ -863,7 +955,7 @@ export default function WholesaleOrderBasketPage() {
                   <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>
                     Delivery Schedule &amp; Consignment Notes (Optional)
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
                     <div className="ws-form-group">
                       <label className="ws-form-label">Buyer PO Reference #</label>
                       <input

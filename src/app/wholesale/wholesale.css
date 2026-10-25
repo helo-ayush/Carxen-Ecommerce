@@ -6438,6 +6438,7 @@ textarea.ws-form-control {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ws-radio-label {
@@ -6849,6 +6850,262 @@ textarea.ws-form-control {
   outline: none;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
+
+/* ==========================================================================
+   WHOLESALE RESPONSIVE MOBILE FORM GRIDS & BASKET LIST
+   ========================================================================== */
+
+.ws-form-grid {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ws-form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ws-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .ws-form-grid-2,
+  .ws-form-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Desktop vs Mobile Toggle for Basket Items */
+.ws-basket-desktop-table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.ws-basket-mobile-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .ws-basket-desktop-table {
+    display: none !important;
+  }
+
+  .ws-basket-mobile-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .ws-mobile-item-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .ws-mobile-item-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ws-mobile-item-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ws-mobile-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ws-mobile-item-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ws-text);
+    text-decoration: none;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .ws-mobile-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ws-mobile-remove-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    align-self: flex-start;
+  }
+
+  .ws-mobile-moq-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-weight: 600;
+  }
+
+  .ws-mobile-item-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed #f1f5f9;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .ws-mobile-pricing {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ws-mobile-unit-price {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .ws-mobile-unit-label {
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  .ws-mobile-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ws-mobile-line-total {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+  }
+
+  .ws-mobile-total-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .ws-mobile-total-val {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  /* Comprehensive Mobile Overflow Protections */
+  body:has(.wholesale-sidebar) .ws-page-container,
+  .ws-page-container {
+    padding: 14px 10px 100px !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-order-layout {
+    grid-template-columns: 100% !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-order-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 16px !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-basket-card {
+    border-radius: 10px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-basket-card-header {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .ws-basket-card-title {
+    font-size: 13.5px;
+  }
+
+  .ws-basket-card-body {
+    padding: 14px;
+    box-sizing: border-box;
+  }
+
+  .ws-checkout-card {
+    position: static !important;
+    padding: 16px 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-pay-card-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ws-warehouse-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ws-security-row {
+    font-size: 11px;
+  }
+}
+
 
 
 
