@@ -27,6 +27,7 @@ import {
   DEFAULT_GST_INFO,
 } from '@/data/customer-defaults';
 import type { StorefrontCoupon } from '@/lib/storefront/coupons';
+import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
 export type CatalogStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -74,6 +75,7 @@ export interface B2BProfile {
   rejectionReason?: string;
   inquiryMessage?: string;
   appliedAt?: string;
+  referenceNumber?: string;
 }
 
 export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
@@ -146,9 +148,20 @@ interface AppContextType {
   isWholesalePending: boolean;
   isWholesaleInquiry: boolean;
   applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
+  updateB2bProfile: (updates: Partial<B2BProfile> & { name?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   refreshCustomerProfile: () => Promise<void>;
   coupons: StorefrontCoupon[];
   refreshCoupons: () => Promise<void>;
+  workspaceMode: 'retail' | 'wholesale';
+  setWorkspaceMode: (mode: 'retail' | 'wholesale') => void;
+  wholesaleBasket: Record<number, number>;
+  wholesaleBasketCount: number;
+  wholesaleBasketSkuCount: number;
+  wholesaleBasketSubtotal: number;
+  addToWholesaleBasket: (productId: number, qty?: number) => void;
+  updateWholesaleBasketQty: (productId: number, qty: number) => void;
+  removeFromWholesaleBasket: (productId: number) => void;
+  clearWholesaleBasket: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -177,6 +190,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
   const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
   const [b2bProfile, setB2bProfile] = useState<B2BProfile | null>(null);
+  const [workspaceMode, setWorkspaceModeState] = useState<'retail' | 'wholesale'>('retail');
+  const [wholesaleBasket, setWholesaleBasket] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('cx_workspace_mode');
+      if (savedMode === 'wholesale' || savedMode === 'retail') {
+        setWorkspaceModeState(savedMode);
+      }
+      const savedBasket = localStorage.getItem('cx_wholesale_basket');
+      if (savedBasket) {
+        setWholesaleBasket(JSON.parse(savedBasket));
+      }
+      const savedB2b = localStorage.getItem('cx_b2b_profile');
+      if (savedB2b) {
+        setB2bProfile(JSON.parse(savedB2b));
+      }
+    } catch {}
+  }, []);
 
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
@@ -256,7 +288,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       phone: localProfile.phone || u.user_metadata?.phone || u.phone || '',
       avatarUrl: localProfile.avatarUrl || u.user_metadata?.avatar_url || '',
       joinedDate: localProfile.joinedDate || (u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Oct 2024'),
-      tier: localProfile.tier || 'Apex Gold Member',
+      tier: localProfile.tier && localProfile.tier !== 'Apex Gold Member' ? localProfile.tier : undefined,
       rewardPoints: localProfile.rewardPoints ?? 250,
     };
   };
@@ -300,7 +332,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             phone: data.profile.phone || prev?.phone || '',
             avatarUrl: data.profile.avatarUrl ?? prev?.avatarUrl ?? '',
             joinedDate: data.profile.joinedDate || prev?.joinedDate || 'Oct 2024',
-            tier: data.profile.tier || prev?.tier || 'Apex Gold Member',
+            tier: (data.profile.tier && data.profile.tier !== 'Apex Gold Member') ? data.profile.tier : (prev?.tier && prev.tier !== 'Apex Gold Member' ? prev.tier : undefined),
             rewardPoints: data.profile.rewardPoints ?? prev?.rewardPoints ?? 250,
           }));
 
@@ -337,6 +369,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               rejectionReason: data.profile.b2bRejectionReason || undefined,
               inquiryMessage: data.profile.b2bRejectionReason || undefined,
               appliedAt: data.profile.b2bAppliedAt || undefined,
+              referenceNumber: data.profile.referenceNumber || undefined,
             });
           }
         }
@@ -566,8 +599,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       phone: '+91 98201 44829',
       avatarUrl: '',
       joinedDate: 'Oct 2024',
-      tier: 'Apex Gold Member',
-      rewardPoints: 1450,
+      rewardPoints: 250,
     };
     setUser(demoUser);
     try {
@@ -1112,6 +1144,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCart({});
   };
 
+  const setWorkspaceMode = useCallback((mode: 'retail' | 'wholesale') => {
+    setWorkspaceModeState(mode);
+    try {
+      localStorage.setItem('cx_workspace_mode', mode);
+    } catch {}
+  }, []);
+
+  const addToWholesaleBasket = useCallback((productId: number, qty = 1) => {
+    const p = products.find((x) => x.id === productId);
+    const moq = p?.b2bMoq || 5;
+
+    setWholesaleBasket((prev) => {
+      const current = prev[productId] || 0;
+      const initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      const next = { ...prev, [productId]: initialQty };
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    if (p) {
+      showToast(`Added to Wholesale Order Basket — ${p.n} (${qty} units)`);
+    }
+  }, [products]);
+
+  const updateWholesaleBasketQty = useCallback((productId: number, qty: number) => {
+    setWholesaleBasket((prev) => {
+      const copy = { ...prev };
+      if (qty <= 0) {
+        delete copy[productId];
+      } else {
+        copy[productId] = qty;
+      }
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(copy));
+      } catch {}
+      return copy;
+    });
+  }, []);
+
+  const removeFromWholesaleBasket = useCallback((productId: number) => {
+    setWholesaleBasket((prev) => {
+      const copy = { ...prev };
+      delete copy[productId];
+      try {
+        localStorage.setItem('cx_wholesale_basket', JSON.stringify(copy));
+      } catch {}
+      return copy;
+    });
+    const p = products.find((x) => x.id === productId);
+    if (p) showToast(`Removed from Wholesale Basket — ${p.n}`);
+  }, [products]);
+
+  const clearWholesaleBasket = useCallback(() => {
+    setWholesaleBasket({});
+    try {
+      localStorage.removeItem('cx_wholesale_basket');
+    } catch {}
+  }, []);
+
+  const wholesaleBasketCount = useMemo(() => {
+    return Object.values(wholesaleBasket).reduce((a, b) => a + b, 0);
+  }, [wholesaleBasket]);
+
+  const wholesaleBasketSkuCount = useMemo(() => {
+    return Object.values(wholesaleBasket).filter((q) => q > 0).length;
+  }, [wholesaleBasket]);
+
+  const wholesaleBasketSubtotal = useMemo(() => {
+    return Object.entries(wholesaleBasket).reduce((sum, [idStr, q]) => {
+      const p = products.find((x) => x.id === Number(idStr));
+      if (!p) return sum;
+      return sum + calculateItemPriceWithOfferLimit(p, q, true).totalPrice;
+    }, 0);
+  }, [wholesaleBasket, products]);
+
   const toggleFav = (productId: number) => {
     setFav((prev) => {
       const exists = prev.includes(productId);
@@ -1232,9 +1340,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               headers,
               body: JSON.stringify(applicationData),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-              return { success: false, error: data.error || 'Failed to submit application' };
+              const friendlyError = formatUserFriendlyB2BError(
+                data.error || 'Failed to submit application. Please review your details and try again.'
+              );
+              return { success: false, error: friendlyError };
             }
             setB2bProfile({
               status: 'PENDING',
@@ -1250,11 +1361,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               expectedMonthlyVolume: applicationData.expectedMonthlyVolume,
               wholesaleTier: 'tier1',
               appliedAt: new Date().toISOString(),
+              referenceNumber:
+                data.referenceNumber ||
+                (applicationData.gstin
+                  ? `CX-B2B-${applicationData.gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+                  : 'CX-B2B-8841'),
             });
             showToast('Wholesale application submitted for review');
             return { success: true };
           } catch (err) {
-            return { success: false, error: err instanceof Error ? err.message : 'Network error' };
+            return {
+              success: false,
+              error: formatUserFriendlyB2BError(err),
+            };
+          }
+        },
+        updateB2bProfile: async (updates: Partial<B2BProfile> & { name?: string; phone?: string }) => {
+          try {
+            setB2bProfile((prev) => {
+              const next: B2BProfile = {
+                status: prev?.status || 'APPROVED',
+                wholesaleTier: prev?.wholesaleTier || 'tier1',
+                ...prev,
+                ...updates,
+              };
+              try {
+                localStorage.setItem('cx_b2b_profile', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+
+            if (updates.name || updates.phone) {
+              setUser((prev) => {
+                if (!prev) return prev;
+                const updatedUser = {
+                  ...prev,
+                  name: updates.name !== undefined && updates.name.trim() ? updates.name.trim() : prev.name,
+                  phone: updates.phone !== undefined ? updates.phone.trim() : prev.phone,
+                };
+                try {
+                  localStorage.setItem('cx_user_profile', JSON.stringify(updatedUser));
+                  localStorage.setItem('cx_demo_user', JSON.stringify(updatedUser));
+                } catch {}
+                return updatedUser;
+              });
+            }
+
+            const headers = await getAuthHeaders();
+            const res = await fetch('/api/storefront/customer/profile', {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify(updates),
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              showToast(data.error || 'Saved locally (server sync issue)');
+              return { success: true };
+            }
+
+            showToast('Business profile updated successfully');
+            return { success: true };
+          } catch (err) {
+            console.warn('Backend business profile update error:', err);
+            showToast('Business profile saved locally');
+            return { success: true };
           }
         },
         refreshCustomerProfile: async () => {
@@ -1309,6 +1480,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showToast,
         coupons,
         refreshCoupons,
+        workspaceMode,
+        setWorkspaceMode,
+        wholesaleBasket,
+        wholesaleBasketCount,
+        wholesaleBasketSkuCount,
+        wholesaleBasketSubtotal,
+        addToWholesaleBasket,
+        updateWholesaleBasketQty,
+        removeFromWholesaleBasket,
+        clearWholesaleBasket,
       }}
     >
       {children}

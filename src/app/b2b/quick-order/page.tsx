@@ -50,10 +50,8 @@ export default function QuickOrderPage() {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/login?redirect=/b2b/quick-order');
-    }
-  }, [authLoading, user, router]);
+    router.replace('/wholesale/quick-order');
+  }, [router]);
 
   // Initialize draft quantities to each product's b2bMoq
   const getProductMoq = (p: Product) => p.b2bMoq || 5;

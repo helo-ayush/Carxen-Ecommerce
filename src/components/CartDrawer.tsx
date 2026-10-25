@@ -5,11 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
-import {
-  getEffectiveWholesaleUnitPrice,
-  getActiveWholesaleTier,
-  calculateItemPriceWithOfferLimit,
-} from '@/lib/storefront/wholesale-pricing';
 import { CatalogState } from './CatalogState';
 import { ProductArt } from './ProductArt';
 import {
@@ -108,16 +103,11 @@ export function CartDrawer() {
           <div className="cx-cart-header-title-row">
             <ShoppingBag className="w-5 h-5 text-[#e2231a]" strokeWidth={2.2} />
             <h2 className="cx-cart-header-title">
-              {isWholesaleApproved ? 'Wholesale Cart' : 'Your Cart'}
+              Your Cart
             </h2>
             <span className="cx-cart-badge">
               {cartCount} {cartCount === 1 ? 'item' : 'items'}
             </span>
-            {isWholesaleApproved && (
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 px-2 py-0.5 rounded-full ml-1">
-                B2B Tier {b2bProfile?.wholesaleTier === 'tier2' ? '2' : '1'}
-              </span>
-            )}
           </div>
           <button
             className="cx-cart-close-btn"
@@ -175,11 +165,7 @@ export function CartDrawer() {
             <>
               {/* Product Cards List */}
               {cartEntries.map(({ product, qty }) => {
-                const priceResult = calculateItemPriceWithOfferLimit(product, qty, isWholesaleApproved);
-                const activeTier = isWholesaleApproved
-                  ? getActiveWholesaleTier(product, qty)
-                  : null;
-                const itemTotal = priceResult.totalPrice;
+                const itemTotal = product.p * qty;
 
                 return (
                   <div className="cx-cart-card" key={product.id}>
@@ -211,27 +197,8 @@ export function CartDrawer() {
                         <div className="cx-cart-card-meta">
                           <span>{product.c || 'Precision Fit'}</span>
                           <span>·</span>
-                          <span>
-                            {formatINR(priceResult.discountedUnitPrice)} {isWholesaleApproved ? 'wholesale/ea' : 'each'}
-                          </span>
-                          {isWholesaleApproved && (
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 ml-1">
-                              ({qty} units · {activeTier?.label || `MOQ ${product.b2bMoq || 5}`})
-                            </span>
-                          )}
+                          <span>{formatINR(product.p)} each</span>
                         </div>
-
-                        {priceResult.isLimitExceeded && (
-                          <div className="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-amber-600 dark:text-amber-400">
-                            <span>⚡ Offer cap ({priceResult.limitQty}):</span>
-                            <span>{priceResult.discountedQty} @ discount · {priceResult.regularQty} @ regular ({formatINR(priceResult.regularUnitPrice)})</span>
-                          </div>
-                        )}
-                        {product.discountLimitQty && !priceResult.isLimitExceeded && (
-                          <div className="mt-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                            ⚡ Offer limit: Max {product.discountLimitQty} units at discount
-                          </div>
-                        )}
                       </div>
 
                     {/* Stepper + Remove row */}
@@ -361,21 +328,10 @@ export function CartDrawer() {
             </div>
 
             <div className="cx-cart-payment-methods">
-              {isWholesaleApproved ? (
-                <>
-                  <span className="cx-cart-payment-pill">NEFT / RTGS Wire</span>
-                  <span className="cx-cart-payment-pill">Corporate Card</span>
-                  <span className="cx-cart-payment-pill">Net 15 Terms</span>
-                  <span className="cx-cart-payment-pill">GST ITC Tax Invoice</span>
-                </>
-              ) : (
-                <>
-                  <span className="cx-cart-payment-pill">UPI</span>
-                  <span className="cx-cart-payment-pill">Cards</span>
-                  <span className="cx-cart-payment-pill">NetBanking</span>
-                  <span className="cx-cart-payment-pill">COD</span>
-                </>
-              )}
+              <span className="cx-cart-payment-pill">UPI</span>
+              <span className="cx-cart-payment-pill">Cards</span>
+              <span className="cx-cart-payment-pill">NetBanking</span>
+              <span className="cx-cart-payment-pill">COD</span>
             </div>
           </div>
         )}

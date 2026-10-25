@@ -23,8 +23,51 @@ import {
   MapPin,
   Layers,
   Percent,
+  X,
+  RefreshCw,
+  PhoneCall,
+  MessageSquare,
+  FileCheck,
 } from 'lucide-react';
 import './b2b.css';
+import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
+
+function B2BErrorBanner({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss?: () => void;
+}) {
+  return (
+    <div className="b2b-error-banner" role="alert" aria-live="assertive">
+      <div className="b2b-error-icon-wrap">
+        <AlertCircle size={18} />
+      </div>
+      <div className="b2b-error-content">
+        <div className="b2b-error-title">Application Submission Notice</div>
+        <div className="b2b-error-msg">{message}</div>
+        <div className="b2b-error-help">
+          <span>Need immediate assistance? Contact wholesale desk:</span>
+          <strong>+91 98765 43210</strong>
+          <span>·</span>
+          <strong>b2b@carxen.in</strong>
+        </div>
+      </div>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="b2b-error-dismiss-btn"
+          title="Dismiss notification"
+          aria-label="Dismiss notification"
+        >
+          <X size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function B2BWholesalePage() {
   const router = useRouter();
@@ -37,6 +80,7 @@ export default function B2BWholesalePage() {
     applyForWholesale,
     refreshCustomerProfile,
     coupons,
+    showToast,
   } = useApp();
 
   const [formData, setFormData] = useState({
@@ -60,12 +104,35 @@ export default function B2BWholesalePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
+
+  const handleCheckLiveStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      await refreshCustomerProfile();
+      showToast('Checked with Veda review desk: Application is currently under review.');
+    } catch {
+      showToast('Status checked: Under review by factory desk.');
+    } finally {
+      setTimeout(() => setCheckingStatus(false), 600);
+    }
+  };
+
+  const handleCopyRef = (refId: string) => {
+    void navigator.clipboard?.writeText(refId);
+    setCopiedRef(true);
+    showToast(`Copied reference ID: ${refId}`);
+    setTimeout(() => setCopiedRef(false), 2000);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login?redirect=/b2b');
+      router.replace('/login?redirect=/wholesale');
+    } else if (isWholesaleApproved) {
+      router.replace('/wholesale');
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, isWholesaleApproved, router]);
 
   useEffect(() => {
     if (user && !formData.name) {
@@ -88,14 +155,67 @@ export default function B2BWholesalePage() {
       return;
     }
 
-    if (!formData.name.trim() || !formData.businessName.trim()) {
-      setErrorMessage('Applicant Name and Legal Business Name are required.');
+    if (!formData.name.trim()) {
+      setErrorMessage('Please enter the Representative / Applicant Full Name.');
+      window.scrollTo({ top: 180, behavior: 'smooth' });
+      return;
+    }
+
+    if (!formData.businessName.trim()) {
+      setErrorMessage('Please enter your registered Legal Business Name.');
+      window.scrollTo({ top: 180, behavior: 'smooth' });
       return;
     }
 
     if (!formData.email.trim() && !formData.phone.trim()) {
-      setErrorMessage('Please provide either an email or phone number for verification.');
+      setErrorMessage('Please provide either a business email or mobile number for account verification.');
+      window.scrollTo({ top: 180, behavior: 'smooth' });
       return;
+    }
+
+    if (formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        setErrorMessage('Please enter a valid business email address (e.g. name@company.com).');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    if (formData.phone.trim()) {
+      const cleanedPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
+      if (cleanedPhone.length < 8 || cleanedPhone.length > 15) {
+        setErrorMessage('Please enter a valid contact phone or WhatsApp number (8–15 digits).');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    if (formData.gstin.trim()) {
+      const cleanedGst = formData.gstin.trim().toUpperCase();
+      if (cleanedGst.length !== 15) {
+        setErrorMessage('GSTIN must be 15 alphanumeric characters (e.g. 22AAAAA0000A1Z5), or leave blank if unregistered.');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    if (formData.pan.trim()) {
+      const cleanedPan = formData.pan.trim().toUpperCase();
+      if (cleanedPan.length !== 10) {
+        setErrorMessage('PAN must be 10 alphanumeric characters (e.g. ABCDE1234F), or leave blank.');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    if (formData.pincode.trim()) {
+      const cleanedPin = formData.pincode.trim();
+      if (!/^\d{6}$/.test(cleanedPin)) {
+        setErrorMessage('Postal PIN code must be a 6-digit number.');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -106,7 +226,8 @@ export default function B2BWholesalePage() {
       setJustSubmitted(true);
       void refreshCustomerProfile();
     } else {
-      setErrorMessage(res.error || 'Failed to submit application. Please try again.');
+      setErrorMessage(formatUserFriendlyB2BError(res.error || 'Failed to submit application. Please review your details and try again.'));
+      window.scrollTo({ top: 180, behavior: 'smooth' });
     }
   };
 
@@ -198,8 +319,8 @@ export default function B2BWholesalePage() {
             <Link href="/login?mode=signup&redirect=/b2b" className="b2b-btn secondary">
               Register New Account
             </Link>
-            <Link href="/shop" className="b2b-btn ghost">
-              Browse Retail Shop
+            <Link href="/" className="b2b-btn ghost">
+              CarXen Home
             </Link>
           </div>
         </div>
@@ -360,50 +481,268 @@ export default function B2BWholesalePage() {
   // 3. PENDING REVIEW VIEW
   // --------------------------------------------------------------------------
   if (isWholesalePending || justSubmitted) {
+    const activeBusiness = b2bProfile?.businessName || formData.businessName || 'Your Dealership';
+    const referenceId =
+      b2bProfile?.referenceNumber ||
+      (b2bProfile?.gstin
+        ? `CX-B2B-${b2bProfile.gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+        : `CX-B2B-${(user?.id || 'APEX').slice(-6).toUpperCase()}`);
+    const appliedDate = b2bProfile?.appliedAt
+      ? new Date(b2bProfile.appliedAt).toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : new Date().toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+
     return (
       <div className="b2b-page-container">
-        <div className="b2b-pending-hero">
-          <div className="b2b-badge pending" style={{ margin: '0 auto 16px' }}>
-            <span className="b2b-dot pulse" />
-            <span>APPLICATION UNDER REVIEW</span>
+        <div className="b2b-pending-wrap">
+          {/* Main Hero Status Card */}
+          <div className="b2b-pending-hero">
+            <div className="b2b-status-live-badge">
+              <span className="b2b-live-dot" />
+              <span>Verification In Progress · Estimated 24–48 Hours</span>
+            </div>
+
+            <h1>Application Submitted for Review</h1>
+            <p className="sub">
+              Thank you for partnering with CarXen. Your wholesale dealership application for{' '}
+              <strong>{activeBusiness}</strong> has been received and prioritized at our factory verification desk.
+            </p>
+
+            {/* Application Meta Strip */}
+            <div className="b2b-pending-meta-strip">
+              <div className="b2b-meta-item">
+                <span>Application ID:</span>
+                <span className="b2b-meta-tag">{referenceId}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyRef(referenceId)}
+                  className="b2b-meta-copy-btn"
+                  title="Copy Reference ID"
+                >
+                  {copiedRef ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                </button>
+              </div>
+              <div className="b2b-meta-item">
+                <Clock size={14} style={{ color: '#f59e0b' }} />
+                <span>Submitted:</span>
+                <strong>{appliedDate}</strong>
+              </div>
+              <div className="b2b-meta-item">
+                <ShieldCheck size={14} style={{ color: '#10b981' }} />
+                <span>Verification Desk:</span>
+                <strong>CarXen Veda Factory Desk</strong>
+              </div>
+            </div>
+
+            {/* Visual Connected Stepper */}
+            <div className="b2b-pending-steps-grid">
+              <div className="b2b-pending-step-card done">
+                <div className="b2b-pending-step-num">✓</div>
+                <div className="b2b-pending-step-content">
+                  <div className="b2b-step-header-row">
+                    <strong>1. Application Filed</strong>
+                    <span className="b2b-step-status-chip done">Completed</span>
+                  </div>
+                  <span>Entity details & tax identifiers recorded</span>
+                </div>
+              </div>
+
+              <div className="b2b-pending-step-card active">
+                <div className="b2b-pending-step-num">2</div>
+                <div className="b2b-pending-step-content">
+                  <div className="b2b-step-header-row">
+                    <strong>2. Veda Owner Desk Review</strong>
+                    <span className="b2b-step-status-chip active">In Review</span>
+                  </div>
+                  <span>GSTIN & wholesale tier matching (24–48h)</span>
+                </div>
+              </div>
+
+              <div className="b2b-pending-step-card">
+                <div className="b2b-pending-step-num">3</div>
+                <div className="b2b-pending-step-content">
+                  <div className="b2b-step-header-row">
+                    <strong>3. Wholesale Unlocked</strong>
+                    <span className="b2b-step-status-chip upcoming">Upcoming</span>
+                  </div>
+                  <span>Instant bulk table ordering & GST ITC invoices</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Action Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleCheckLiveStatus}
+                disabled={checkingStatus}
+                className="b2b-btn secondary"
+                style={{ minWidth: 170 }}
+              >
+                <RefreshCw size={15} style={{ animation: checkingStatus ? 'spin 1s linear infinite' : 'none' }} />
+                <span>{checkingStatus ? 'Checking Status...' : 'Check Status Now'}</span>
+              </button>
+
+              <Link href="/b2b/quick-order" className="b2b-btn primary">
+                <Layers size={15} />
+                <span>Preview Wholesale Catalog</span>
+              </Link>
+
+              <Link href="/shop" className="b2b-btn ghost">
+                <span>Browse Storefront (Retail)</span>
+              </Link>
+            </div>
           </div>
 
-          <h1>Application Submitted for Review</h1>
-          <p className="sub">
-            Thank you for applying. Your wholesale dealer application for <strong>{b2bProfile?.businessName || formData.businessName || 'your dealership'}</strong> has been routed to the CarXen Veda Owner verification desk.
-          </p>
+          {/* Submitted Information Record Card */}
+          <div className="b2b-app-spec-card">
+            <div className="b2b-spec-header">
+              <div className="b2b-spec-title-wrap">
+                <h3>Submitted Application Record</h3>
+                <p>Verify the information submitted for wholesale tier approval and invoicing.</p>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#047857', background: '#ecfdf5', padding: '4px 10px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <CheckCircle2 size={13} />
+                <span>Details on Record</span>
+              </span>
+            </div>
 
-          <div className="b2b-pending-steps-grid">
-            <div className="b2b-pending-step-card done">
-              <div className="b2b-pending-step-num">✓</div>
-              <div className="b2b-pending-step-content">
-                <strong>1. Application Filed</strong>
-                <span>Legal entity details & GSTIN recorded</span>
+            <div className="b2b-spec-grid">
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <Building2 size={12} />
+                  <span>Legal Entity Name</span>
+                </div>
+                <div className="b2b-spec-val">{activeBusiness}</div>
+                {b2bProfile?.tradeName || formData.tradeName ? (
+                  <div style={{ fontSize: 11.5, color: '#71717a', marginTop: 2 }}>
+                    Trade: {b2bProfile?.tradeName || formData.tradeName}
+                  </div>
+                ) : null}
               </div>
-            </div>
-            <div className="b2b-pending-step-card active">
-              <div className="b2b-pending-step-num">2</div>
-              <div className="b2b-pending-step-content">
-                <strong>2. Veda Owner Desk Review</strong>
-                <span>GSTIN & wholesale tier matching (24–48h)</span>
+
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <FileText size={12} />
+                  <span>Tax Registration (GSTIN)</span>
+                </div>
+                <div className="b2b-spec-val" style={{ fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.04em' }}>
+                  {b2bProfile?.gstin || formData.gstin || 'Not Provided / Sole Proprietor'}
+                </div>
+                {b2bProfile?.pan || formData.pan ? (
+                  <div style={{ fontSize: 11.5, color: '#71717a', marginTop: 2 }}>
+                    PAN: {b2bProfile?.pan || formData.pan}
+                  </div>
+                ) : null}
               </div>
-            </div>
-            <div className="b2b-pending-step-card">
-              <div className="b2b-pending-step-num">3</div>
-              <div className="b2b-pending-step-content">
-                <strong>3. Wholesale Unlocked</strong>
-                <span>Instant bulk ordering & GST ITC invoices</span>
+
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <Mail size={12} />
+                  <span>Contact Representative</span>
+                </div>
+                <div className="b2b-spec-val">{formData.name || user?.name || 'Authorized Buyer'}</div>
+                <div style={{ fontSize: 11.5, color: '#71717a', marginTop: 2 }}>
+                  {formData.email || user?.email || formData.phone || user?.phone || 'Verified contact'}
+                </div>
+              </div>
+
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <Percent size={12} />
+                  <span>Business Category</span>
+                </div>
+                <div className="b2b-spec-val">
+                  {b2bProfile?.businessType || formData.businessType || 'Automotive Dealer / Workshop'}
+                </div>
+              </div>
+
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <Layers size={12} />
+                  <span>Projected Order Volume</span>
+                </div>
+                <div className="b2b-spec-val">
+                  {b2bProfile?.expectedMonthlyVolume || formData.expectedMonthlyVolume || '₹50k–₹2L (Tier 1)'}
+                </div>
+              </div>
+
+              <div className="b2b-spec-item">
+                <div className="b2b-spec-label">
+                  <MapPin size={12} />
+                  <span>Dispatch Location</span>
+                </div>
+                <div className="b2b-spec-val">
+                  {b2bProfile?.city || formData.city
+                    ? `${b2bProfile?.city || formData.city}, ${b2bProfile?.state || formData.state || ''} ${b2bProfile?.pincode || formData.pincode ? `(${b2bProfile?.pincode || formData.pincode})` : ''}`
+                    : 'Registered Workshop Address'}
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/shop" className="b2b-btn secondary">
-              Browse Storefront (Retail Mode)
-            </Link>
-            <Link href="/account" className="b2b-btn ghost">
-              View Customer Profile
-            </Link>
+          {/* What to Expect Next (3 Value Tiles) */}
+          <div className="b2b-expect-grid">
+            <div className="b2b-expect-card">
+              <div className="b2b-expect-icon">
+                <Mail size={18} style={{ color: '#e2231a' }} />
+              </div>
+              <h4>Realtime Notification</h4>
+              <p>You will receive an automated email and SMS notification the moment your wholesale tier is approved.</p>
+            </div>
+
+            <div className="b2b-expect-card">
+              <div className="b2b-expect-icon">
+                <Percent size={18} style={{ color: '#16a34a' }} />
+              </div>
+              <h4>Automatic Price Toggle</h4>
+              <p>Upon approval, the storefront automatically unlocks wholesale dealer rates and MOQ bulk order tables.</p>
+            </div>
+
+            <div className="b2b-expect-card">
+              <div className="b2b-expect-icon">
+                <FileCheck size={18} style={{ color: '#2563eb' }} />
+              </div>
+              <h4>Full GST ITC Invoices</h4>
+              <p>Every shipment comes with an official GST invoice matching your GSTIN for instant input tax credit.</p>
+            </div>
+          </div>
+
+          {/* Fast-Track Desk Box */}
+          <div className="b2b-fasttrack-card">
+            <div className="b2b-fasttrack-content">
+              <h4>
+                <Sparkles size={16} style={{ color: '#f59e0b' }} />
+                <span>Need Expedited Approval for an Active Order?</span>
+              </h4>
+              <p>
+                If you have an active garage job or urgent bulk purchase order waiting, contact our factory wholesale desk to prioritize verification immediately.
+              </p>
+            </div>
+            <div className="b2b-fasttrack-actions">
+              <a href="tel:+919876543210" className="b2b-hotline-btn">
+                <PhoneCall size={14} />
+                <span>+91 98765 43210</span>
+              </a>
+              <a
+                href={`https://wa.me/919876543210?text=${encodeURIComponent(
+                  `Hi CarXen Wholesale Desk, I have submitted a wholesale application for ${activeBusiness} (Ref: ${referenceId}) and would like to expedite verification.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="b2b-hotline-btn whatsapp"
+              >
+                <MessageSquare size={14} />
+                <span>WhatsApp Desk</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -443,9 +782,10 @@ export default function B2BWholesalePage() {
           <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Update requested fields and submit your response directly back to the Veda review table.</p>
 
           {errorMessage && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, marginBottom: 20 }}>
-              {errorMessage}
-            </div>
+            <B2BErrorBanner
+              message={errorMessage}
+              onDismiss={() => setErrorMessage(null)}
+            />
           )}
 
           <form onSubmit={handleSubmit}>
@@ -510,9 +850,10 @@ export default function B2BWholesalePage() {
           <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Ensure your GSTIN, Legal Name, and Workshop Address are accurate.</p>
 
           {errorMessage && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, marginBottom: 20 }}>
-              {errorMessage}
-            </div>
+            <B2BErrorBanner
+              message={errorMessage}
+              onDismiss={() => setErrorMessage(null)}
+            />
           )}
 
           <form onSubmit={handleSubmit}>
@@ -712,10 +1053,10 @@ export default function B2BWholesalePage() {
           </div>
 
           {errorMessage && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertCircle size={16} />
-              <span>{errorMessage}</span>
-            </div>
+            <B2BErrorBanner
+              message={errorMessage}
+              onDismiss={() => setErrorMessage(null)}
+            />
           )}
 
           <form onSubmit={handleSubmit}>

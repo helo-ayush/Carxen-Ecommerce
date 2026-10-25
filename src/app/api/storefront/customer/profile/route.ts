@@ -25,11 +25,13 @@ export async function GET(request: Request) {
     const basePoints = typeof meta.rewardPoints === 'number' ? meta.rewardPoints : 250;
     const computedPoints = basePoints + orderPoints;
 
-    let computedTier = meta.tier;
-    if (!computedTier) {
-      if (totalSpent >= 50000) computedTier = 'Apex Titanium Member';
-      else if (totalSpent >= 15000) computedTier = 'Apex Gold Member';
-      else computedTier = 'Apex Silver Member';
+    let computedTier = meta.tier && meta.tier !== 'Apex Gold Member' ? meta.tier : null;
+    if (totalSpent >= 50000) {
+      computedTier = 'Apex Titanium Member';
+    } else if (totalSpent >= 15000) {
+      computedTier = 'Apex Gold Member';
+    } else if (totalSpent >= 5000) {
+      computedTier = 'Apex Silver Member';
     }
 
     const profile = {
@@ -72,6 +74,11 @@ export async function GET(request: Request) {
       b2bAppliedAt: (customer as any).b2bAppliedAt || null,
       b2bReviewedAt: (customer as any).b2bReviewedAt || null,
       b2bRejectionReason: (customer as any).b2bRejectionReason || null,
+      referenceNumber:
+        meta.referenceNumber ||
+        ((customer as any).gstin
+          ? `CX-B2B-${(customer as any).gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
+          : `CX-B2B-${((customer as any).id || '8841').slice(-6).toUpperCase()}`),
     };
 
     return NextResponse.json({
@@ -108,6 +115,16 @@ export async function PUT(request: Request) {
       savedPayments,
       garageVehicles,
       activeVehicle,
+      businessName,
+      tradeName,
+      gstin,
+      pan,
+      businessType,
+      businessAddress,
+      city,
+      state,
+      pincode,
+      expectedMonthlyVolume,
     } = body || {};
 
     const existingMeta = (customer.metadata || {}) as Record<string, any>;
@@ -119,6 +136,16 @@ export async function PUT(request: Request) {
       ...(savedPayments !== undefined ? { savedPayments } : {}),
       ...(garageVehicles !== undefined ? { garageVehicles } : {}),
       ...(activeVehicle !== undefined ? { activeVehicle } : {}),
+      ...(businessName !== undefined ? { businessName } : {}),
+      ...(tradeName !== undefined ? { tradeName } : {}),
+      ...(gstin !== undefined ? { gstin } : {}),
+      ...(pan !== undefined ? { pan } : {}),
+      ...(businessType !== undefined ? { businessType } : {}),
+      ...(businessAddress !== undefined ? { businessAddress } : {}),
+      ...(city !== undefined ? { city } : {}),
+      ...(state !== undefined ? { state } : {}),
+      ...(pincode !== undefined ? { pincode } : {}),
+      ...(expectedMonthlyVolume !== undefined ? { expectedMonthlyVolume } : {}),
     };
 
     const trimmedName = typeof name === 'string' && name.trim() ? name.trim() : customer.name;
@@ -127,21 +154,46 @@ export async function PUT(request: Request) {
     const supabase = getSupabaseAdmin();
     const now = new Date().toISOString();
 
+    const customerUpdateData: Record<string, any> = {
+      name: trimmedName,
+      phone: trimmedPhone,
+      metadata: updatedMeta,
+      updatedAt: now,
+    };
+
+    if (businessName !== undefined) customerUpdateData.businessName = businessName?.trim() || null;
+    if (tradeName !== undefined) customerUpdateData.tradeName = tradeName?.trim() || null;
+    if (gstin !== undefined) customerUpdateData.gstin = gstin?.trim().toUpperCase() || null;
+    if (pan !== undefined) customerUpdateData.pan = pan?.trim().toUpperCase() || null;
+    if (businessType !== undefined) customerUpdateData.businessType = businessType?.trim() || null;
+    if (businessAddress !== undefined) customerUpdateData.businessAddress = businessAddress?.trim() || null;
+    if (city !== undefined) customerUpdateData.city = city?.trim() || null;
+    if (state !== undefined) customerUpdateData.state = state?.trim() || null;
+    if (pincode !== undefined) customerUpdateData.pincode = pincode?.trim() || null;
+    if (expectedMonthlyVolume !== undefined) customerUpdateData.expectedMonthlyVolume = expectedMonthlyVolume?.trim() || null;
+
     const { data: updatedCustomer, error: updateErr } = await supabase
       .from('ecommerce_customers')
-      .update({
-        name: trimmedName,
-        phone: trimmedPhone,
-        metadata: updatedMeta,
-        updatedAt: now,
-      })
+      .update(customerUpdateData)
       .eq('id', customer.id)
       .select()
       .single();
 
     if (updateErr) {
       console.error('Failed to update customer row:', updateErr);
-      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      // Fallback: If some column is missing in database schema, try updating just metadata, name and phone
+      const { error: fallbackErr } = await supabase
+        .from('ecommerce_customers')
+        .update({
+          name: trimmedName,
+          phone: trimmedPhone,
+          metadata: updatedMeta,
+          updatedAt: now,
+        })
+        .eq('id', customer.id);
+      if (fallbackErr) {
+        return NextResponse.json({ error: fallbackErr.message }, { status: 500 });
+      }
     }
 
     // Sync with Supabase Auth metadata if user is linked
@@ -169,8 +221,8 @@ export async function PUT(request: Request) {
         email: updatedCustomer.email,
         phone: updatedCustomer.phone,
         avatarUrl: updatedMeta.avatarUrl || '',
-        tier: updatedMeta.tier || 'Apex Gold Member',
-        rewardPoints: updatedMeta.rewardPoints ?? 1450,
+        tier: updatedMeta.tier || null,
+        rewardPoints: updatedMeta.rewardPoints ?? 250,
         joinedDate: updatedMeta.joinedDate || 'Oct 2024',
         communicationPrefs: updatedMeta.communicationPrefs || null,
         gstBilling: updatedMeta.gstBilling || null,

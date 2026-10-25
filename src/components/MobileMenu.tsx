@@ -2,19 +2,37 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { RefreshCw } from 'lucide-react';
 
 export function MobileMenu() {
-  const { isMobileMenuOpen, closeMobileMenu, user, car } = useApp();
+  const router = useRouter();
+  const {
+    isMobileMenuOpen,
+    closeMobileMenu,
+    user,
+    car,
+    logout,
+    isWholesaleApproved,
+    refreshCustomerProfile,
+    showToast,
+  } = useApp();
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
 
+  const isWholesaleMode = pathname.startsWith('/wholesale') || pathname.startsWith('/b2b');
+
   return (
     <div className={`menu ${isMobileMenuOpen ? 'on' : ''}`} id="menu">
       <div className="wrap menu-top" style={{ width: '100%', display: 'flex' }}>
-        <Link href="/" onClick={closeMobileMenu} className="logo logo-link" aria-label="CARXEN Homepage">
+        <Link
+          href="/"
+          onClick={closeMobileMenu}
+          className="logo logo-link"
+          aria-label="CARXEN Homepage"
+        >
           <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '36px', width: 'auto' }} />
         </Link>
         <button className="xb" id="menuX" onClick={closeMobileMenu} aria-label="Close">
@@ -24,7 +42,87 @@ export function MobileMenu() {
         </button>
       </div>
       <nav className="wrap">
-        {isLandingPage ? (
+        {isWholesaleMode ? (
+          <>
+            <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.1s' }}>
+              <i>01</i>Wholesale Dashboard
+            </Link>
+            {!isWholesaleApproved && (
+              <button
+                type="button"
+                onClick={async () => {
+                  closeMobileMenu();
+                  try {
+                    await refreshCustomerProfile();
+                    showToast('Application status checked: Commercial review is currently in progress.');
+                  } catch {
+                    showToast('Application is currently under commercial review.');
+                  }
+                }}
+                style={{
+                  transitionDelay: '.13s',
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  width: '100%',
+                  cursor: 'pointer',
+                  padding: '12px 0',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                <RefreshCw size={18} />
+                <span>Check Status</span>
+              </button>
+            )}
+            <Link href="/wholesale/catalog" onClick={closeMobileMenu} style={{ transitionDelay: '.16s' }}>
+              <i>02</i>Wholesale Catalogue
+            </Link>
+            <Link href="/wholesale/quick-order" onClick={closeMobileMenu} style={{ transitionDelay: '.22s' }}>
+              <i>03</i>Quick Order Matrix
+            </Link>
+            <Link href="/wholesale/order-basket" onClick={closeMobileMenu} style={{ transitionDelay: '.28s' }}>
+              <i>04</i>Order Basket
+            </Link>
+            <Link href="/wholesale/orders" onClick={closeMobileMenu} style={{ transitionDelay: '.34s' }}>
+              <i>05</i>Wholesale Orders
+            </Link>
+            <Link href="/wholesale/quotes" onClick={closeMobileMenu} style={{ transitionDelay: '.40s' }}>
+              <i>06</i>Saved Lists & Quotes
+            </Link>
+            <Link href="/wholesale/account" onClick={closeMobileMenu} style={{ transitionDelay: '.46s' }}>
+              <i>07</i>Business Account
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                closeMobileMenu();
+                await logout();
+                router.push('/login');
+              }}
+              style={{
+                transitionDelay: '.52s',
+                background: 'none',
+                border: 'none',
+                color: '#ef4444',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                cursor: 'pointer',
+                font: 'inherit',
+                padding: '12px 0'
+              }}
+            >
+              <i style={{ color: '#ef4444' }}>08</i>Sign out
+            </button>
+          </>
+        ) : isLandingPage ? (
           <>
             <Link href="/#categories" onClick={closeMobileMenu} style={{ transitionDelay: '.1s' }}>
               <i>01</i>Product
@@ -41,8 +139,11 @@ export function MobileMenu() {
             <Link href="/#reviews" onClick={closeMobileMenu} style={{ transitionDelay: '.38s' }}>
               <i>05</i>Reviews
             </Link>
-            <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.45s' }}>
-              <i>06</i>Shop now
+            <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.45s' }}>
+              <i>06</i>Wholesale Portal
+            </Link>
+            <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.52s' }}>
+              <i>07</i>Shop now
             </Link>
           </>
         ) : (
