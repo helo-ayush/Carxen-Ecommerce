@@ -267,7 +267,7 @@ export default function WholesaleQuickOrderPage() {
         </div>
       ) : (
         <div className="ws-table-card">
-          <table className="ws-procurement-table">
+          <table className="ws-procurement-table ws-quick-order-table">
             <thead>
               <tr>
                 <th style={{ width: '27%' }}>Product Line</th>

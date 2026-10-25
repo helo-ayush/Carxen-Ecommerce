@@ -1728,4 +1728,63 @@
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 900px) {
+  .b2b-page-container {
+    padding: 16px 14px calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .b2b-approved-hero {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .b2b-approved-hero h1 {
+    font-size: 22px;
+  }
+
+  .b2b-approved-hero p.sub {
+    font-size: 13px;
+  }
+
+  .b2b-approved-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .b2b-approved-actions .b2b-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .b2b-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .b2b-metric-box {
+    padding: 14px 16px;
+  }
+
+  .b2b-auth-gate-card {
+    padding: 28px 18px;
+    margin: 20px auto;
+    border-radius: 18px;
+  }
+
+  .b2b-auth-gate-card h1 {
+    font-size: 20px;
+  }
+
+  .b2b-form-card {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+
+  .b2b-form-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+
 

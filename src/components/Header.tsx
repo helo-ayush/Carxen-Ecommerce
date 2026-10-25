@@ -211,13 +211,33 @@ function HeaderContent() {
   if (isWholesaleMode) {
     return (
       <>
-        {/* Mobile Header (Hidden on Desktop, only shown on screens <= 768px) */}
+        {/* Mobile Header (Hidden on Desktop, only shown on screens <= 900px) */}
         <header className="wholesale-mobile-header" aria-label="Wholesale Navigation">
-          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
-            <img src="/logo.png" alt="CARXEN" className="logo-img" />
-          </Link>
-          <span className="wholesale-brand-tag" style={{ marginLeft: '4px' }}>B2B</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="wholesale-mobile-header-left">
+            <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
+              <img src="/logo.png" alt="CARXEN" className="logo-img" />
+            </Link>
+            <span className="wholesale-brand-tag">B2B PORTAL</span>
+            {isWholesaleApproved && (
+              <span className="wholesale-mobile-tier-badge">
+                {b2bProfile?.wholesaleTier === 'tier2' ? 'T2 · 25%' : 'T1 · 15%'}
+              </span>
+            )}
+          </div>
+          <div className="wholesale-mobile-header-right">
+            {isWholesaleApproved && (
+              <Link
+                href="/wholesale/catalog"
+                className="wholesale-mobile-search-btn"
+                aria-label="Search wholesale catalogue"
+                title="Search wholesale catalogue"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-4-4" />
+                </svg>
+              </Link>
+            )}
             {isWholesaleApproved && (
               <Link
                 href="/wholesale/order-basket"
@@ -230,7 +250,7 @@ function HeaderContent() {
                 )}
               </Link>
             )}
-            <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
+            <button className="tool burger wholesale-mobile-burger" id="burger" onClick={openMobileMenu} aria-label="Open B2B Menu">
               <svg viewBox="0 0 24 24">
                 <path d="M3 7h18M3 12h18M3 17h18" />
               </svg>

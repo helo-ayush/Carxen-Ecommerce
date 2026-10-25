@@ -107,11 +107,11 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
 ];
 
 const STAGES = [
-  { id: 'CONFIRMED_BY_BUYER', label: '1. PO Placed', order: 1 },
-  { id: 'UNDER_CARXEN_REVIEW', label: '2. CarXen Review', order: 2 },
-  { id: 'ACCEPTED', label: '3. Accepted', order: 3 },
-  { id: 'IN_PRODUCTION', label: '4. Production', order: 4 },
-  { id: 'DELIVERED', label: '5. Dispatched & ITC', order: 5 },
+  { id: 'CONFIRMED_BY_BUYER', label: '1. PO Placed', shortLabel: '1. Placed', order: 1 },
+  { id: 'UNDER_CARXEN_REVIEW', label: '2. CarXen Review', shortLabel: '2. Review', order: 2 },
+  { id: 'ACCEPTED', label: '3. Accepted', shortLabel: '3. Accepted', order: 3 },
+  { id: 'IN_PRODUCTION', label: '4. Production', shortLabel: '4. Prod', order: 4 },
+  { id: 'DELIVERED', label: '5. Dispatched & ITC', shortLabel: '5. Delivered', order: 5 },
 ];
 
 function getStageLevel(status: WholesaleOrderMock['status']) {
@@ -266,7 +266,8 @@ export default function WholesaleOrdersPage() {
           onClick={() => setActiveTab('all')}
           className={`ws-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
         >
-          <span>All Orders</span>
+          <span className="ws-tab-label-full">All Orders</span>
+          <span className="ws-tab-label-short">All</span>
           <span className="ws-tab-count">{allOrders.length}</span>
         </button>
         <button
@@ -274,7 +275,8 @@ export default function WholesaleOrdersPage() {
           onClick={() => setActiveTab('active')}
           className={`ws-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
         >
-          <span>Active in Pipeline</span>
+          <span className="ws-tab-label-full">Active in Pipeline</span>
+          <span className="ws-tab-label-short">Active</span>
           <span className="ws-tab-count">
             {allOrders.filter((o) => o.status !== 'DELIVERED').length}
           </span>
@@ -284,7 +286,8 @@ export default function WholesaleOrdersPage() {
           onClick={() => setActiveTab('completed')}
           className={`ws-tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
         >
-          <span>Delivered / Invoiced</span>
+          <span className="ws-tab-label-full">Delivered / Invoiced</span>
+          <span className="ws-tab-label-short">Delivered</span>
           <span className="ws-tab-count">
             {allOrders.filter((o) => o.status === 'DELIVERED').length}
           </span>
@@ -336,7 +339,8 @@ export default function WholesaleOrdersPage() {
                         <div className="ws-timeline-bullet">
                           {isCompleted ? <Check size={14} strokeWidth={3} /> : stg.order}
                         </div>
-                        <span className="ws-timeline-label">{stg.label}</span>
+                        <span className="ws-timeline-label ws-timeline-label-full">{stg.label}</span>
+                        <span className="ws-timeline-label ws-timeline-label-short">{stg.shortLabel}</span>
                       </div>
                     );
                   })}
@@ -351,10 +355,10 @@ export default function WholesaleOrdersPage() {
                         <span className="ws-order-item-sku">({item.sku})</span>
                       </div>
                       <div className="ws-order-item-right">
-                        <span style={{ color: 'var(--ws-text-muted)' }}>
+                        <span className="ws-order-item-qty-rate">
                           {item.quantity} pcs @ {formatINR(item.unitPrice || 0)}
                         </span>
-                        <strong style={{ minWidth: '90px', textAlign: 'right', color: 'var(--ws-text)' }}>
+                        <strong className="ws-order-item-total">
                           {formatINR(item.totalPrice || 0)}
                         </strong>
                       </div>
@@ -371,8 +375,8 @@ export default function WholesaleOrdersPage() {
                   <strong>{ord.shippingAddress}</strong>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--ws-emerald)', fontWeight: 600 }}>
+                <div className="ws-order-footer-settlement-row">
+                  <span className="ws-order-settlement-tag">
                     ✓ Direct Offline Commercial Settlement
                   </span>
                   <div className="ws-order-total-val">

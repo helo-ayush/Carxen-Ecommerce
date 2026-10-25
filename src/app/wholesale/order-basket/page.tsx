@@ -344,7 +344,7 @@ export default function WholesaleOrderBasketPage() {
                 </span>
               </div>
 
-              <table className="ws-procurement-table">
+              <table className="ws-procurement-table ws-basket-table">
                 <thead>
                   <tr>
                     <th>Product Line</th>
