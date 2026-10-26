@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp, type GarageVehicle } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
+import {
+  ACTIVE_ORDER_STATUSES,
+  ORDER_STAGE_FLOW,
+  ORDER_STAGE_LABELS,
+  orderStageStep,
+} from '@/lib/order-stages';
 import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/customer';
 import { Footer } from '@/components/Footer';
 import { supabase } from '@/lib/supabase/client';
@@ -195,7 +201,7 @@ function AccountContent() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       if (orderFilter === 'ACTIVE') {
-        if (!['CONFIRMED', 'PROCESSING', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(order.status)) {
+        if (!ACTIVE_ORDER_STATUSES.includes(order.status)) {
           return false;
         }
       } else if (orderFilter === 'DELIVERED') {
@@ -214,9 +220,7 @@ function AccountContent() {
     });
   }, [orders, orderFilter, orderSearch]);
 
-  const activeOrdersCount = orders.filter((o) =>
-    ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.status)
-  ).length;
+  const activeOrdersCount = orders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status)).length;
 
   const handleSignOut = async () => {
     await logout();
@@ -553,7 +557,7 @@ function AccountContent() {
       <b>Dispatch & Tracking Details:</b>
       <div>Carrier: <b>${order.carrier}</b></div>
       <div>AWB / Tracking #: <b>${order.trackingNumber}</b></div>
-      <div>Status: <b>${order.status.replace(/_/g, ' ')}</b></div>
+      <div>Status: <b>${ORDER_STAGE_LABELS[order.status]}</b></div>
       <div>Estimated / Delivery: ${order.estimatedDelivery}</div>
     </div>
   </div>
@@ -1256,7 +1260,7 @@ function AccountContent() {
                       const isDelivered = order.status === 'DELIVERED';
                       const isOutForDelivery = order.status === 'OUT_FOR_DELIVERY';
                       const isShipped = order.status === 'SHIPPED';
-                      const stepIndex = isDelivered ? 4 : isOutForDelivery ? 3 : isShipped ? 2 : 1;
+                      const stepIndex = orderStageStep(order.status);
 
                       return (
                         <div key={order.id} className={`ac-order-tile ${isDelivered ? 'is-delivered' : ''}`}>
@@ -1290,7 +1294,7 @@ function AccountContent() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <span className={`ac-status-pill ${order.status.toLowerCase()}`}>
                                 {(isOutForDelivery || isShipped) && <span className="ac-pulse-dot" />}
-                                {order.status.replace(/_/g, ' ')}
+                                {ORDER_STAGE_LABELS[order.status]}
                               </span>
                               <span style={{ fontSize: '15px', fontWeight: 700, color: '#09090b' }}>
                                 {formatINR(order.totalAmount)}
@@ -1300,23 +1304,20 @@ function AccountContent() {
 
                           {/* Subtle Tracker Progress with red indicator */}
                           <div className="ac-tracker-line">
-                            <div className={`ac-tracker-node ${stepIndex >= 1 ? 'filled' : ''}`}>
-                              <div className="ac-node-bar" />
-                              <span className="ac-node-lbl">1. Placed</span>
-                            </div>
-                            <div className={`ac-tracker-node ${stepIndex >= 2 ? 'filled' : ''}`}>
-                              <div className="ac-node-bar" />
-                              <span className="ac-node-lbl">2. Dispatched</span>
-                            </div>
-                            <div className={`ac-tracker-node ${stepIndex >= 3 ? 'filled' : ''}`}>
-                              <div className="ac-node-bar" />
-                              <span className="ac-node-lbl">3. Out for delivery</span>
-                            </div>
-                            <div className={`ac-tracker-node ${stepIndex >= 4 ? 'filled' : ''}`}>
-                              <div className="ac-node-bar" />
-                              <span className="ac-node-lbl">4. Delivered</span>
-                            </div>
+                            {ORDER_STAGE_FLOW.map((stage, idx) => (
+                              <div key={stage} className={`ac-tracker-node ${stepIndex >= idx + 1 ? 'filled' : ''}`}>
+                                <div className="ac-node-bar" />
+                                <span className="ac-node-lbl">
+                                  {idx + 1}. {ORDER_STAGE_LABELS[stage]}
+                                </span>
+                              </div>
+                            ))}
                           </div>
+                          {order.status === 'CANCELLED' && (
+                            <div style={{ marginTop: '6px', fontSize: '12px', color: '#71717a' }}>
+                              This order was cancelled and is no longer being fulfilled.
+                            </div>
+                          )}
 
                           {/* Courier Mini Strip with Copy button */}
                           <div className="ac-courier-mini">
@@ -2533,18 +2534,57 @@ function AccountContent() {
             </div>
 
             <div style={{ borderLeft: '2px solid #e2231a', paddingLeft: '14px', marginLeft: '6px' }}>
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Out for Delivery with Courier Agent</div>
-                <div style={{ fontSize: '11.5px', color: '#71717a' }}>Baner Hub · Today, 08:30 AM</div>
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Arrived at Destination City Facility</div>
-                <div style={{ fontSize: '11.5px', color: '#71717a' }}>Pune Air Cargo Hub · Yesterday, 09:45 PM</div>
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Dispatched from Central Warehouse</div>
-                <div style={{ fontSize: '11.5px', color: '#71717a' }}>CARXEN Hub 01, Mumbai · Oct 12, 02:15 PM</div>
-              </div>
+              {trackingModalOrder.status === 'CANCELLED' ? (
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Order cancelled</div>
+                  <div style={{ fontSize: '11.5px', color: '#71717a' }}>
+                    Placed on{' '}
+                    {new Date(trackingModalOrder.placedAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </div>
+                </div>
+              ) : (
+                ORDER_STAGE_FLOW.map((stage, idx) => {
+                  const reached = orderStageStep(trackingModalOrder.status) >= idx + 1;
+                  const isCurrent = orderStageStep(trackingModalOrder.status) === idx + 1;
+                  return (
+                    <div key={stage} style={{ marginBottom: idx === ORDER_STAGE_FLOW.length - 1 ? 0 : '14px' }}>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '13px',
+                          color: reached ? '#09090b' : '#a1a1aa',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {reached && <Check size={13} strokeWidth={3} color="#16a34a" />}
+                        {ORDER_STAGE_LABELS[stage]}
+                        {isCurrent && (
+                          <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#b91a12', textTransform: 'uppercase' }}>
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      {idx === 0 && reached && (
+                        <div style={{ fontSize: '11.5px', color: '#71717a' }}>
+                          {new Date(trackingModalOrder.placedAt).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div style={{ marginTop: '20px', textAlign: 'right' }}>

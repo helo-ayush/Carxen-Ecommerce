@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase-admin';
+import { getOrderStatusMessage, normalizeOrderStatus } from '@/lib/order-stages';
 import type { CustomerAddress, CustomerOrderHistoryRecord, OrderProgressStatus } from '@/types/customer';
 
 export const STORE_ID = 'store_carxen';
@@ -298,35 +299,6 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
   return [];
 }
 
-function normalizeOrderStatus(status: string): OrderProgressStatus {
-  const upper = (status || '').toUpperCase();
-  if (['CONFIRMED', 'PROCESSING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'].includes(upper)) {
-    return upper as OrderProgressStatus;
-  }
-  if (upper === 'PENDING') return 'CONFIRMED';
-  if (upper === 'PAID') return 'PROCESSING';
-  return 'CONFIRMED';
-}
-
-function getStatusMessage(status: OrderProgressStatus): string {
-  switch (status) {
-    case 'CONFIRMED':
-      return 'Order confirmed and registered at CARXEN fulfillment center';
-    case 'PROCESSING':
-      return 'Performance quality check and high-torque packaging in progress';
-    case 'SHIPPED':
-      return 'Dispatched via premium express logistics network';
-    case 'OUT_FOR_DELIVERY':
-      return 'Driver out for delivery — expected by 7:00 PM';
-    case 'DELIVERED':
-      return 'Successfully delivered to verified recipient';
-    case 'CANCELLED':
-      return 'Order cancelled';
-    default:
-      return 'Order in progress';
-  }
-}
-
 export async function loadCustomerOrders(
   customerId: string,
   customerEmail?: string | null
@@ -401,7 +373,7 @@ export async function loadCustomerOrders(
       orderNumber: o.orderNumber,
       placedAt: placedDate,
       status: progressStatus,
-      statusMessage: getStatusMessage(progressStatus),
+      statusMessage: getOrderStatusMessage(progressStatus),
       paymentStatus: (o.paymentStatus?.toUpperCase() as any) || 'PAID',
       paymentMethod: custSnap.paymentMethod || 'UPI Payment',
       trackingNumber,

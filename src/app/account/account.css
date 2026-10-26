@@ -407,10 +407,16 @@
   border: 1px solid #bfdbfe;
 }
 
-.ac-status-pill.processing, .ac-status-pill.confirmed {
+.ac-status-pill.processing, .ac-status-pill.confirmed, .ac-status-pill.packed {
   background: #fffbeb;
   color: #92400e;
   border: 1px solid #fef08a;
+}
+
+.ac-status-pill.cancelled {
+  background: #f4f4f5;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
 }
 
 .ac-pulse-dot {

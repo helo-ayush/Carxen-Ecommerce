@@ -7,7 +7,14 @@ import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import { loadStorefrontOrder } from '@/lib/storefront/order-client';
 import type { StorefrontOrderSnapshot } from '@/lib/storefront/order-types';
-import type { CustomerOrderHistoryRecord } from '@/types/customer';
+import {
+  getOrderStatusMessage,
+  normalizeOrderStatus,
+  ORDER_STAGE_FLOW,
+  ORDER_STAGE_LABELS,
+  orderStageStep,
+} from '@/lib/order-stages';
+import type { CustomerOrderHistoryRecord, OrderProgressStatus } from '@/types/customer';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 
@@ -32,12 +39,14 @@ import '../order-tracking.css';
 
 type OrderLoadState = 'loading' | 'ready' | 'empty' | 'error';
 
-function humanizeStatus(status: string) {
-  return status
-    .toLowerCase()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+const STAGE_DESCRIPTIONS: Record<OrderProgressStatus, string> = {
+  CONFIRMED: 'Payment authorized & registered',
+  PACKED: 'Packed at CARXEN fulfilment centre',
+  SHIPPED: 'Handed over to the courier partner',
+  OUT_FOR_DELIVERY: 'Doorstep handover & verification',
+  DELIVERED: 'Received by the customer',
+  CANCELLED: 'Order cancelled',
+};
 
 function formatDate(dateStr?: string | null) {
   if (!dateStr) return 'Just now';
@@ -79,13 +88,7 @@ export default function OrderTrackingPage() {
         return;
       }
 
-      // If we already have local order with full tracking history, mark ready immediately
-      if (localOrder) {
-        setLoadState('ready');
-        return;
-      }
-
-      setLoadState('loading');
+      setLoadState(localOrder ? 'ready' : 'loading');
       setLoadError(null);
 
       try {
@@ -93,8 +96,10 @@ export default function OrderTrackingPage() {
         if (signal.aborted) return;
 
         if (!order) {
-          setServerOrder(null);
-          setLoadState('empty');
+          if (!localOrder) {
+            setServerOrder(null);
+            setLoadState('empty');
+          }
           return;
         }
 
@@ -102,9 +107,11 @@ export default function OrderTrackingPage() {
         setLoadState('ready');
       } catch (err) {
         if (signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
-        setServerOrder(null);
-        setLoadError(err instanceof Error ? err.message : 'Unable to load tracking details.');
-        setLoadState('error');
+        if (!localOrder) {
+          setServerOrder(null);
+          setLoadError(err instanceof Error ? err.message : 'Unable to load tracking details.');
+          setLoadState('error');
+        }
       }
     },
     [orderNumber, localOrder]
@@ -182,6 +189,11 @@ export default function OrderTrackingPage() {
   const paymentStatus = localOrder?.paymentStatus || serverOrder?.paymentStatus || 'PAID';
   const placedAtDate = localOrder?.placedAt || serverOrder?.placedAt;
 
+  const progressStatus: OrderProgressStatus = serverOrder
+    ? normalizeOrderStatus(serverOrder.fulfillmentStatus || serverOrder.status)
+    : localOrder?.status || 'CONFIRMED';
+  const stageStep = orderStageStep(progressStatus);
+
   return (
     <div style={{ background: 'var(--bg, #f4f3ef)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <main style={{ flex: '1 0 auto' }}>
@@ -205,8 +217,10 @@ export default function OrderTrackingPage() {
             </div>
 
             <div className="trk-status-badge">
-              <span className="trk-status-pulse" />
-              <span>In Transit · Dispatch Verified</span>
+              {progressStatus !== 'DELIVERED' && progressStatus !== 'CANCELLED' && (
+                <span className="trk-status-pulse" />
+              )}
+              <span>{ORDER_STAGE_LABELS[progressStatus]} · {getOrderStatusMessage(progressStatus)}</span>
             </div>
           </div>
 
@@ -253,53 +267,46 @@ export default function OrderTrackingPage() {
 
                 <div className="trk-timeline-wrap">
                   <div className="trk-timeline-line">
-                    <div className="trk-timeline-line-fill" style={{ width: '45%' }} />
+                    <div
+                      className="trk-timeline-line-fill"
+                      style={{ width: `${(stageStep / ORDER_STAGE_FLOW.length) * 100}%` }}
+                    />
                   </div>
 
-                  {/* Step 1: Placed */}
-                  <div className="trk-timeline-step completed">
-                    <div className="trk-step-node">
-                      <Check style={{ width: 18, height: 18, strokeWidth: 2.8 }} />
-                    </div>
-                    <div>
-                      <div className="trk-step-label">Order Confirmed</div>
-                      <div className="trk-step-desc">Payment authorized &amp; registered</div>
-                    </div>
-                  </div>
-
-                  {/* Step 2: Processing & Packed */}
-                  <div className="trk-timeline-step completed">
-                    <div className="trk-step-node">
-                      <Package style={{ width: 17, height: 17, strokeWidth: 2.4 }} />
-                    </div>
-                    <div>
-                      <div className="trk-step-label">Packed &amp; Prepared</div>
-                      <div className="trk-step-desc">CARXEN Express Hub, Pune</div>
-                    </div>
-                  </div>
-
-                  {/* Step 3: In Transit (Current Active) */}
-                  <div className="trk-timeline-step active">
-                    <div className="trk-step-node">
-                      <Truck style={{ width: 17, height: 17, strokeWidth: 2.4 }} />
-                    </div>
-                    <div>
-                      <div className="trk-step-label" style={{ color: 'var(--red, #e2231a)' }}>
-                        In Transit
+                  {ORDER_STAGE_FLOW.map((stage, idx) => {
+                    const reached = stageStep >= idx + 1;
+                    const isCurrent = stageStep === idx + 1;
+                    const StepIcon = [Check, Package, Truck, MapPin, CheckCircle2][idx];
+                    return (
+                      <div
+                        key={stage}
+                        className={`trk-timeline-step ${reached ? (isCurrent ? 'active' : 'completed') : ''}`}
+                      >
+                        <div className="trk-step-node">
+                          {reached ? (
+                            <StepIcon style={{ width: 17, height: 17, strokeWidth: 2.4 }} />
+                          ) : (
+                            idx + 1
+                          )}
+                        </div>
+                        <div>
+                          <div
+                            className="trk-step-label"
+                            style={isCurrent ? { color: 'var(--red, #e2231a)' } : undefined}
+                          >
+                            {ORDER_STAGE_LABELS[stage]}
+                          </div>
+                          <div className="trk-step-desc">{STAGE_DESCRIPTIONS[stage]}</div>
+                        </div>
                       </div>
-                      <div className="trk-step-desc">Dispatched with {carrier}</div>
-                    </div>
-                  </div>
-
-                  {/* Step 4: Out for Delivery */}
-                  <div className="trk-timeline-step">
-                    <div className="trk-step-node">4</div>
-                    <div>
-                      <div className="trk-step-label">Out for Delivery</div>
-                      <div className="trk-step-desc">Doorstep handover &amp; verification</div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
+                {progressStatus === 'CANCELLED' && (
+                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#71717a' }}>
+                    This order was cancelled and is no longer being fulfilled.
+                  </div>
+                )}
               </div>
 
               {/* 2-Column Info Grid */}

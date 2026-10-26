@@ -15,7 +15,7 @@ export interface CustomerAddress {
 
 export type OrderProgressStatus =
   | 'CONFIRMED'
-  | 'PROCESSING'
+  | 'PACKED'
   | 'SHIPPED'
   | 'OUT_FOR_DELIVERY'
   | 'DELIVERED'
