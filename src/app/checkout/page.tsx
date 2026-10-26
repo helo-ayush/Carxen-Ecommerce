@@ -1308,7 +1308,7 @@ export default function CheckoutPage() {
                                 B2B Wholesaler Tax Invoice (ITC Eligible)
                               </span>
                               <span className="font-semibold text-text-tertiary">
-                                Tier {b2bProfile?.wholesaleTier === 'tier2' ? '2 (VIP)' : '1 (Standard)'}
+                                Verified B2B Account
                               </span>
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">

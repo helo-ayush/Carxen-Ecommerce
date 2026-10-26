@@ -219,7 +219,7 @@ export function WholesaleProductCard({
               )}
             </div>
             <div className="ws-card-tier2-teaser">
-              <span>Tier 2 ({t2Min}+):</span>
+              <span>Volume ({t2Min}+):</span>
               <strong>{formatINR(t2)} / u</strong>
               <span className="ws-tier2-save">· Save 8%</span>
             </div>

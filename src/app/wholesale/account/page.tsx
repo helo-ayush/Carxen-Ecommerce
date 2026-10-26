@@ -120,7 +120,6 @@ export default function WholesaleAccountPage() {
   }
 
   const businessName = b2bProfile?.businessName || user?.name || 'Authorized Automotive Partner';
-  const isTier2 = b2bProfile?.wholesaleTier === 'tier2';
 
   // Save Business Profile changes
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -818,26 +817,24 @@ export default function WholesaleAccountPage() {
 
         {/* Right Column: Commercial Tier & Assigned Account Manager */}
         <div>
-          {/* Active Wholesale Tier */}
+          {/* Active Wholesale Commercial Status */}
           <div className="ws-card">
             <div className="ws-card-header">
               <h3>
                 <WholesaleIcon name="tier" size={18} strokeWidth={2} />
-                <span>Active Commercial Tier</span>
+                <span>Commercial Account Status</span>
               </h3>
             </div>
             <div className="ws-card-body">
               <div className="ws-tier-badge-card">
                 <div className="ws-tier-badge-level">
-                  CarXen Verified Margin Level
+                  CarXen Verified B2B Partner
                 </div>
                 <div className="ws-tier-badge-title">
-                  {isTier2 ? 'Tier 2 · Volume Commercial' : 'Tier 1 · Wholesale Partner'}
+                  Verified Wholesale Partner
                 </div>
                 <div className="ws-tier-badge-desc">
-                  {isTier2
-                    ? 'Up to 25% wholesale margin across all catalogue categories for monthly volume ₹2L+'
-                    : 'Up to 15% wholesale margin with minimum order quantity (MOQ) validation'}
+                  Direct manufacturer pricing with GST tax invoicing. Extra tiered discounts and volume pricing are automatically applied via promotions and batch orders.
                 </div>
               </div>
 

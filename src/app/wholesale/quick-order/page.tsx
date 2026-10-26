@@ -121,7 +121,7 @@ export default function WholesaleQuickOrderPage() {
     showToast(`Added ${count} products to Wholesale Order Basket.`);
   };
 
-  const tierLabel = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (25% Margin)' : 'Tier 1 (15% Margin)';
+  const tierLabel = 'Verified Wholesale Pricing';
 
   return (
     <div className="ws-page-container">
@@ -278,8 +278,8 @@ export default function WholesaleQuickOrderPage() {
                 <th style={{ width: '27%' }}>Product Line</th>
                 <th style={{ width: '14%' }}>SKU / Part #</th>
                 <th style={{ width: '8%' }}>MOQ</th>
-                <th style={{ width: '13%' }}>Tier 1 (Wholesale)</th>
-                <th style={{ width: '14%' }}>Tier 2 (Volume 20+)</th>
+                <th style={{ width: '13%' }}>Wholesale Price</th>
+                <th style={{ width: '14%' }}>Volume Price (20+)</th>
                 <th style={{ width: '10%', textAlign: 'center' }}>Batch Qty</th>
                 <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
               </tr>

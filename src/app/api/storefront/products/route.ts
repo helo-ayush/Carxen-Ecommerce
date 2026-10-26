@@ -11,24 +11,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     let isWholesale = false;
-    let wholesaleTier: 'tier1' | 'tier2' = 'tier1';
-
     try {
       const { customer } = await getAuthenticatedCustomer(request);
       if (customer && customer.b2bStatus === 'APPROVED') {
         isWholesale = true;
-        wholesaleTier = (customer.wholesaleTier || 'tier1') as 'tier1' | 'tier2';
       }
     } catch {
       // In guest mode, default to non-wholesale
     }
 
-    const catalog = await getStorefrontProducts({ isWholesale, wholesaleTier });
+    const catalog = await getStorefrontProducts({ isWholesale });
 
     return NextResponse.json({
       ...catalog,
       wholesaleMode: isWholesale,
-      ...(isWholesale ? { wholesaleTier } : {}),
     }, {
       headers: { 'Cache-Control': 'no-store' },
     });

@@ -45,10 +45,7 @@ export function MobileMenu() {
   const isWholesaleMode = pathname.startsWith('/wholesale') || pathname.startsWith('/b2b');
 
   const partnerName = b2bProfile?.businessName || user?.name || 'Verified Wholesale Partner';
-  const tierName =
-    b2bProfile?.wholesaleTier === 'tier2'
-      ? 'Tier 2 Partner · 25% Factory Margin'
-      : 'Tier 1 Partner · 15% Factory Margin';
+  const tierName = 'Verified Wholesale Partner';
 
   return (
     <div className={`menu ${isWholesaleMode ? 'b2b-mobile-drawer' : ''} ${isMobileMenuOpen ? 'on' : ''}`} id="menu">

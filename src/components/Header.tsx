@@ -220,7 +220,7 @@ function HeaderContent() {
             <span className="wholesale-brand-tag">B2B PORTAL</span>
             {isWholesaleApproved && (
               <span className="wholesale-mobile-tier-badge">
-                {b2bProfile?.wholesaleTier === 'tier2' ? 'T2 · 25%' : 'T1 · 15%'}
+                B2B Partner
               </span>
             )}
           </div>
@@ -272,7 +272,7 @@ function HeaderContent() {
             <span className="wholesale-status-ping" />
             <span className="wholesale-status-text">
               {isWholesaleApproved
-                ? (b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 · 25% Margin' : 'Tier 1 · 15% Margin')
+                ? 'Verified Wholesale Partner'
                 : (isWholesalePending ? 'Verification Pending' : 'Registration Required')}
             </span>
           </div>
@@ -519,7 +519,7 @@ function HeaderContent() {
                   <span className="wholesale-switch-text">Wholesale Portal</span>
                   {isWholesaleApproved && (
                     <span className="wholesale-micro-tier">
-                      {b2bProfile?.wholesaleTier === 'tier2' ? 'T2' : 'T1'}
+                      B2B
                     </span>
                   )}
                 </Link>

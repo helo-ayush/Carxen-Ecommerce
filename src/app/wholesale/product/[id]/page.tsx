@@ -329,7 +329,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   const currentInBasketQty = wholesaleBasket[product.id] || 0;
   const isDraftDifferent = isInBasket && quantity !== currentInBasketQty;
 
-  const partnerTier = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 Partner (25% Base Margin)' : 'Tier 1 Partner (15% Base Margin)';
+  const partnerTier = 'Verified Wholesale Partner';
 
   return (
     <div className="ws-page-container">

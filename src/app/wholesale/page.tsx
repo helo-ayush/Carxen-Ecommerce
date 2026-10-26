@@ -560,7 +560,7 @@ export default function WholesaleDashboardPage() {
 
   // 4. APPROVED WHOLESALER WORKSPACE DASHBOARD
   const businessName = b2bProfile?.businessName || user?.name || 'Verified Wholesale Partner';
-  const tierName = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 Partner (25% Margin)' : 'Tier 1 Partner (15% Margin)';
+  const tierName = 'Verified Wholesale Partner';
 
   const shortcuts = [
     {

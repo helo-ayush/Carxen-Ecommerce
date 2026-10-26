@@ -337,7 +337,7 @@ export default function B2BWholesalePage() {
         <div className="b2b-approved-hero">
           <div className="b2b-badge active" style={{ marginBottom: 16 }}>
             <span className="b2b-dot pulse" />
-            <span>WHOLESALE PARTNER · ACTIVE ({b2bProfile?.wholesaleTier === 'tier2' ? 'TIER 2 VIP' : 'TIER 1 STANDARD'})</span>
+            <span>WHOLESALE PARTNER · ACTIVE</span>
           </div>
 
           <h1>Welcome, {b2bProfile?.businessName || user?.name || 'Wholesale Partner'}</h1>
@@ -367,8 +367,8 @@ export default function B2BWholesalePage() {
               <span className="val" style={{ fontFamily: 'monospace' }}>{b2bProfile?.gstin || '—'}</span>
             </div>
             <div className="b2b-metric-item">
-              <span className="lbl">Assigned Wholesale Tier</span>
-              <span className="val green">{b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (High Volume)' : 'Tier 1 (Standard)'}</span>
+              <span className="lbl">Wholesale Status</span>
+              <span className="val green">Verified B2B Partner</span>
             </div>
             <div className="b2b-metric-item">
               <span className="lbl">Tax Invoicing</span>

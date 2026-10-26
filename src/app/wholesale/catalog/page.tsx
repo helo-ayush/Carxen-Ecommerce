@@ -179,7 +179,7 @@ export default function WholesaleCatalogPage() {
   }
 
   const availableModels = selectedBrand !== 'All Brands' ? POPULAR_MODELS[selectedBrand] || [] : [];
-  const tierName = b2bProfile?.wholesaleTier === 'tier2' ? 'Tier 2 (25% Margin)' : 'Tier 1 (15% Margin)';
+  const tierName = 'Verified Wholesale Partner';
 
   return (
     <div className="ws-page-container">
@@ -491,7 +491,7 @@ export default function WholesaleCatalogPage() {
                           <span className="ws-price-retail-strike">{formatINR(p.p)}</span>
                         )}
                         <span className="ws-price-wholesale">{formatINR(t1)}</span>
-                        <span className="ws-price-tier2">Tier 2: {formatINR(t2)} (20+)</span>
+                        <span className="ws-price-tier2">Volume: {formatINR(t2)} (20+)</span>
                       </div>
                     </td>
 
