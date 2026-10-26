@@ -21,10 +21,7 @@ export type ProductInstallation = {
 };
 
 export type ProductComboItem = {
-  title: string;
-  subtitle?: string;
   productId?: string;
-  discountPercent?: number;
 };
 
 export interface Product {
