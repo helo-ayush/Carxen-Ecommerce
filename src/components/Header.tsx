@@ -25,6 +25,7 @@ function HeaderContent() {
     logout,
     showToast,
     refreshCustomerProfile,
+    openSupportModal,
   } = useApp();
   const announcementConfig = storefrontConfig?.announcement;
   const router = useRouter();
@@ -374,31 +375,30 @@ function HeaderContent() {
 
           <div className="wholesale-sidebar-spacer" />
 
-          {/* CarXen Commercial Desk in Sidebar */}
+          {/* CarXen Commercial Support Desk in Sidebar */}
           <div className="wholesale-sidebar-card ws-sidebar-commercial-desk">
             <div className="ws-sidebar-card-header">
-              <WholesaleIcon name="phone" size={14} />
-              <span>CarXen Commercial Desk</span>
+              <WholesaleIcon name="invoice" size={14} />
+              <span>Commercial Support Desk</span>
             </div>
             <p className="ws-sidebar-desk-desc">
-              Custom vehicle orders, bulk procurement &amp; priority allocation
+              Custom vehicle orders, bulk procurement &amp; priority allocation inquiries
             </p>
-            <div className="ws-sidebar-desk-phone">
-              +91 98765 43210
-            </div>
-            <a
-              href="https://wa.me/919876543210"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => openSupportModal({
+                category: 'Bulk Procurement & Factory Batch Quotation',
+                initialMessage: 'Inquiry regarding wholesale order allocation / procurement schedule.',
+              })}
               className="ws-sidebar-desk-wa-btn"
+              style={{ width: '100%', cursor: 'pointer', border: 'none', textAlign: 'center', justifyContent: 'center' }}
             >
-              <span>WhatsApp Commercial Desk</span>
+              <span>Submit Support Query</span>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
               </svg>
-            </a>
+            </button>
           </div>
 
           {/* Clean Logout button replacing Personal Shopping */}

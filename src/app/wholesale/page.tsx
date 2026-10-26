@@ -36,6 +36,7 @@ export default function WholesaleDashboardPage() {
     logout,
     showToast,
     refreshCustomerProfile,
+    openSupportModal,
   } = useApp();
 
   const [formData, setFormData] = useState({
@@ -525,29 +526,33 @@ export default function WholesaleDashboardPage() {
                 </div>
               </div>
 
-              {/* Card 2: WhatsApp Desk Assistance */}
+              {/* Card 2: Commercial Desk Support Assistance */}
               <div className="ws-review-fasttrack-card">
                 <div className="ws-fasttrack-body">
                   <div className="ws-fasttrack-icon">
-                    <WholesaleIcon name="phone" size={18} />
+                    <WholesaleIcon name="invoice" size={18} />
                   </div>
                   <div className="ws-fasttrack-text">
                     <strong>Need Urgent Stock for Showroom?</strong>
-                    <p>Have an urgent opening or fleet order? Contact our commercial verification desk on WhatsApp for expedited review.</p>
+                    <p>Have an urgent opening or fleet order? Contact our commercial support desk for expedited verification.</p>
                   </div>
                 </div>
 
                 <div className="ws-fasttrack-action-row">
-                  <a
-                    href={`https://wa.me/919876543210?text=Hi%20CarXen,%20I%20have%20submitted%20my%20wholesale%20partner%20application%20for%20${encodeURIComponent(applicantName)}%20(GSTIN:%20${applicantGstin}).%20Please%20expedite%20my%20review.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openSupportModal({
+                      category: 'Wholesale Verification & Fast-Track Approval',
+                      businessName: applicantName,
+                      initialMessage: `Requesting expedited verification for applicant ${applicantName} (GSTIN: ${applicantGstin || 'Pending'}). Urgent showroom order pending review.`,
+                    })}
                     className="ws-fasttrack-wa-btn"
+                    style={{ cursor: 'pointer', border: 'none' }}
                   >
-                    <span>Expedite via WhatsApp Desk</span>
+                    <span>Contact Commercial Support Desk</span>
                     <ExternalLink size={13} />
-                  </a>
-                  <span className="ws-desk-hours-note">Desk active Mon–Sat 9:30 AM – 7:00 PM IST</span>
+                  </button>
+                  <span className="ws-desk-hours-note">Queries route directly into Veda ERP Desk</span>
                 </div>
               </div>
             </div>

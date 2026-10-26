@@ -6,8 +6,16 @@ const STORE_SLUG = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carx
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function POST(request: NextRequest) {
-  const payload = await request.json().catch(() => null) as
-    | { name?: unknown; email?: unknown; message?: unknown; company?: unknown }
+  const payload = (await request.json().catch(() => null)) as
+    | {
+        name?: unknown;
+        email?: unknown;
+        message?: unknown;
+        company?: unknown;
+        companyName?: unknown;
+        businessName?: unknown;
+        bot_check?: unknown;
+      }
     | null;
 
   if (!payload) {
@@ -15,13 +23,16 @@ export async function POST(request: NextRequest) {
   }
 
   // Honeypot: real customers never fill this hidden field.
-  if (String(payload.company ?? '').trim()) {
+  if (String(payload.bot_check ?? '').trim()) {
     return NextResponse.json({ ok: true }, { status: 201 });
   }
 
   const name = String(payload.name ?? '').trim();
   const email = String(payload.email ?? '').trim().toLowerCase();
-  const message = String(payload.message ?? '').trim();
+  const rawMessage = String(payload.message ?? '').trim();
+  const company = String(
+    payload.companyName ?? payload.businessName ?? payload.company ?? ''
+  ).trim();
 
   if (name.length < 2 || name.length > 80) {
     return NextResponse.json({ error: 'Enter your name (2–80 characters).' }, { status: 400 });
@@ -29,9 +40,13 @@ export async function POST(request: NextRequest) {
   if (!EMAIL_PATTERN.test(email) || email.length > 160) {
     return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 });
   }
-  if (message.length < 10 || message.length > 2000) {
+  if (rawMessage.length < 10 || rawMessage.length > 2000) {
     return NextResponse.json({ error: 'Describe your query in 10–2000 characters.' }, { status: 400 });
   }
+
+  const message = company
+    ? `[Wholesale / Business: ${company}]\n\n${rawMessage}`
+    : rawMessage;
 
   const supabase = getSupabaseAdmin();
   const { data: store } = await supabase

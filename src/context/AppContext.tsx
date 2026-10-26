@@ -78,6 +78,12 @@ export interface B2BProfile {
   referenceNumber?: string;
 }
 
+export interface SupportModalOptions {
+  category?: string;
+  initialMessage?: string;
+  businessName?: string;
+}
+
 export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
   { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
   { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
@@ -103,6 +109,10 @@ interface AppContextType {
   isMobileMenuOpen: boolean;
   quickViewProduct: Product | null;
   toastMessage: string | null;
+  isSupportModalOpen: boolean;
+  supportModalOptions: SupportModalOptions | null;
+  openSupportModal: (options?: SupportModalOptions) => void;
+  closeSupportModal: () => void;
   addresses: CustomerAddress[];
   orders: CustomerOrderHistoryRecord[];
   savedPayments: SavedPaymentMethod[];
@@ -181,6 +191,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [supportModalOptions, setSupportModalOptions] = useState<SupportModalOptions | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Customer detailed state
@@ -1332,6 +1344,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const openSupportModal = useCallback((options?: SupportModalOptions) => {
+    setSupportModalOptions(options || null);
+    setIsSupportModalOpen(true);
+    document.body.classList.add('lock');
+  }, []);
+
+  const closeSupportModal = useCallback(() => {
+    setIsSupportModalOpen(false);
+    setSupportModalOptions(null);
+    if (!isCartOpen && !isMobileMenuOpen && !quickViewProduct) {
+      document.body.classList.remove('lock');
+    }
+  }, [isCartOpen, isMobileMenuOpen, quickViewProduct]);
+
   const cartCount = useMemo(() => {
     return Object.values(cart).reduce((a, b) => a + b, 0);
   }, [cart]);
@@ -1538,6 +1564,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         closeMobileMenu,
         openQuickView,
         closeQuickView,
+        isSupportModalOpen,
+        supportModalOptions,
+        openSupportModal,
+        closeSupportModal,
         showToast,
         coupons,
         refreshCoupons,

@@ -49,6 +49,7 @@ export default function WholesaleAccountPage() {
     deleteAddress,
     setPrimaryAddress,
     showToast,
+    openSupportModal,
   } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -882,10 +883,18 @@ export default function WholesaleAccountPage() {
               </div>
 
               <div className="ws-manager-actions">
-                <a href="tel:+919876543210" className="ws-manager-link">
-                  <WholesaleIcon name="phone" size={16} strokeWidth={2} />
-                  <span>+91 98765 43210 (Direct Line)</span>
-                </a>
+                <button
+                  type="button"
+                  onClick={() => openSupportModal({
+                    category: 'Custom Showroom / Dealership Allocation',
+                    initialMessage: 'Commercial query regarding assigned account manager and procurement dossier.',
+                  })}
+                  className="ws-manager-link"
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                >
+                  <WholesaleIcon name="invoice" size={16} strokeWidth={2} />
+                  <span>Submit Commercial Query</span>
+                </button>
                 <a href="mailto:b2b@carxen.in" className="ws-manager-link">
                   <Mail size={16} />
                   <span>b2b@carxen.in (PO Desk)</span>

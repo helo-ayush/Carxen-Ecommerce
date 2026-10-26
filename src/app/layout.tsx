@@ -13,6 +13,7 @@ import { Toast } from '@/components/Toast';
 import { Preloader } from '@/components/Preloader';
 import { BottomNav } from '@/components/BottomNav';
 import { PwaSupport } from '@/components/PwaSupport';
+import { B2BSupportModal } from '@/components/wholesale/B2BSupportModal';
 
 export const metadata: Metadata = {
   title: 'CARXEN — Engineered for Every Drive | Premium Car Accessories',
@@ -53,6 +54,7 @@ export default function RootLayout({
           {children}
           <CartDrawer />
           <QuickViewModal />
+          <B2BSupportModal />
           <Toast />
           <PwaSupport />
           <BottomNav />
