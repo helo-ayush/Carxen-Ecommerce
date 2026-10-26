@@ -596,14 +596,56 @@ function ProductDetailContent({ product }: { product: Product }) {
       .slice(0, 2);
   }, [product, products]);
 
-  const bundleTotal = useMemo(
-    () => [product, ...recommendedProducts].reduce((sum, item) => sum + item.p, 0),
+  // Combined bundle items: current product + VEDA recommendations
+  const bundleItems = useMemo(
+    () => [product, ...recommendedProducts],
     [product, recommendedProducts]
   );
 
+  // Selected bundle item IDs for interactive customization
+  const [selectedBundleIds, setSelectedBundleIds] = useState<number[]>([]);
+
+  // Keep selectedBundleIds synced whenever bundleItems change
+  useEffect(() => {
+    setSelectedBundleIds(bundleItems.map((item) => item.id));
+  }, [bundleItems]);
+
+  const toggleBundleItem = (id: number) => {
+    setSelectedBundleIds((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length <= 1) {
+          showToast('At least one item must remain selected in the bundle');
+          return prev;
+        }
+        return prev.filter((itemId) => itemId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const selectedBundleItems = useMemo(() => {
+    return bundleItems.filter((item) => selectedBundleIds.includes(item.id));
+  }, [bundleItems, selectedBundleIds]);
+
+  const rawBundleTotal = useMemo(() => {
+    return selectedBundleItems.reduce((acc, curr) => acc + curr.p, 0);
+  }, [selectedBundleItems]);
+
+  // 5% Bundle savings when 2 or more items are selected
+  const bundleSavings = useMemo(() => {
+    return selectedBundleItems.length >= 2 ? Math.round(rawBundleTotal * 0.05) : 0;
+  }, [selectedBundleItems.length, rawBundleTotal]);
+
+  const finalBundleTotal = rawBundleTotal - bundleSavings;
+
   const handleAddBundle = () => {
-    [product, ...recommendedProducts].forEach((item) => addToCart(item.id, 1));
-    showToast(`Added ${recommendedProducts.length + 1} items to your cart!`);
+    selectedBundleItems.forEach((item) => addToCart(item.id, 1));
+    showToast(
+      `Added ${selectedBundleItems.length} ${
+        selectedBundleItems.length === 1 ? 'item' : 'items'
+      } to your cart!`
+    );
     openCart();
   };
 
@@ -1402,68 +1444,110 @@ function ProductDetailContent({ product }: { product: Product }) {
         </section>
 
         {/* ------------------------------------------------------------------
-        {/* ------------------------------------------------------------------
-            FREQUENTLY BOUGHT TOGETHER (configured from VEDA)
+            FREQUENTLY BOUGHT TOGETHER (configured from VEDA batch option)
+            Shown ONLY when 1 or 2 products were selected in VEDA
             ------------------------------------------------------------------ */}
         {recommendedProducts.length > 0 && (
           <section className="ps-bundle-section">
             <div className="ps-bundle-header">
               <div>
                 <div className="ps-bundle-tag">
-                  <Sparkles size={12} />
-                  <span>RECOMMENDED PAIRING</span>
+                  <Zap size={13} style={{ fill: 'currentColor' }} />
+                  <span>PERFECT CABIN PAIRING</span>
                 </div>
                 <h3 className="ps-bundle-title">Frequently bought together</h3>
                 <p className="ps-bundle-subtitle">
-                  Accessories CarXen recommends buying with this {categoryLabel.toLowerCase()}.
+                  Upgrade your cabin with accessories that pair well with this {categoryLabel.toLowerCase()}.
                 </p>
               </div>
+
+              {bundleSavings > 0 && (
+                <div className="ps-bundle-savings-pill">
+                  Save {formatINR(bundleSavings)} on this bundle (5% OFF)
+                </div>
+              )}
             </div>
 
             <div className="ps-bundle-main-layout">
               {/* Current product + configured recommendations */}
               <div className="ps-bundle-products-wrap">
-                {[product, ...recommendedProducts].map((bItem, i) => (
-                  <React.Fragment key={bItem.id}>
-                    {i > 0 && (
-                      <div className="ps-bundle-connector" aria-hidden="true">
-                        <Plus size={14} />
-                      </div>
-                    )}
-                    <div className="ps-bundle-card selected">
-                      <div className="ps-bundle-card-top">
-                        {bItem.id === product.id ? (
-                          <span className="ps-bundle-badge-current">This item</span>
-                        ) : (
-                          <span className="ps-bundle-badge-category">{bItem.categoryLabel || bItem.c}</span>
-                        )}
-                      </div>
+                {bundleItems.map((bItem, i) => {
+                  const isSelected = selectedBundleIds.includes(bItem.id);
+                  const isCurrent = bItem.id === product.id;
 
-                      <div className="ps-bundle-thumb-wrap">
-                        {bItem.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bItem.image} alt={bItem.n} />
-                        ) : (
-                          <div style={{ width: '85%', height: '85%' }}>
-                            <ProductArt product={bItem} />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="ps-bundle-card-body">
-                        <Link href={`/product/${bItem.id}`} className="ps-bundle-item-link">
-                          {bItem.n}
-                        </Link>
-                        <div className="ps-bundle-price-row">
-                          <span className="ps-bundle-price">{formatINR(bItem.p)}</span>
-                          {bItem.o && bItem.o > bItem.p && (
-                            <span className="ps-bundle-orig-price">{formatINR(bItem.o)}</span>
+                  return (
+                    <React.Fragment key={bItem.id}>
+                      {i > 0 && (
+                        <div className="ps-bundle-connector" aria-hidden="true">
+                          <Plus size={14} />
+                        </div>
+                      )}
+                      <div
+                        className={`ps-bundle-card ${isSelected ? 'selected' : 'unselected'}`}
+                        onClick={() => toggleBundleItem(bItem.id)}
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === ' ' || e.key === 'Enter') {
+                            e.preventDefault();
+                            toggleBundleItem(bItem.id);
+                          }
+                        }}
+                      >
+                        {/* Checkbox & Badge */}
+                        <div className="ps-bundle-card-top">
+                          <label className="ps-bundle-checkbox-label" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleBundleItem(bItem.id)}
+                              className="ps-bundle-checkbox"
+                              aria-label={`Select ${bItem.n}`}
+                            />
+                            <span className="ps-bundle-custom-check">
+                              {isSelected && <Check size={12} strokeWidth={3.5} />}
+                            </span>
+                          </label>
+                          {isCurrent ? (
+                            <span className="ps-bundle-badge-current">This item</span>
+                          ) : (
+                            <span className="ps-bundle-badge-category">{bItem.categoryLabel || bItem.c}</span>
                           )}
                         </div>
+
+                        {/* Thumbnail */}
+                        <div className="ps-bundle-thumb-wrap">
+                          {bItem.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={bItem.image} alt={bItem.n} />
+                          ) : (
+                            <div style={{ width: '85%', height: '85%' }}>
+                              <ProductArt product={bItem} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title & Price */}
+                        <div className="ps-bundle-card-body">
+                          <Link
+                            href={`/product/${bItem.id}`}
+                            className="ps-bundle-item-link"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {bItem.n}
+                          </Link>
+                          <div className="ps-bundle-price-row">
+                            <span className="ps-bundle-price">{formatINR(bItem.p)}</span>
+                            {bItem.o && bItem.o > bItem.p && (
+                              <span className="ps-bundle-orig-price">{formatINR(bItem.o)}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </React.Fragment>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </div>
 
               {/* Equals connector for desktop */}
@@ -1476,20 +1560,34 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <div className="ps-bundle-summary-header">
                   <span className="ps-bundle-summary-label">Bundle Total</span>
                   <span className="ps-bundle-summary-count">
-                    ({recommendedProducts.length + 1} items)
+                    ({selectedBundleItems.length} {selectedBundleItems.length === 1 ? 'item' : 'items'})
                   </span>
                 </div>
 
                 <div className="ps-bundle-summary-pricing">
-                  <div className="ps-bundle-final-price">{formatINR(bundleTotal)}</div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--steel, #5d5d64)', marginTop: '4px' }}>
-                    Simple sum of item prices — no bundle discount applied.
-                  </div>
+                  <div className="ps-bundle-final-price">{formatINR(finalBundleTotal)}</div>
+                  {bundleSavings > 0 ? (
+                    <div className="ps-bundle-savings-row">
+                      <span className="ps-bundle-raw-strike">{formatINR(rawBundleTotal)}</span>
+                      <span className="ps-bundle-discount-badge">5% BUNDLE SAVINGS</span>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11.5px', color: 'var(--steel, #5d5d64)', marginTop: '4px' }}>
+                      Select 2 or more items to unlock 5% bundle savings
+                    </div>
+                  )}
                 </div>
 
-                <button type="button" onClick={handleAddBundle} className="ps-bundle-action-btn">
+                <button
+                  type="button"
+                  onClick={handleAddBundle}
+                  className="ps-bundle-action-btn"
+                  disabled={selectedBundleItems.length === 0}
+                >
                   <Plus size={16} />
-                  <span>Add {recommendedProducts.length + 1} items to cart</span>
+                  <span>
+                    Add {selectedBundleItems.length} {selectedBundleItems.length === 1 ? 'item' : 'items'} to cart
+                  </span>
                 </button>
 
                 <div className="ps-bundle-summary-perks">
