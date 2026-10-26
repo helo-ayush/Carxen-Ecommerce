@@ -243,7 +243,7 @@ export default function PrivacyPolicyPage() {
                       <tr>
                         <td><strong>Transactional Data</strong></td>
                         <td>Order history, payment reference IDs, GST billing details, and invoice records.</td>
-                        <td>Statutory tax compliance, warranty validation, and return/exchange fulfillment.</td>
+                        <td>Statutory tax compliance, warranty validation, and order fulfillment.</td>
                       </tr>
                       <tr>
                         <td><strong>Technical & Cookies</strong></td>
@@ -354,7 +354,7 @@ export default function PrivacyPolicyPage() {
                 </p>
                 <ul>
                   <li><strong>Order Fulfillment & Manufacturing:</strong> Custom-cutting seat upholstery, laser-tailoring floor mats, and dispatching orders to your specified delivery address.</li>
-                  <li><strong>Customer Support:</strong> Resolving fitment questions, processing returns/replacements under warranty, and addressing technical support inquiries.</li>
+                  <li><strong>Customer Support:</strong> Resolving fitment questions, warranty validations, and addressing technical support inquiries.</li>
                   <li><strong>Account Management:</strong> Maintaining your personal virtual garage, tracking accumulated Apex reward points, and saving order receipts.</li>
                   <li><strong>Operational Communications:</strong> Providing critical transactional notices, such as shipping dispatch alerts, OTPs, password resets, and changes to our terms.</li>
                   <li><strong>Platform Integrity:</strong> Protecting against fraudulent checkout attempts, unauthorized account takeover, and DDoS threats.</li>

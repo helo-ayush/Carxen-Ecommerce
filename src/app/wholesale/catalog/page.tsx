@@ -11,6 +11,7 @@ import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
+import { CatalogState } from '@/components/CatalogState';
 import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter } from 'lucide-react';
 import '../wholesale.css';
 
@@ -40,6 +41,9 @@ export default function WholesaleCatalogPage() {
     isWholesaleApproved,
     authLoading,
     products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
     b2bProfile,
     wholesaleBasket,
     wholesaleBasketSkuCount,
@@ -176,6 +180,14 @@ export default function WholesaleCatalogPage() {
 
   if (authLoading || !user || !isWholesaleApproved) {
     return null;
+  }
+
+  if (catalogStatus !== 'ready') {
+    return (
+      <div className="ws-page-container" style={{ padding: '40px 20px' }}>
+        <CatalogState status={catalogStatus} error={catalogError} onRetry={retryCatalog} />
+      </div>
+    );
   }
 
   const availableModels = selectedBrand !== 'All Brands' ? POPULAR_MODELS[selectedBrand] || [] : [];

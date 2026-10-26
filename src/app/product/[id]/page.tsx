@@ -1100,8 +1100,8 @@ function ProductDetailContent({ product }: { product: Product }) {
                   <span>2–4 Day Dispatch</span>
                 </div>
                 <div className="ps-card-assurance-item">
-                  <RotateCcw size={14} style={{ color: '#0284c7' }} />
-                  <span>7-Day Returns</span>
+                  <CheckCircle2 size={14} style={{ color: '#0284c7' }} />
+                  <span>100% Genuine Fit</span>
                 </div>
               </div>
             </div>

@@ -23,7 +23,7 @@ import {
 export const metadata: Metadata = {
   title: 'Terms of Service | CARXEN — Precision Automotive Accessories',
   description:
-    'Read the CarXen Terms of Service. Understand our terms of use, vehicle fitment guarantee, Google authentication integration, order fulfillment, warranty, and return policies.',
+    'Read the CarXen Terms of Service. Understand our terms of use, vehicle fitment guarantee, Google authentication integration, order fulfillment, warranty, cancellation relief, and no-returns policy.',
   openGraph: {
     title: 'Terms of Service | CARXEN',
     description:
@@ -135,7 +135,7 @@ export default function TermsOfServicePage() {
                 </a>
                 <a href="#returns-refunds" className="legal-toc-link">
                   <span className="legal-toc-num">06</span>
-                  <span>Returns, Exchanges & Refunds</span>
+                  <span>No-Returns & Cancellation</span>
                 </a>
                 <a href="#warranty" className="legal-toc-link">
                   <span className="legal-toc-num">07</span>
@@ -172,7 +172,7 @@ export default function TermsOfServicePage() {
                 </div>
                 <div className="legal-trust-point">
                   <RotateCcw size={14} />
-                  <span><strong>Hassle-Free Replacement:</strong> 7-day transit damage or sizing replacement guarantee.</span>
+                  <span><strong>24-Hour Relief Period:</strong> Instant self-service order cancellation window before production.</span>
                 </div>
                 <div className="legal-trust-point">
                   <ShieldCheck size={14} />
@@ -295,48 +295,53 @@ export default function TermsOfServicePage() {
               </div>
             </section>
 
-            {/* Section 06: Returns, Exchanges & Refunds */}
+            {/* Section 06: No-Returns & Order Cancellation Policy */}
             <section id="returns-refunds" className="legal-section-card">
               <div className="legal-section-header">
                 <span className="legal-section-idx">06</span>
-                <h2 className="legal-section-title">Returns, Exchanges & Refund Policy</h2>
+                <h2 className="legal-section-title">No-Returns & Order Cancellation Policy</h2>
               </div>
               <div className="legal-prose">
                 <p>
-                  We stand by the craftsmanship of every accessory we build. If you are not completely satisfied with your order, our return policy is designed to be fair and straightforward:
+                  Because CarXen precision-engineers, bespoke-crafts, and laser-cuts automotive interior accessories to individual order specifications, <strong>CarXen operates a strict No-Returns Policy</strong>. Once an order has been manufactured, dispatched, or delivered, returns or exchanges for change of mind or personal preference are not accepted.
                 </p>
 
                 <div className="legal-table-wrap">
                   <table className="legal-table">
                     <thead>
                       <tr>
-                        <th>Product Category</th>
-                        <th>Return Window</th>
-                        <th>Eligibility Conditions</th>
+                        <th>Policy Stage</th>
+                        <th>Applicable Timeline</th>
+                        <th>Terms & Eligibility</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td><strong>Standard Accessories</strong> (Steering covers, organizers, cushions, car care)</td>
-                        <td>7 Days from delivery</td>
-                        <td>Unused, uninstalled, in original packaging with all tags intact.</td>
+                        <td><strong>24-Hour Relief Cancellation</strong></td>
+                        <td>Within 24 Hours of order placement</td>
+                        <td>Self-service 1-click cancellation available via Account Profile or Wholesale Orders dashboard. 100% full refund automatically issued.</td>
                       </tr>
                       <tr>
-                        <td><strong>Custom Tailored Gear</strong> (Model-specific Seat Covers, 7D Floor Mats)</td>
-                        <td>7 Days (Replacement only)</td>
-                        <td>Eligible for free replacement if defective or incorrect fitment vs. car selected at checkout.</td>
+                        <td><strong>Post-24-Hour Window</strong></td>
+                        <td>After 24 Hours until dispatch</td>
+                        <td>Orders enter live production & cutting queue. Cancellations require customer support authorization (care@carxen.io) and cannot be guaranteed.</td>
                       </tr>
                       <tr>
-                        <td><strong>Defective / Transit Damaged Items</strong></td>
-                        <td>48 Hours reporting</td>
-                        <td>Photo/video evidence of damage upon unboxing required; immediate free pickup & replacement.</td>
+                        <td><strong>Dispatched & Delivered Goods</strong></td>
+                        <td>Post-delivery</td>
+                        <td><strong>No returns or refunds accepted.</strong> All delivered consignments and retail orders are final sale.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Transit Damage / Manufacturing Defect</strong></td>
+                        <td>Within 48 Hours of delivery</td>
+                        <td>If goods arrive physically damaged or with a verified manufacturing defect, contact care@carxen.io with unboxing evidence for an expedited replacement under our Warranty.</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
                 <p>
-                  <strong>Refund Processing:</strong> Approved refunds are credited directly to the original payment method within 5–7 business days following our quality inspection at the fulfillment center.
+                  <strong>Replacement Resolution:</strong> Verified transit damage or manufacturing defects reported within 48 hours are eligible for replacement parts manufactured and shipped at no extra charge. We do not provide cash or card refunds for delivered goods.
                 </p>
               </div>
             </section>

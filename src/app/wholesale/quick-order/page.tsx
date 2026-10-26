@@ -10,6 +10,7 @@ import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
+import { CatalogState } from '@/components/CatalogState';
 import { Plus, Minus, X, ArrowRight, Check } from 'lucide-react';
 import '../wholesale.css';
 
@@ -20,6 +21,9 @@ export default function WholesaleQuickOrderPage() {
     isWholesaleApproved,
     authLoading,
     products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
     wholesaleBasket,
     wholesaleBasketSkuCount,
     wholesaleBasketCount,
@@ -122,6 +126,14 @@ export default function WholesaleQuickOrderPage() {
   };
 
   const tierLabel = 'Verified Wholesale Pricing';
+
+  if (catalogStatus !== 'ready') {
+    return (
+      <div className="ws-page-container" style={{ padding: '40px 20px' }}>
+        <CatalogState status={catalogStatus} error={catalogError} onRetry={retryCatalog} />
+      </div>
+    );
+  }
 
   return (
     <div className="ws-page-container">

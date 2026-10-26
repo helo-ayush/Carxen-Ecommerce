@@ -9,6 +9,7 @@ import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { ProductArt } from '@/components/ProductArt';
+import { CatalogState } from '@/components/CatalogState';
 import {
   Plus,
   Minus,
@@ -16,6 +17,7 @@ import {
   ArrowRight,
   Check,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   CreditCard,
   Banknote,
@@ -29,6 +31,7 @@ import {
   ShoppingBag,
   ExternalLink,
   Calendar,
+  RefreshCw,
   X,
 } from 'lucide-react';
 import '../wholesale.css';
@@ -57,6 +60,9 @@ export default function WholesaleOrderBasketPage() {
   const router = useRouter();
   const {
     products,
+    catalogStatus,
+    catalogError,
+    retryCatalog,
     user,
     b2bProfile,
     isWholesaleApproved,
@@ -138,6 +144,10 @@ export default function WholesaleOrderBasketPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
+
+  // Critical decision warning modals (e.g. COD order placement, clearing basket)
+  const [showCodWarningModal, setShowCodWarningModal] = useState(false);
+  const [showClearBasketModal, setShowClearBasketModal] = useState(false);
 
   // Mock simulation modal state
   const [mockModalOpen, setMockModalOpen] = useState(false);
@@ -273,6 +283,42 @@ export default function WholesaleOrderBasketPage() {
     showToast(`Wholesale order ${placedOrder.orderNumber} placed successfully!`);
   };
 
+  const executeCodOrderPlacement = async () => {
+    setSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      const payload = buildOrderPayload({ paymentMethod: 'Cash on delivery' });
+      const res = await fetch('/api/storefront/wholesale/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      setSubmitting(false);
+
+      if (!res.ok) {
+        setShowCodWarningModal(false);
+        setSubmissionError(data.error || 'Failed to place wholesale order. Please verify your details.');
+        return;
+      }
+
+      setShowCodWarningModal(false);
+      const placed = data.order || {
+        orderNumber: `CX-B2B-${Math.floor(10000 + Math.random() * 90000)}`,
+        totalAmount: totalOrderValue,
+        paymentMethod: 'Cash on delivery',
+        paymentStatus: 'PENDING',
+      };
+      completeWholesaleOrderPlacement(placed, 'Cash on delivery');
+    } catch (err: any) {
+      setSubmitting(false);
+      setShowCodWarningModal(false);
+      setSubmissionError(err?.message || 'Network error transmitting order to CarXen. Please try again.');
+    }
+  };
+
   const handleConfirmOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (basketLineItems.length === 0) {
@@ -288,40 +334,15 @@ export default function WholesaleOrderBasketPage() {
       return;
     }
 
-    setSubmitting(true);
     setSubmissionError(null);
 
-    // CASH ON DELIVERY (COD) FLOW
+    // CASH ON DELIVERY (COD) FLOW - Intercept with critical confirmation dialog
     if (paymentOption === 'cod') {
-      try {
-        const payload = buildOrderPayload({ paymentMethod: 'Cash on delivery' });
-        const res = await fetch('/api/storefront/wholesale/order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        setSubmitting(false);
-
-        if (!res.ok) {
-          setSubmissionError(data.error || 'Failed to place wholesale order. Please verify your details.');
-          return;
-        }
-
-        const placed = data.order || {
-          orderNumber: `CX-B2B-${Math.floor(10000 + Math.random() * 90000)}`,
-          totalAmount: totalOrderValue,
-          paymentMethod: 'Cash on delivery',
-          paymentStatus: 'PENDING',
-        };
-        completeWholesaleOrderPlacement(placed, 'Cash on delivery');
-      } catch (err: any) {
-        setSubmitting(false);
-        setSubmissionError(err?.message || 'Network error transmitting order to CarXen. Please try again.');
-      }
+      setShowCodWarningModal(true);
       return;
     }
+
+    setSubmitting(true);
 
     // RAZORPAY ONLINE PAYMENT FLOW
     try {
@@ -506,6 +527,34 @@ export default function WholesaleOrderBasketPage() {
     );
   }
 
+  // SERVER CATALOG LOADING STATE - Wait for products to be fetched live from server
+  if (catalogStatus === 'loading' || (products.length === 0 && catalogStatus !== 'empty' && catalogStatus !== 'error')) {
+    return (
+      <div className="ws-page-container">
+        <div className="ws-empty-state-card" style={{ maxWidth: '540px', width: '100%', boxSizing: 'border-box', margin: '40px auto', padding: '48px 24px' }}>
+          <div className="ws-empty-icon-wrap" style={{ animation: 'spin 1.5s linear infinite' }}>
+            <RefreshCw size={28} style={{ color: '#e2231a' }} />
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '16px 0 8px 0' }}>
+            Fetching Wholesale Products from Server…
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
+            Verifying product allocations, verified MOQs, and tier pricing from the CarXen database.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // SERVER CATALOG ERROR STATE
+  if (catalogStatus === 'error') {
+    return (
+      <div className="ws-page-container" style={{ padding: '40px 20px' }}>
+        <CatalogState status={catalogStatus} error={catalogError} onRetry={retryCatalog} />
+      </div>
+    );
+  }
+
   // EMPTY BASKET STATE
   if (basketLineItems.length === 0) {
     return (
@@ -553,7 +602,7 @@ export default function WholesaleOrderBasketPage() {
         </div>
 
         <div className="ws-header-actions">
-          <button type="button" onClick={clearWholesaleBasket} className="ws-btn-secondary" style={{ color: '#dc2626' }}>
+          <button type="button" onClick={() => setShowClearBasketModal(true)} className="ws-btn-secondary" style={{ color: '#dc2626' }}>
             <Trash2 size={15} />
             <span>Clear Basket</span>
           </button>
@@ -1259,6 +1308,258 @@ export default function WholesaleOrderBasketPage() {
                 }}
               >
                 Simulate Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CRITICAL DECISION: COD ORDER CONFIRMATION WARNING MODAL */}
+      {showCodWarningModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              padding: '28px 24px',
+              maxWidth: 520,
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #fde047',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#fef3c7',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
+                  Confirm Wholesale Order Booking
+                </h3>
+                <p style={{ fontSize: 13, color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                  Are you sure you want to place this wholesale consignment under Cash on Delivery?
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#fffbeb',
+                border: '1px solid #fef3c7',
+                borderRadius: 10,
+                padding: '12px 14px',
+                fontSize: 12.5,
+                color: '#92400e',
+                lineHeight: 1.5,
+                marginBottom: 16,
+                display: 'flex',
+                gap: 8,
+                alignItems: 'flex-start',
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2, color: '#b45309' }} />
+              <div>
+                <strong>Factory Commitment Notice:</strong> Confirming this wholesale consignment immediately routes the order to the CarXen factory floor for production staging and transport allocation. Please ensure your receiving facility is prepared for delivery handover.
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                padding: '14px 16px',
+                fontSize: 12.5,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: '#64748b' }}>Buyer Entity:</span>
+                <strong style={{ color: '#0f172a' }}>{businessName} {gstin ? `(${gstin})` : ''}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: '#64748b' }}>Consignment Batch:</span>
+                <strong style={{ color: '#0f172a' }}>{basketLineItems.length} SKUs &bull; {wholesaleBasketCount} Total Units</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: '#64748b' }}>Warehouse Destination:</span>
+                <strong style={{ color: '#0f172a', textAlign: 'right', maxWidth: '60%', wordBreak: 'break-word' }}>
+                  {shippingLine1}, {shippingCity} ({shippingPincode})
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: '#64748b' }}>Payment Mode:</span>
+                <strong style={{ color: '#0284c7' }}>Cash on Delivery (Pay at Handover)</strong>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  paddingTop: 10,
+                  borderTop: '1px solid #e2e8f0',
+                  fontWeight: 800,
+                  fontSize: 14,
+                }}
+              >
+                <span style={{ color: '#0f172a' }}>Total Amount Due (inc. 18% GST):</span>
+                <span style={{ color: '#e2231a' }}>{formatINR(totalOrderValue)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setShowCodWarningModal(false)}
+                style={{
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Review &amp; Edit Basket
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={executeCodOrderPlacement}
+                style={{
+                  background: '#e2231a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 20px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {submitting ? 'Transmitting Order…' : 'Yes, Confirm & Place Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CRITICAL DECISION: CLEAR BASKET CONFIRMATION MODAL */}
+      {showClearBasketModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              padding: '24px',
+              maxWidth: 420,
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
+                  Clear Wholesale Basket?
+                </h3>
+                <p style={{ fontSize: 12.5, color: '#64748b', margin: 0 }}>
+                  Are you sure you want to remove all {wholesaleBasketCount} units from your basket? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => setShowClearBasketModal(false)}
+                style={{
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '9px 15px',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Keep Items
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearWholesaleBasket();
+                  setShowClearBasketModal(false);
+                  showToast('Wholesale order basket cleared.');
+                }}
+                style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '9px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Yes, Clear Basket
               </button>
             </div>
           </div>

@@ -119,6 +119,7 @@ interface AppContextType {
   deleteAddress: (id: string) => void;
   setPrimaryAddress: (id: string) => void;
   saveOrderToHistory: (order: CustomerOrderHistoryRecord) => void;
+  cancelOrder: (orderNumber: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
   addSavedPayment: (pm: Omit<SavedPaymentMethod, 'id'>) => void;
   deleteSavedPayment: (id: string) => void;
   setDefaultPayment: (id: string) => void;
@@ -239,7 +240,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCatalogError(null);
 
     try {
-      const response = await loadCatalogProducts(signal);
+      const customHeaders: Record<string, string> = {};
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) {
+          customHeaders['Authorization'] = `Bearer ${data.session.access_token}`;
+        }
+      } catch {}
+      try {
+        const cached = typeof window !== 'undefined' ? localStorage.getItem('cx_demo_user') : null;
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.id) customHeaders['x-demo-user-id'] = parsed.id;
+          if (parsed.email) customHeaders['x-demo-user-email'] = parsed.email;
+        }
+      } catch {}
+
+      const response = await loadCatalogProducts(signal, customHeaders);
       if (signal?.aborted) return;
 
       setProducts(response.products);
@@ -252,7 +269,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setProducts([]);
       setCatalogStatus('error');
-      setCatalogError(error instanceof Error ? error.message : 'The catalog could not be loaded.');
+      setCatalogError(error instanceof Error ? error.message : 'The storefront catalog could not be loaded from the server.');
     }
   }, []);
 
@@ -261,6 +278,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void requestCatalog(controller.signal);
     return () => controller.abort();
   }, [requestCatalog]);
+
+  // Re-fetch catalog when user identity or wholesale approval status resolves
+  useEffect(() => {
+    if (user?.id || b2bProfile?.status) {
+      void requestCatalog();
+    }
+  }, [user?.id, b2bProfile?.status, requestCatalog]);
 
   const retryCatalog = useCallback(() => {
     void requestCatalog();
@@ -899,6 +923,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const cancelOrder = async (orderNumber: string, reason?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/storefront/orders/cancel', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ orderNumber, reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errorMsg = data.error || 'Failed to cancel order.';
+        showToast(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
+      setOrders((prev) => {
+        const updated = prev.map((o) =>
+          o.orderNumber === orderNumber || o.id === orderNumber
+            ? { ...o, status: 'CANCELLED' as const, statusMessage: 'Order cancelled within 24h relief period' }
+            : o
+        );
+        try {
+          localStorage.setItem('cx_order_history', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast(`Order #${orderNumber} cancelled successfully.`);
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Network error cancelling order.';
+      showToast(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
   // Saved Payment Methods CRUD
   const addSavedPayment = async (pm: Omit<SavedPaymentMethod, 'id'>) => {
     const newId = `pm_${Date.now()}`;
@@ -1455,6 +1515,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteAddress,
         setPrimaryAddress,
         saveOrderToHistory,
+        cancelOrder,
         addSavedPayment,
         deleteSavedPayment,
         setDefaultPayment,

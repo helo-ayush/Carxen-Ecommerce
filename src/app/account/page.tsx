@@ -40,6 +40,9 @@ import {
   X,
   Star,
   Download,
+  XCircle,
+  AlertTriangle,
+  HelpCircle,
 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import './account.css';
@@ -70,6 +73,7 @@ function AccountContent() {
     deleteAddress,
     setPrimaryAddress,
     orders,
+    cancelOrder,
     savedPayments,
     addSavedPayment,
     deleteSavedPayment,
@@ -130,6 +134,8 @@ function AccountContent() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [trackingModalOrder, setTrackingModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
   const [invoiceModalOrder, setInvoiceModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
+  const [cancelModalOrder, setCancelModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Customer Product Reviews state (productId -> review record)
   const [customerReviews, setCustomerReviews] = useState<Record<number, any>>({});
@@ -591,7 +597,7 @@ function AccountContent() {
   </div>
 
   <div class="footer">
-    Thank you for choosing CARXEN. Backed by CARXEN 2-Year Comprehensive Warranty and 30-Day Hassle-Free Returns.<br>
+    Thank you for choosing CARXEN. Backed by CARXEN 2-Year Comprehensive Warranty and Precision Fit Guarantee.<br>
     For support or inquiries, email care@carxen.io or call 1800-209-8899.
   </div>
 </body>
@@ -1490,6 +1496,94 @@ function AccountContent() {
                               flexWrap: 'wrap',
                             }}
                           >
+                            {/* 24-Hour Cancellation Relief Period vs Contact Support Action */}
+                            {(() => {
+                              const isCancelled = order.status === 'CANCELLED';
+                              const isDelivered = order.status === 'DELIVERED';
+                              const placedTime = new Date(order.placedAt).getTime();
+                              const hoursElapsed = (Date.now() - placedTime) / (1000 * 60 * 60);
+                              const isWithin24h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 24 : true;
+                              const hoursLeft = Math.max(0, Math.ceil(24 - (Number.isFinite(hoursElapsed) ? hoursElapsed : 0)));
+
+                              if (isCancelled) {
+                                return (
+                                  <span
+                                    style={{
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      color: '#dc2626',
+                                      background: '#fef2f2',
+                                      border: '1px solid #fecaca',
+                                      padding: '5px 10px',
+                                      borderRadius: '6px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    <XCircle size={13} /> Order Cancelled
+                                  </span>
+                                );
+                              }
+
+                              if (!isDelivered && isWithin24h) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => setCancelModalOrder(order)}
+                                    style={{
+                                      height: '32px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      padding: '0 12px',
+                                      color: '#dc2626',
+                                      background: '#ffffff',
+                                      border: '1px solid #fca5a5',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                    }}
+                                    title="Cancel order within 24-hour relief period"
+                                  >
+                                    <XCircle size={13} />
+                                    <span>Cancel Order ({hoursLeft}h left)</span>
+                                  </button>
+                                );
+                              }
+
+                              if (!isDelivered && !isWithin24h) {
+                                return (
+                                  <a
+                                    href={`mailto:support@carxen.com?subject=${encodeURIComponent(`Cancellation Request for Order #${order.orderNumber}`)}&body=${encodeURIComponent(`Hi CarXen Support,\n\nI would like to request cancellation for Order #${order.orderNumber}.\n\nThank you,\n${user?.name || ''}`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      height: '32px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      padding: '0 10px',
+                                      color: '#4b5563',
+                                      background: '#f9fafb',
+                                      border: '1px solid #e5e7eb',
+                                      borderRadius: '8px',
+                                      textDecoration: 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                    }}
+                                    title="24-hour relief period has ended. Contact customer support to request cancellation."
+                                  >
+                                    <HelpCircle size={13} />
+                                    <span>Contact Support to Cancel</span>
+                                  </a>
+                                );
+                              }
+
+                              return null;
+                            })()}
+
                             <button
                               type="button"
                               className="ac-btn-outline"
@@ -3045,6 +3139,130 @@ function AccountContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ORDER CANCELLATION CONFIRMATION MODAL */}
+      {cancelModalOrder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(9, 9, 11, 0.7)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '440px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+              border: '1px solid #fecaca',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#09090b', margin: '0 0 4px 0' }}>
+                  Cancel Order #{cancelModalOrder.orderNumber}?
+                </h3>
+                <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                  You are within the 24-hour self-service cancellation window. Are you sure you want to cancel this order?
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                fontSize: '12.5px',
+                marginBottom: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: '#64748b' }}>Order Total:</span>
+                <strong>{formatINR(cancelModalOrder.totalAmount)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: '#64748b' }}>Items in Order:</span>
+                <strong>{cancelModalOrder.items.length} item{cancelModalOrder.items.length === 1 ? '' : 's'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Destination:</span>
+                <span style={{ textAlign: 'right', maxWidth: '60%', color: '#09090b', fontWeight: 500 }}>
+                  {cancelModalOrder.shippingAddress.city}, {cancelModalOrder.shippingAddress.postalCode}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setCancelModalOrder(null)}
+                style={{
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={async () => {
+                  setIsCancelling(true);
+                  await cancelOrder(cancelModalOrder.orderNumber);
+                  setIsCancelling(false);
+                  setCancelModalOrder(null);
+                }}
+                style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: isCancelling ? 'not-allowed' : 'pointer',
+                  opacity: isCancelling ? 0.7 : 1,
+                }}
+              >
+                {isCancelling ? 'Cancelling Order…' : 'Yes, Cancel Order'}
+              </button>
+            </div>
           </div>
         </div>
       )}
