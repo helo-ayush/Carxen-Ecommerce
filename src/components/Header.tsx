@@ -60,6 +60,8 @@ function HeaderContent() {
     setSearchVal(currentQuery);
   }, [currentQuery]);
 
+  useEffect(() => () => document.documentElement.classList.remove('cx-searching'), []);
+
   useEffect(() => {
     let lastScrollY = window.scrollY;
     let accumulatedDelta = 0;
@@ -187,7 +189,7 @@ function HeaderContent() {
       params.delete('q');
     }
     const qs = params.toString();
-    router.push(`/shop${qs ? `?${qs}` : ''}`);
+    router.push(`/shop${qs ? `?${qs}` : ''}`, { scroll: !isShopPage });
   };
 
   const showAnnouncement = announcementConfig ? announcementConfig.enabled !== false : true;
@@ -455,11 +457,20 @@ function HeaderContent() {
             {/* LANDING PAGE: Section Anchor Navigation */}
             {isLandingPage ? (
               <nav className="main">
-                <Link href="/#categories">Product</Link>
+                {storefrontConfig?.featuredCategories?.enabled !== false && (
+                  <Link href="/#categories">Product</Link>
+                )}
                 <Link href="/#craft">Craft</Link>
                 <Link href="/#shop">Explore</Link>
-                <Link href="/#fitment">Vehicles</Link>
-                <Link href="/#reviews">Reviews</Link>
+                {storefrontConfig?.fitment?.enabled !== false && (
+                  <Link href="/#fitment">Vehicles</Link>
+                )}
+                {storefrontConfig?.reviews?.enabled !== false && (
+                  <Link href="/#reviews">Reviews</Link>
+                )}
+                {storefrontConfig?.support?.enabled !== false && (
+                  <Link href="/#support">Support</Link>
+                )}
               </nav>
             ) : (
               /* SHOP / STORE PAGES: Centered Search Bar */
@@ -474,6 +485,8 @@ function HeaderContent() {
                     placeholder={`Search parts for your ${activeCar.m}…`}
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
+                    onFocus={() => document.documentElement.classList.add('cx-searching')}
+                    onBlur={() => document.documentElement.classList.remove('cx-searching')}
                     aria-label={`Search parts for ${activeCar.m}`}
                   />
                   {searchVal && (

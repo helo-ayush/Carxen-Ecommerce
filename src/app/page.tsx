@@ -60,6 +60,74 @@ const WHY_GALLERY_ITEMS = [
   },
 ];
 
+const SUPPORT_TOPICS = [
+  { title: 'Fitment help', tag: '01 — Vehicle', badge: 'Fitment', description: 'Tell us your car and we will confirm the right part.' },
+  { title: 'Order status', tag: '02 — Orders', badge: 'Orders', description: 'Questions about a placed order, payment or invoice.' },
+  { title: 'Delivery & returns', tag: '03 — Delivery', badge: 'Delivery', description: 'Shipping timelines, address changes and returns.' },
+  { title: 'Installation', tag: '04 — Install', badge: 'Install', description: 'Fitting guidance for your exact product.' },
+  { title: 'Warranty', tag: '05 — Warranty', badge: 'Warranty', description: 'Coverage, replacements and product care.' },
+];
+
+const SUPPORT_CARD_FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1640705049944-de916f415bb4?auto=format&fit=crop&w=1200&q=85';
+
+const LANDING_REVIEWS = [
+  {
+    id: 'landing-rev-1',
+    author: 'Aarav Sharma',
+    sub: 'Hyundai Creta · New Delhi',
+    avatar: 'AS',
+    bg: '#e2231a',
+    rating: 5.0,
+    text: 'The seat covers fit my Creta like they were stitched around it. Two months of daily driving and there is still zero creasing.',
+  },
+  {
+    id: 'landing-rev-2',
+    author: 'Priya Nair',
+    sub: 'Kia Seltos · Bengaluru',
+    avatar: 'PN',
+    bg: '#1b1b1e',
+    rating: 4.8,
+    text: 'Ordered the 7D mats before the monsoon. Mud and spilled coffee wipe right off, and the cabin still looks brand new.',
+  },
+  {
+    id: 'landing-rev-3',
+    author: 'Rohan Mehta',
+    sub: 'Mahindra Scorpio N · Mumbai',
+    avatar: 'RM',
+    bg: '#5d5d64',
+    rating: 4.7,
+    text: 'Stitching and finish are better than what my dealer quoted at nearly double the price. The steering grip feels premium every day.',
+  },
+  {
+    id: 'landing-rev-4',
+    author: 'Ananya Iyer',
+    sub: 'Honda City · Chennai',
+    avatar: 'AI',
+    bg: '#b91a12',
+    rating: 5.0,
+    text: 'The neck pillows made a nine-hour drive to Pondicherry genuinely comfortable. Delivery was quick and the packing was neat.',
+  },
+  {
+    id: 'landing-rev-5',
+    author: 'Vikram Singh',
+    sub: 'Toyota Fortuner · Jaipur',
+    avatar: 'VS',
+    bg: '#2a2d34',
+    rating: 4.6,
+    text: 'Mats and covers arrived well packed. Fitment is exact, and the team answered my questions over email before I ordered.',
+  },
+  {
+    id: 'landing-rev-6',
+    author: 'Sneha Kulkarni',
+    sub: 'Tata Nexon · Pune',
+    avatar: 'SK',
+    bg: '#7f1d1d',
+    rating: 4.9,
+    text: 'The red accent on the steering cover matches my Nexon perfectly. Quality feels far above the price I paid.',
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const {
@@ -83,9 +151,21 @@ export default function HomePage() {
   const whyConfig = storefrontConfig?.whyCarxen;
   const reviewsConfig = storefrontConfig?.reviews;
   const craftConfig = storefrontConfig?.craftCards;
-  const ctaConfig = storefrontConfig?.cta;
+  const supportConfig = storefrontConfig?.support;
   const announcementConfig = storefrontConfig?.announcement;
   const addonsConfig = storefrontConfig?.addons;
+
+  const supportTitle = String(supportConfig?.title || "Need a hand? We're here.").trim();
+  const supportTitleBreak = supportTitle.indexOf('?');
+  const supportTitleLead = supportTitleBreak >= 0 ? supportTitle.slice(0, supportTitleBreak + 1) : supportTitle;
+  const supportTitleTail =
+    supportTitleBreak >= 0
+      ? supportTitle.slice(supportTitleBreak + 1).trim().replace(/[.!]+$/, '')
+      : '';
+  const supportTopics =
+    Array.isArray(supportConfig?.topics) && supportConfig.topics.length > 0
+      ? supportConfig.topics
+      : ['Fitment help for your car', 'Order & delivery questions', 'We reply to your email'];
 
   // Reveal observer
   useEffect(() => {
@@ -339,21 +419,90 @@ export default function HomePage() {
     };
   }, []);
 
+  // Published storefront reviews take priority; owner-authored highlights are
+  // used only while there are no verified reviews yet.
+  const configuredReviews = useMemo<HomeReview[]>(() => {
+    const items = Array.isArray(reviewsConfig?.items) ? reviewsConfig.items : [];
+    const palette = ['#e2231a', '#1b1b1e', '#5d5d64', '#b91a12', '#2a2d34'];
+    return items
+      .filter((item: any) => item && typeof item.text === 'string' && item.text.trim())
+      .map((item: any, index: number) => ({
+        id: String(item.id || `configured-${index}`),
+        text: String(item.text),
+        author: String(item.author || 'CarXen customer'),
+        sub: String(item.sub || ''),
+        avatar: String(item.avatar || 'CX').slice(0, 2).toUpperCase(),
+        bg: String(item.bg || palette[index % palette.length]),
+        rating: Number(item.rating) > 0 ? Number(item.rating) : 5,
+      }));
+  }, [reviewsConfig]);
+
+  const displayedReviews =
+    activeReviewsList.length > 0
+      ? activeReviewsList
+      : configuredReviews.length > 0
+      ? configuredReviews
+      : LANDING_REVIEWS;
+  const usingFeaturedReviews = activeReviewsList.length === 0;
+
   useEffect(() => {
+    if (displayedReviews.length <= 1) {
+      setActiveReview(0);
+      return;
+    }
     const timer = setInterval(() => {
-      setActiveReview((prev) => (prev + 1) % activeReviewsList.length);
+      setActiveReview((prev) => (prev + 1) % displayedReviews.length);
     }, 5600);
     return () => clearInterval(timer);
-  }, [activeReviewsList.length]);
+  }, [displayedReviews.length]);
 
-  // Newsletter State
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterMsg, setNewsletterMsg] = useState('');
+  // Support portal form
+  const [supportName, setSupportName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportCompany, setSupportCompany] = useState('');
+  const [supportSending, setSupportSending] = useState(false);
+  const [supportMsg, setSupportMsg] = useState('');
+  const [supportError, setSupportError] = useState(false);
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleSupportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setNewsletterMsg('✓ Welcome to the X-List — thank you for subscribing!');
-    setNewsletterEmail('');
+    if (supportSending) return;
+    setSupportSending(true);
+    setSupportMsg('');
+    setSupportError(false);
+
+    try {
+      const response = await fetch('/api/storefront/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          name: supportName,
+          email: supportEmail,
+          message: supportMessage,
+          company: supportCompany,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setSupportError(true);
+        setSupportMsg(payload?.error || 'Could not send your request. Please try again.');
+        return;
+      }
+
+      setSupportMsg(
+        String(supportConfig?.successMessage || "Request received — we'll reply to your email."),
+      );
+      setSupportName('');
+      setSupportEmail('');
+      setSupportMessage('');
+    } catch {
+      setSupportError(true);
+      setSupportMsg('Could not send your request. Please try again.');
+    } finally {
+      setSupportSending(false);
+    }
   };
 
   return (
@@ -1088,7 +1237,7 @@ export default function HomePage() {
       )}
 
       {/* REVIEWS */}
-      {reviewsConfig?.enabled !== false && activeReviewsList.length > 0 && (
+      {reviewsConfig?.enabled !== false && (
         <section className="sec" id="reviews">
           <div className="wrap">
             <div className="sec-head rv in">
@@ -1096,13 +1245,21 @@ export default function HomePage() {
               <span className="t">{reviewsConfig?.eyebrow || 'Driver voices'}</span>
               <span className="rule" />
               <span className="note">
-                {activeReviewsList.length} verified review{activeReviewsList.length === 1 ? '' : 's'}
+                {displayedReviews.length > 0
+                  ? usingFeaturedReviews
+                    ? `${displayedReviews.length} customer review${displayedReviews.length === 1 ? '' : 's'}`
+                    : `${displayedReviews.length} verified review${displayedReviews.length === 1 ? '' : 's'}`
+                  : 'Verified reviews'}
               </span>
             </div>
             <div className="rev-g">
               <div className="rv-l in">
                 <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
-                  Verified Drivers
+                  {displayedReviews.length === 0
+                    ? 'Driver reviews'
+                    : usingFeaturedReviews
+                    ? 'Customer reviews'
+                    : 'Verified Drivers'}
                 </Badge>
                 <span className="rev-q">“</span>
                 <h2 className="disp" style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.75rem)' }}>
@@ -1116,43 +1273,45 @@ export default function HomePage() {
                     </>
                   )}
                 </h2>
-              <div className="rev-c">
-                <button
-                  className="rb"
-                  id="rPrev"
-                  onClick={() =>
-                    setActiveReview(
-                      (prev) => (prev - 1 + activeReviewsList.length) % activeReviewsList.length
-                    )
-                  }
-                  aria-label="Previous"
-                >
-                  <svg viewBox="0 0 24 24">
-                    <path d="M20 12H4M11 5l-7 7 7 7" />
-                  </svg>
-                </button>
-                <button
-                  className="rb"
-                  id="rNext"
-                  onClick={() =>
-                    setActiveReview((prev) => (prev + 1) % activeReviewsList.length)
-                  }
-                  aria-label="Next"
-                >
-                  <svg viewBox="0 0 24 24">
-                    <path d="M4 12h16M13 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <div className="dots" id="dots">
-                  {activeReviewsList.map((_, i) => (
-                    <i
-                      key={i}
-                      className={i === activeReview ? 'on' : ''}
-                      onClick={() => setActiveReview(i)}
-                    />
-                  ))}
+              {displayedReviews.length > 1 && (
+                <div className="rev-c">
+                  <button
+                    className="rb"
+                    id="rPrev"
+                    onClick={() =>
+                      setActiveReview(
+                        (prev) => (prev - 1 + displayedReviews.length) % displayedReviews.length
+                      )
+                    }
+                    aria-label="Previous"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M20 12H4M11 5l-7 7 7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    className="rb"
+                    id="rNext"
+                    onClick={() =>
+                      setActiveReview((prev) => (prev + 1) % displayedReviews.length)
+                    }
+                    aria-label="Next"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 12h16M13 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div className="dots" id="dots">
+                    {displayedReviews.map((_, i) => (
+                      <i
+                        key={i}
+                        className={i === activeReview ? 'on' : ''}
+                        onClick={() => setActiveReview(i)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <div className="rev-vp rv in">
               <div
@@ -1160,20 +1319,44 @@ export default function HomePage() {
                 id="revT"
                 style={{ transform: `translateX(-${activeReview * 100}%)` }}
               >
-                {activeReviewsList.map((rev, idx) => (
-                  <div className="rev-s" key={idx}>
-                    <blockquote>{rev.text}</blockquote>
+                {displayedReviews.length > 0 ? (
+                  displayedReviews.map((rev, idx) => (
+                    <div className="rev-s" key={idx}>
+                      <div className="rev-stars" aria-label={`${rev.rating.toFixed(1)} out of 5 stars`}>
+                        <span className="rev-stars-icons">
+                          {'★'.repeat(Math.round(rev.rating))}
+                          {'☆'.repeat(5 - Math.round(rev.rating))}
+                        </span>
+                        <span className="rev-stars-score">{rev.rating.toFixed(1)}</span>
+                      </div>
+                      <blockquote>{rev.text}</blockquote>
+                      <div className="rev-p">
+                        <span className="av" style={{ background: rev.bg }}>
+                          {rev.avatar}
+                        </span>
+                        <div>
+                          <h5>{rev.author}</h5>
+                          <p>{rev.sub}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rev-s" key="empty-reviews">
+                    <blockquote>
+                      No reviews yet. Verified buyers can share their experience after delivery.
+                    </blockquote>
                     <div className="rev-p">
-                      <span className="av" style={{ background: rev.bg }}>
-                        {rev.avatar}
+                      <span className="av" style={{ background: '#1b1b1e' }}>
+                        CX
                       </span>
                       <div>
-                        <h5>{rev.author}</h5>
-                        <p>{rev.sub}</p>
+                        <h5>CarXen</h5>
+                        <p>Verified reviews appear here</p>
                       </div>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -1181,99 +1364,111 @@ export default function HomePage() {
       </section>
       )}
 
-      {/* CTA SECTION */}
-{ctaConfig?.enabled !== false && (
-        <section className="cta">
-          <div className="wrap cta-in">
-            <div className="cta-grid">
-              <div className="cta-left-col">
-                <div style={{ marginBottom: '16px' }}>
-                  <Badge variant="outline" className="rv in" style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}>
-                    {ctaConfig?.sectionNumber || '08'} — {ctaConfig?.eyebrow || 'Ready when you are'}
-                  </Badge>
-                </div>
-                <h2 className="disp">
-                  {(() => {
-                    const rawTitle = ctaConfig?.title;
-                    if (rawTitle && rawTitle.toLowerCase().includes('elevate')) {
-                      const match = rawTitle.match(/^(.*?)(?:drive\.?)\s*(elevate\s*it\.?)$/i);
-                      if (match) {
-                        return (
-                          <>
-                            <span className="mask rv in" style={{ display: 'block' }}>
-                              <span>{match[1].trim() || "Don't just"}</span>
-                            </span>
-                            <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.1s' }}>
-                              <span>drive.</span>
-                            </span>
-                            <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.2s' }}>
-                              <span style={{ color: 'var(--red, #e2231a)' }}>{match[2]}</span>
-                            </span>
-                          </>
-                        );
-                      }
-                    }
-
-                    if (rawTitle && rawTitle !== "Don't just drive. Elevate it.") {
-                      return rawTitle;
-                    }
-
-                    return (
-                      <>
-                        <span className="mask rv in" style={{ display: 'block' }}>
-                          <span>Don&apos;t just</span>
-                        </span>
-                        <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.1s' }}>
-                          <span>drive.</span>
-                        </span>
-                        <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.2s' }}>
-                          <span style={{ color: 'var(--red, #e2231a)' }}>Elevate it.</span>
-                        </span>
-                      </>
-                    );
-                  })()}
-                </h2>
-                <div className="perks rv in">
-                  {ctaConfig?.perks && ctaConfig.perks.length > 0 ? (
-                    ctaConfig.perks.map((p: string, idx: number) => (
-                      <span key={idx}>✦ {p.replace(/^✦\s*/, '')}</span>
-                    ))
-                  ) : (
-                    <>
-                      <span>✦ Early access to drops</span>
-                      <span>✦ Member pricing up to 20% off</span>
-                      <span>✦ Fitment alerts for your garage</span>
-                    </>
-                  )}
-                </div>
+      {/* SUPPORT PORTAL */}
+      {supportConfig?.enabled !== false && (
+      <section className="cta" id="support" aria-label="Customer support">
+        <div className="wrap cta-in">
+          <form className="cta-grid" onSubmit={handleSupportSubmit}>
+            <div className="cta-left-col">
+              <div style={{ marginBottom: '16px' }}>
+                <Badge
+                  variant="outline"
+                  className="rv in"
+                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}
+                >
+                  {`${supportConfig?.sectionNumber || '08'} — ${supportConfig?.eyebrow || 'Support'}`}
+                </Badge>
+              </div>
+              <h2 className="disp">
+                <span className="mask rv in" style={{ display: 'block' }}>
+                  <span>{supportTitleLead}</span>
+                </span>
+                {supportTitleTail && (
+                  <span className="mask rv in" style={{ display: 'block', ['--d' as any]: '.1s' }}>
+                    <span>
+                      {supportTitleTail}
+                      <span style={{ color: 'var(--red, #e2231a)' }}>.</span>
+                    </span>
+                  </span>
+                )}
+              </h2>
+              <div className="perks rv in">
+                {supportTopics.map((topic: string, idx: number) => (
+                  <span key={idx}>✦ {topic}</span>
+                ))}
               </div>
 
-              <div className="cta-right-col">
-                <div className="craft-cards-hint mono rv in">
-                  <span>{craftConfig?.hint || '✦ Click card to explore cabin craft'}</span>
-                </div>
-                <Cards customCards={craftConfig?.cards} />
-                <form className="news rv in" id="nf" onSubmit={handleNewsletterSubmit}>
-                  <label htmlFor="ne">{ctaConfig?.newsletterLabel || 'Join the X-List — 10% off first order'}</label>
-                  <div className="nf">
-                    <input
-                      id="ne"
-                      type="email"
-                      placeholder="your@email.com"
-                      required
-                      value={newsletterEmail}
-                      onChange={(e) => setNewsletterEmail(e.target.value)}
-                    />
-                    <button type="submit">{ctaConfig?.buttonLabel || 'Join'}</button>
-                  </div>
-                  <p className="msg" id="nm">
-                    {newsletterMsg}
-                  </p>
-                </form>
+              <div className="support-fields">
+                <label htmlFor="support-name">{supportConfig?.nameLabel || 'Your name'}</label>
+                <input
+                  id="support-name"
+                  className="support-input"
+                  placeholder="e.g. Aarav Sharma"
+                  value={supportName}
+                  onChange={(e) => setSupportName(e.target.value)}
+                  minLength={2}
+                  maxLength={80}
+                  required
+                />
+
+                <label htmlFor="support-message">{supportConfig?.messageLabel || 'How can we help?'}</label>
+                <textarea
+                  id="support-message"
+                  className="support-input support-textarea"
+                  placeholder="Tell us about your car, the product or your order..."
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  minLength={10}
+                  maxLength={2000}
+                  rows={4}
+                  required
+                />
+
+                {/* Honeypot — hidden from people, catches bots */}
+                <input
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={supportCompany}
+                  onChange={(e) => setSupportCompany(e.target.value)}
+                  style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }}
+                />
               </div>
             </div>
-          </div>
-        </section>
+
+            <div className="cta-right-col">
+              <div className="craft-cards-hint mono rv in">
+                <span>✦ {supportConfig?.hint || 'Common support topics'}</span>
+              </div>
+              <Cards
+                customCards={SUPPORT_TOPICS.map((topic, index) => ({
+                  ...topic,
+                  image: craftConfig?.cards?.[index]?.image || SUPPORT_CARD_FALLBACK_IMAGE,
+                }))}
+              />
+              <div className="news rv in">
+                <label htmlFor="support-email">{supportConfig?.emailLabel || 'Where should we reply?'}</label>
+                <div className="nf">
+                  <input
+                    id="support-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    maxLength={160}
+                    required
+                  />
+                  <button type="submit" disabled={supportSending}>
+                    {supportSending ? 'Sending…' : supportConfig?.sendLabel || 'Send'}
+                  </button>
+                </div>
+                <p className={`msg ${supportError ? 'is-error' : ''}`}>{supportMsg}</p>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
       )}
 
       <Footer />

@@ -45,6 +45,12 @@ html {
   overflow-x: clip;
 }
 
+/* Chrome scrolls to keep a focused input clear of scroll-padding-top, which
+   makes the shop jump upward on every keystroke in the header search. */
+html.cx-searching {
+  scroll-padding-top: 0;
+}
+
 body {
   font-family: var(--sans);
   background: var(--bg);
@@ -5043,6 +5049,27 @@ nav.main a.active {
   padding-right: 20px;
 }
 
+.rev-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rev-stars-icons {
+  color: #f5a623;
+  font-size: 15px;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.rev-stars-score {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--mute);
+}
+
 .rev-s blockquote {
   font-size: clamp(1.15rem, 1.8vw, 1.6rem);
   font-weight: 500;
@@ -5263,6 +5290,60 @@ nav.main a.active {
   margin-top: 10px;
   min-height: 1.3em;
   text-transform: uppercase;
+}
+
+/* support portal form inside the dark CTA panel */
+.support-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+  max-width: 520px;
+}
+
+.support-fields label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .62);
+  margin-top: 8px;
+}
+
+.support-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .06);
+  border-radius: 14px;
+  padding: 13px 16px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s, background .2s;
+}
+
+.support-input::placeholder {
+  color: rgba(255, 255, 255, .38);
+}
+
+.support-input:focus {
+  border-color: rgba(226, 35, 26, .7);
+  background: rgba(255, 255, 255, .09);
+}
+
+.support-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.nf button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.cta .msg.is-error {
+  color: #ff8a80;
 }
 
 @media (max-width: 700px) {

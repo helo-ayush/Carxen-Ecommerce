@@ -243,6 +243,7 @@ export async function POST(request: NextRequest) {
   const { data: inserted, error } = await supabase
     .from('ecommerce_reviews')
     .insert({
+      id: crypto.randomUUID(),
       productId: product.id,
       customerId: customer.id,
       storeId: store.id,
@@ -253,6 +254,7 @@ export async function POST(request: NextRequest) {
       status,
       verifiedPurchase: true,
       publishedAt,
+      updatedAt: new Date().toISOString(),
     })
     .select('id, createdAt')
     .single();

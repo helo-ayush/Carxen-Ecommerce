@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { isCustomFit } from '@/data/products';
@@ -419,6 +419,19 @@ function ShopContent() {
     [filteredProducts, activeCar],
   );
 
+  // While a search is active the results list gets shorter. Without a floor the
+  // document shrinks past the scroll position and the browser clamps it, which
+  // looks like the page scrolling by itself on every keystroke. Hold the
+  // pre-search height until the query is cleared.
+  const resultsColumnRef = useRef<HTMLDivElement>(null);
+  const stableResultsHeightRef = useRef(0);
+  const isSearching = Boolean(searchQuery.trim());
+
+  useEffect(() => {
+    if (isSearching) return;
+    const column = resultsColumnRef.current;
+    if (column) stableResultsHeightRef.current = column.offsetHeight;
+  }, [isSearching, filteredProducts.length, category, fitType, priceTier, seriesFilter, products.length]);
   return (
     <div className="in-shop">
       {/* 1. HERO BANNER DIRECTLY BELOW NAVBAR */}
@@ -673,7 +686,15 @@ function ShopContent() {
           </aside>
 
           {/* RIGHT COLUMN: MAIN CONTENT */}
-          <div className="shop-products-column">
+          <div
+            className="shop-products-column"
+            ref={resultsColumnRef}
+            style={
+              isSearching && stableResultsHeightRef.current > 0
+                ? { minHeight: stableResultsHeightRef.current }
+                : undefined
+            }
+          >
             {/* TOP BAR: CATEGORY PILLS (LEFT) + SORT BY (RIGHT) */}
             <div className="shop-top-bar">
               <div className="shop-category-pills">
