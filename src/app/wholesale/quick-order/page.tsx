@@ -298,11 +298,13 @@ export default function WholesaleQuickOrderPage() {
                   <tr key={p.id}>
                     <td>
                       <div className="ws-prod-cell">
-                        <div className="ws-prod-art-thumb">
+                        <Link href={`/wholesale/product/${p.id}`} className="ws-prod-art-thumb" title={`View ${p.n}`}>
                           <ProductArt product={p} />
-                        </div>
+                        </Link>
                         <div className="ws-prod-info">
-                          <div className="ws-prod-name">{p.n}</div>
+                          <Link href={`/wholesale/product/${p.id}`} className="ws-prod-name" title={`View ${p.n}`}>
+                            {p.n}
+                          </Link>
                           <div className="ws-prod-meta">
                             <span className="ws-prod-series-badge">{p.s} Series</span>
                             {typeof p.fitment === 'string' && p.fitment ? (
@@ -314,7 +316,9 @@ export default function WholesaleQuickOrderPage() {
                     </td>
 
                     <td>
-                      <span className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>{p.slug || `CX-${p.id}`}</span>
+                      <Link href={`/wholesale/product/${p.id}`} className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>
+                        {p.slug || `CX-${p.id}`}
+                      </Link>
                     </td>
 
                     <td>

@@ -109,22 +109,12 @@ export function WholesaleProductCard({
     >
       {/* Media Box */}
       <div className="ws-card-media" onClick={handleCardClick} title="View wholesale product specifications">
-        {/* Top-Left Badges */}
+        {/* Top-Left Minimal MOQ Indicator */}
         <div className="ws-card-badges">
           <span className="ws-card-badge moq">
             <span className="ws-card-badge-dot" />
-            <span>MOQ: {moq} units</span>
+            <span>MOQ: {moq}</span>
           </span>
-          {marginPercent > 0 && (
-            <span className="ws-card-badge margin">
-              <span>{marginPercent}% Margin</span>
-            </span>
-          )}
-        </div>
-
-        {/* Top-Right SKU Pill */}
-        <div className="ws-card-sku">
-          <span>{product.slug || `CX-${product.id}`}</span>
         </div>
 
         {/* Artwork */}
@@ -214,6 +204,11 @@ export function WholesaleProductCard({
             <div className="ws-card-price-primary">
               <span className="ws-card-price-wholesale">{formatINR(t1)}</span>
               <span className="ws-card-price-unit">/ unit</span>
+              {marginPercent > 0 && (
+                <span className="ws-card-margin-pill">
+                  {marginPercent}% Margin
+                </span>
+              )}
               {retailPrice > t1 && (
                 <span className="ws-card-price-retail">MRP {formatINR(retailPrice)}</span>
               )}

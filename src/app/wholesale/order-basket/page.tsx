@@ -606,17 +606,17 @@ export default function WholesaleOrderBasketPage() {
                         <tr key={p.id}>
                           <td>
                             <div className="ws-item-cell">
-                              <div className="ws-item-thumb">
+                              <Link href={`/wholesale/product/${p.id}`} className="ws-item-thumb" title={`View ${p.n}`}>
                                 <ProductArt product={p} />
-                              </div>
+                              </Link>
                               <div className="ws-item-details">
                                 <Link href={`/wholesale/product/${p.id}`} className="ws-item-name">
                                   {p.n}
                                 </Link>
                                 <div className="ws-item-meta">
-                                  <span className="ws-item-sku-badge">
+                                  <Link href={`/wholesale/product/${p.id}`} className="ws-item-sku-badge" title={p.slug || `CX-${p.id}`}>
                                     Part #{p.slug || `CX-${p.id}`}
-                                  </span>
+                                  </Link>
                                   <span>•</span>
                                   <span>{p.c || 'Accessories'}</span>
                                 </div>
@@ -705,17 +705,17 @@ export default function WholesaleOrderBasketPage() {
                 {basketLineItems.map(({ product: p, quantity, moq, isMoqMet, unitPrice, totalPrice }) => (
                   <div key={p.id} className="ws-mobile-item-card">
                     <div className="ws-mobile-item-top">
-                      <div className="ws-mobile-item-thumb">
+                      <Link href={`/wholesale/product/${p.id}`} className="ws-mobile-item-thumb" title={`View ${p.n}`}>
                         <ProductArt product={p} />
-                      </div>
+                      </Link>
                       <div className="ws-mobile-item-info">
                         <Link href={`/wholesale/product/${p.id}`} className="ws-mobile-item-name">
                           {p.n}
                         </Link>
                         <div className="ws-mobile-item-meta">
-                          <span className="ws-item-sku-badge">
+                          <Link href={`/wholesale/product/${p.id}`} className="ws-item-sku-badge" title={p.slug || `CX-${p.id}`}>
                             Part #{p.slug || `CX-${p.id}`}
-                          </span>
+                          </Link>
                           <span className={`ws-moq-pill ${isMoqMet ? 'valid' : 'invalid'}`}>
                             {isMoqMet ? <Check size={10} strokeWidth={3} /> : <AlertCircle size={10} />}
                             <span>MOQ: {moq}</span>

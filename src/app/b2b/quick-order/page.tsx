@@ -412,17 +412,17 @@ export default function QuickOrderPage() {
                     {/* Product & SKU Details */}
                     <td>
                       <div className="b2b-qo-product-cell">
-                        <div className="b2b-qo-thumb">
+                        <Link href={`/wholesale/product/${p.id}`} className="b2b-qo-thumb" title={`View ${p.n}`}>
                           <ProductArt product={p} />
-                        </div>
+                        </Link>
                         <div className="b2b-qo-info">
-                          <Link href={`/product/${p.id}`} className="b2b-qo-title">
+                          <Link href={`/wholesale/product/${p.id}`} className="b2b-qo-title">
                             {p.n}
                           </Link>
                           <div className="b2b-qo-meta-row">
-                            <span className="b2b-qo-sku-badge">
+                            <Link href={`/wholesale/product/${p.id}`} className="b2b-qo-sku-badge" title={p.slug || `CX-${String(p.id).padStart(4, '0')}`}>
                               {p.slug || `CX-${String(p.id).padStart(4, '0')}`}
-                            </span>
+                            </Link>
                             <span className="b2b-qo-cat-tag">
                               {p.categoryLabel || p.c} · {p.s} Series
                             </span>
