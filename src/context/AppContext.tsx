@@ -119,6 +119,7 @@ interface AppContextType {
   deleteAddress: (id: string) => void;
   setPrimaryAddress: (id: string) => void;
   saveOrderToHistory: (order: CustomerOrderHistoryRecord) => void;
+  cancelOrder: (orderNumber: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
   addSavedPayment: (pm: Omit<SavedPaymentMethod, 'id'>) => void;
   deleteSavedPayment: (id: string) => void;
   setDefaultPayment: (id: string) => void;
@@ -922,6 +923,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const cancelOrder = async (orderNumber: string, reason?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/storefront/orders/cancel', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ orderNumber, reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errorMsg = data.error || 'Failed to cancel order.';
+        showToast(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
+      setOrders((prev) => {
+        const updated = prev.map((o) =>
+          o.orderNumber === orderNumber || o.id === orderNumber
+            ? { ...o, status: 'CANCELLED' as const, statusMessage: 'Order cancelled within 24h relief period' }
+            : o
+        );
+        try {
+          localStorage.setItem('cx_order_history', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast(`Order #${orderNumber} cancelled successfully.`);
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Network error cancelling order.';
+      showToast(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
   // Saved Payment Methods CRUD
   const addSavedPayment = async (pm: Omit<SavedPaymentMethod, 'id'>) => {
     const newId = `pm_${Date.now()}`;
@@ -1478,6 +1515,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteAddress,
         setPrimaryAddress,
         saveOrderToHistory,
+        cancelOrder,
         addSavedPayment,
         deleteSavedPayment,
         setDefaultPayment,
