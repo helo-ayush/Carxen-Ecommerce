@@ -19,12 +19,9 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  CreditCard,
   Banknote,
   Lock,
   ShieldCheck,
-  Smartphone,
-  QrCode,
   Building2,
   Truck,
   Package,
@@ -148,14 +145,6 @@ export default function WholesaleOrderBasketPage() {
   // Critical decision warning modals (e.g. COD order placement, clearing basket)
   const [showCodWarningModal, setShowCodWarningModal] = useState(false);
   const [showClearBasketModal, setShowClearBasketModal] = useState(false);
-
-  // Mock simulation modal state
-  const [mockModalOpen, setMockModalOpen] = useState(false);
-  const [mockOrderDetails, setMockOrderDetails] = useState<{
-    razorpayOrderId: string;
-    amountInPaise: number;
-    finalTotal: number;
-  } | null>(null);
 
   // Map basket items to product objects with verified MOQs & tier pricing
   const basketLineItems = useMemo(() => {
@@ -357,19 +346,7 @@ export default function WholesaleOrderBasketPage() {
         throw new Error(orderData.error || 'Failed to initialize Razorpay checkout order.');
       }
 
-      // Check if mock test mode is active
-      if (orderData.isMock) {
-        setMockOrderDetails({
-          razorpayOrderId: orderData.razorpayOrderId,
-          amountInPaise: orderData.amount,
-          finalTotal: totalOrderValue,
-        });
-        setMockModalOpen(true);
-        setSubmitting(false);
-        return;
-      }
-
-      // Live Razorpay Mode
+      // Live Razorpay Mode (direct gateway checkout via environment keys)
       const scriptReady = await loadRazorpayScript();
       if (!scriptReady || !(window as any).Razorpay) {
         throw new Error('Unable to load Razorpay checkout gateway. Please verify your connection.');
@@ -459,7 +436,6 @@ export default function WholesaleOrderBasketPage() {
         throw new Error(data.error || 'Payment recorded but order registration failed.');
       }
 
-      setMockModalOpen(false);
       const placed = data.order || {
         orderNumber: `CX-B2B-${Math.floor(10000 + Math.random() * 90000)}`,
         totalAmount: totalOrderValue,
@@ -1179,140 +1155,6 @@ export default function WholesaleOrderBasketPage() {
           </div>
         </div>
       </form>
-
-      {/* RAZORPAY TEST SIMULATION MODAL (When Test/Mock Key is Active) */}
-      {mockModalOpen && mockOrderDetails && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: 16,
-              maxWidth: 460,
-              width: '100%',
-              padding: 24,
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2231a' }}>
-                  <CreditCard size={18} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>Razorpay Test Gateway</h3>
-                  <span style={{ fontSize: 11, color: '#64748b' }}>Wholesale B2B Online Simulation</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMockModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ color: '#64748b' }}>Order ID:</span>
-                <strong style={{ fontFamily: 'monospace' }}>{mockOrderDetails.razorpayOrderId}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ color: '#64748b' }}>Legal Entity:</span>
-                <strong>{businessName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Commercial Total:</span>
-                <strong style={{ color: '#e2231a', fontSize: 15 }}>{formatINR(mockOrderDetails.finalTotal)}</strong>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Payment Methods Simulated:</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
-                <div style={{ background: '#f1f5f9', borderRadius: 6, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Smartphone size={13} style={{ color: '#e2231a' }} /> UPI / QR
-                </div>
-                <div style={{ background: '#f1f5f9', borderRadius: 6, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CreditCard size={13} style={{ color: '#2563eb' }} /> Visa / RuPay
-                </div>
-                <div style={{ background: '#f1f5f9', borderRadius: 6, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Building2 size={13} style={{ color: '#059669' }} /> NetBanking
-                </div>
-                <div style={{ background: '#f1f5f9', borderRadius: 6, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <QrCode size={13} style={{ color: '#7c3aed' }} /> Dynamic QR
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                type="button"
-                disabled={submitting}
-                style={{
-                  background: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '12px',
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: 13.5,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-                onClick={async () => {
-                  const mockPaymentId = `pay_mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                  const mockSignature = `mock_sig_${Math.random().toString(36).slice(2, 12)}`;
-                  await verifyAndFinalizeWholesaleOrder({
-                    razorpayOrderId: mockOrderDetails.razorpayOrderId,
-                    razorpayPaymentId: mockPaymentId,
-                    razorpaySignature: mockSignature,
-                  });
-                }}
-              >
-                <ShieldCheck size={16} />
-                {submitting ? 'Verifying with Backend…' : '✓ Approve Test Payment (Simulate Success)'}
-              </button>
-
-              <button
-                type="button"
-                style={{
-                  background: '#ffffff',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  padding: '10px',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 12.5,
-                  cursor: 'pointer',
-                }}
-                onClick={() => {
-                  setMockModalOpen(false);
-                  setSubmissionError('Simulated payment was cancelled or declined.');
-                  showToast('Payment declined (Test Simulation)');
-                }}
-              >
-                Simulate Decline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* CRITICAL DECISION: COD ORDER CONFIRMATION WARNING MODAL */}
       {showCodWarningModal && (
