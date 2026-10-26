@@ -1,4 +1,4 @@
-﻿import { getStorefrontProducts } from '@/lib/storefront/catalog';
+import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { validateCoupon, type WholesaleBuyerContext, type StorefrontCoupon } from '@/lib/storefront/coupons';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
@@ -54,7 +54,7 @@ export async function calculateAuthoritativeCartTotals(
   const lineItems: AuthoritativeTotalsResult['lineItems'] = [];
 
   for (const item of params.items) {
-    const qty = Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || 1)));
+    const qty = Math.max(1, Math.min(50000, Math.floor(Number(item.quantity) || 1)));
     const product = products.find((p) => p.id === Number(item.productId));
 
     if (!product) {

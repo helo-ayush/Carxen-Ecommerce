@@ -138,7 +138,7 @@ export default function WholesaleQuickOrderPage() {
           </h1>
           <p>
             High-speed SKU batch ordering with automatic MOQ enforcement and volume tier pricing.
-            <strong> Direct factory fulfillment via CarXen with zero online payment required.</strong>
+            <strong> Direct factory fulfillment via CarXen with Razorpay online and COD checkout.</strong>
           </p>
         </div>
 
@@ -272,7 +272,7 @@ export default function WholesaleQuickOrderPage() {
         </div>
       ) : (
         <div className="ws-table-card">
-          <table className="ws-procurement-table">
+          <table className="ws-procurement-table ws-quick-order-table">
             <thead>
               <tr>
                 <th style={{ width: '27%' }}>Product Line</th>

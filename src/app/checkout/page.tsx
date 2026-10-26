@@ -137,7 +137,7 @@ export default function CheckoutPage() {
     addresses.find((a) => a.isPrimary)?.id || addresses[0]?.id || 'new'
   );
   const [shippingSpeed, setShippingSpeed] = useState<'std' | 'exp'>('std');
-  const [paymentOption, setPaymentOption] = useState<'razorpay' | 'cod' | 'wire' | 'credit_terms'>('razorpay');
+  const [paymentOption, setPaymentOption] = useState<'razorpay' | 'cod'>('razorpay');
   const [buyerGstin, setBuyerGstin] = useState(b2bProfile?.gstin || '');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
@@ -698,12 +698,10 @@ export default function CheckoutPage() {
       return;
     }
 
-    // CASH ON DELIVERY / WIRE / CREDIT TERMS FALLBACK
+    // CASH ON DELIVERY FALLBACK
     try {
       const paymentMethodMap: Record<string, StorefrontPaymentMethod> = {
         cod: 'Cash on delivery',
-        wire: 'Net banking',
-        credit_terms: 'Card',
       };
 
       const checkout: StorefrontCheckoutRequest = {
@@ -1505,73 +1503,6 @@ export default function CheckoutPage() {
                               </div>
                             )}
                           </div>
-
-                          {/* 3 & 4. B2B WHOLESALE OPTIONS */}
-                          {isWholesaleApproved && (
-                            <>
-                              <div
-                                className={`inf-ck-pay-card ${paymentOption === 'wire' ? 'active' : ''}`}
-                              >
-                                <div
-                                  className="inf-ck-pay-card-header"
-                                  onClick={() => setPaymentOption('wire')}
-                                >
-                                  <div className="inf-ck-radio-label">
-                                    <span className="inf-ck-radio-circle" />
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                      <span style={{ fontWeight: 700, fontSize: 14 }}>Bank Wire Transfer (NEFT / RTGS)</span>
-                                      <span style={{ fontSize: 11.5, color: '#71717a' }}>Direct B2B commercial settlement</span>
-                                    </div>
-                                  </div>
-                                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                                    Zero Surcharge
-                                  </span>
-                                </div>
-
-                                {paymentOption === 'wire' && (
-                                  <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
-                                    <div className="rounded-xl border border-border bg-surface-2 p-3 text-xs text-text-secondary space-y-1.5">
-                                      <p><strong>Beneficiary:</strong> CarXen Automotive Technologies Pvt Ltd</p>
-                                      <p><strong>Bank:</strong> HDFC Bank Ltd, Industrial Finance Branch</p>
-                                      <p><strong>A/C No:</strong> 50200088192301</p>
-                                      <p><strong>IFSC:</strong> HDFC0000128</p>
-                                      <p className="text-[11px] text-text-tertiary pt-1 border-t border-border/50">
-                                        Quote your order number in transfer remarks. Immediate dispatch on wire confirmation.
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div
-                                className={`inf-ck-pay-card ${paymentOption === 'credit_terms' ? 'active' : ''}`}
-                              >
-                                <div
-                                  className="inf-ck-pay-card-header"
-                                  onClick={() => setPaymentOption('credit_terms')}
-                                >
-                                  <div className="inf-ck-radio-label">
-                                    <span className="inf-ck-radio-circle" />
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                      <span style={{ fontWeight: 700, fontSize: 14 }}>Net 15 Commercial Credit Terms</span>
-                                      <span style={{ fontSize: 11.5, color: '#71717a' }}>Invoice dispatched with 15-day payment window</span>
-                                    </div>
-                                  </div>
-                                  <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                                    Approved Dealers
-                                  </span>
-                                </div>
-
-                                {paymentOption === 'credit_terms' && (
-                                  <div className="inf-ck-card-body" style={{ padding: '0 20px 20px' }}>
-                                    <p className="text-xs text-text-secondary bg-surface-2 p-3 rounded-xl border border-border">
-                                      Payable within 15 days of shipment dispatch. Official GST tax invoice issued upon placement.
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )}
                         </div>
 
                         {/* Security Guarantee Footer Bar */}
