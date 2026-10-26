@@ -512,6 +512,27 @@ function LoginForm() {
                   </span>
                 </button>
 
+                <p
+                  style={{
+                    fontSize: '11.5px',
+                    color: 'var(--steel, #5d5d64)',
+                    textAlign: 'center',
+                    lineHeight: '1.5',
+                    marginTop: '12px',
+                    marginBottom: '4px',
+                  }}
+                >
+                  By continuing, you agree to CarXen&apos;s{' '}
+                  <Link href="/terms" style={{ color: 'var(--ink, #0e0e0f)', textDecoration: 'underline' }}>
+                    Terms of Service
+                  </Link>{' '}
+                  and acknowledge our{' '}
+                  <Link href="/privacy" style={{ color: 'var(--ink, #0e0e0f)', textDecoration: 'underline' }}>
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+
                 <p className="lg-note">
                   Want to explore first?{' '}
                   <Link href="/shop" style={{ textDecoration: 'underline' }}>

@@ -61,15 +61,21 @@ export function Footer() {
             <Link href="/#top">Warranty</Link>
           </div>
           <div>
-            <h6>Company</h6>
+            <h6>Legal & Policy</h6>
+            <Link href="/privacy">Privacy Policy</Link>
+            <Link href="/terms">Terms of Service</Link>
             <Link href="/#craft">Craftsmanship</Link>
-            <Link href="/#why">Why CarXen</Link>
             <Link href="/#reviews">Reviews</Link>
             <Link href="/#top">Contact</Link>
           </div>
         </div>
         <div className="fb">
           <span className="mono">© 2026 CarXen — Engineered Car Accessories</span>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link href="/privacy" className="mono" style={{ textDecoration: 'underline' }}>Privacy Policy</Link>
+            <span className="mono" style={{ opacity: 0.4 }}>•</span>
+            <Link href="/terms" className="mono" style={{ textDecoration: 'underline' }}>Terms of Service</Link>
+          </div>
           <span className="mono">Precision / Protection / Comfort</span>
         </div>
       </div>
