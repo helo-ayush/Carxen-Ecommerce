@@ -6,12 +6,22 @@ import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import {
   TINT_OPTIONS,
-  SAMPLE_REVIEWS,
-  CATEGORIES_LIST,
   formatINR,
   isCustomFit,
 } from '@/data/products';
+import { supabase } from '@/lib/supabase/client';
 import type { Product } from '@/data/products';
+import {
+  categoryLabel as resolveCategoryLabel,
+  isMatCategory,
+  isSeatCategory,
+  isSteeringCategory,
+} from '@/lib/storefront/categories';
+import {
+  fitBadgeText,
+  fitsVehicle,
+  readFitment,
+} from '@/lib/storefront/fitment';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { ProductCard } from '@/components/ProductCard';
@@ -32,7 +42,6 @@ import {
   Heart,
   Calendar,
   Check,
-  MessageSquare,
   ChevronDown,
   ChevronUp,
   Plus,
@@ -50,7 +59,6 @@ import {
   PackageCheck,
   PlayCircle,
   CheckCircle2,
-  AlertCircle,
   ExternalLink,
   Award,
   Info,
@@ -112,88 +120,33 @@ export default function ProductDetailPage() {
 // HELPER FUNCTIONS FOR PRODUCT SPECIFICATIONS, INSTALLATION & FITMENT
 // ---------------------------------------------------------------------------
 
-function getInstallationDetails(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
-  const category = product.c;
-  const difficulty = product.installation?.difficulty || (category === 'steering' ? 'Moderate (5-10 mins)' : 'Easy (DIY)');
-  const time = product.installation?.time || (category === 'seats' ? '25 - 35 mins' : category === 'mats' ? '10 - 15 mins' : '15 mins');
-  const videoUrl = product.installation?.videoUrl;
-
-  let steps = product.installation?.steps;
-  if (!steps || steps.length === 0) {
-    if (category === 'seats') {
-      steps = [
-        'Unbox and lay out all seat sections on a clean surface to verify driver, passenger, and rear bench orientation.',
-        'Slide the lower cushion cover over the front seat base, aligning side bolsters and smoothing fabric toward corners.',
-        'Push the center elastic straps and round retaining discs through the seat crease between the backrest and bottom cushion.',
-        'Secure the heavy-duty metal S-hooks to non-moving structural points underneath the vehicle seat frame.',
-        'Slip the backrest cover over the seatback, press the ergonomic contour lining flat against the lumbar curve, and fasten the headrest loop fasteners.',
-        'Repeat for the passenger and rear seats. Allow 24 hours of normal usage for the memory-lined contours to settle flush with zero creasing.',
-      ];
-    } else if (category === 'mats') {
-      steps = [
-        'Remove any old factory or aftermarket floor mats and thoroughly vacuum the cabin footwells.',
-        'Align the driver-side mat over the pedal area, ensuring the reinforced heel-pad sits directly under the accelerator and brake pedals with zero pedal interference.',
-        'Engage the OEM floor twist-lock pegs or anchor grommets on the floor pan to ensure 100% anti-slip security while driving.',
-        'Position the front passenger mat flush against the footwell contours, fire-wall angle, and side kick-panels.',
-        'Install the rear row continuous mat, tucking the center transmission hump bridge under the rear center console for seamless edge-to-edge protection.',
-      ];
-    } else if (category === 'steering') {
-      steps = [
-        'Park vehicle on level ground, turn off the engine, and ensure the steering wheel is locked straight.',
-        'Warm the cover slightly (leave in sunlight for 5-10 minutes or gently warm with a hairdryer) to maximize leatherette flexibility.',
-        'Align the top center marker / contrast seam of the cover with the 12 o\'clock position on the steering wheel rim.',
-        'Work downward on both sides simultaneously, firmly stretching the high-friction anti-slip rubber lining around the rim.',
-        'Roll the bottom edge over the lower spoke. Check all seams to verify full rim wrap and firm, non-twist grip.',
-      ];
-    } else {
-      steps = [
-        'Unbox the accessory and inspect components against the included package contents checklist.',
-        'Wipe down the intended cabin mounting surface with a clean microfiber cloth to remove dust and oils.',
-        'Position the accessory and secure with the integrated quick-lock buckle straps or non-marking anchors.',
-        'Adjust height or orientation for personalized driving ergonomics and verify firm stability before driving.',
-      ];
-    }
-  }
-
-  return { difficulty, time, steps, videoUrl };
+function getInstallationDetails(product: Product) {
+  // Only the listing's own installation data — no invented steps.
+  const installation = product.installation;
+  return {
+    difficulty: installation?.difficulty ?? '',
+    time: installation?.time ?? '',
+    steps: Array.isArray(installation?.steps) ? installation.steps.filter(Boolean) : [],
+    videoUrl: installation?.videoUrl,
+  };
 }
 
 function getPackageContents(product: Product) {
-  const category = product.c;
-  if (category === 'seats') {
-    return [
-      { name: 'Front Driver Seat Cover (Base & Backrest)', qty: '1 Set' },
-      { name: 'Front Passenger Seat Cover (Base & Backrest)', qty: '1 Set' },
-      { name: 'Rear Row Bench & Split Backrest Covers', qty: '1 Set' },
-      { name: 'Contoured Headrest Protective Sleeves', qty: '4 - 5 Pcs' },
-      { name: 'Heavy-Duty Metal S-Hooks & Locking Retaining Discs', qty: '1 Hardware Pack' },
-      { name: 'CARXEN 2-Year Official Warranty Certificate', qty: '1 Pc' },
-    ];
-  }
-  if (category === 'mats') {
-    return [
-      { name: 'Driver-Side Precision Mat with Heavy-Duty Heel Pad', qty: '1 Pc' },
-      { name: 'Front Passenger-Side Precision Contoured Mat', qty: '1 Pc' },
-      { name: 'Continuous Rear Row Floor Mat with Transmission Hump Bridge', qty: '1 Full Piece' },
-      { name: 'Anti-Skid Retention Clips & Edge Locks', qty: '1 Set' },
-      { name: 'Waterproof Maintenance & Care Card', qty: '1 Pc' },
-    ];
-  }
-  if (category === 'steering') {
-    return [
-      { name: 'Precision-Fit Ergonomic Steering Wheel Cover', qty: '1 Pc' },
-      { name: 'Anti-Slip Odorless Natural Rubber Core', qty: 'Integrated' },
-      { name: 'Fitting Guide & Authenticity QR Card', qty: '1 Pc' },
-    ];
-  }
-  return [
-    { name: `${product.n} Unit`, qty: '1 Pc' },
-    { name: 'High-Tensile Elastic Quick-Lock Anchor Straps', qty: '1 Set' },
-    { name: 'CARXEN Quality Inspection Certificate & Warranty Card', qty: '1 Pc' },
-  ];
+  // Shown only when the item's specification states what is in the box.
+  const row = (Array.isArray(product.sp) ? product.sp : []).find(([label]) =>
+    /^(package|box) contents$/i.test(String(label).trim()),
+  );
+  if (!row) return [];
+  return String(row[1])
+    .split(/[,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((name) => ({ name, qty: '' }));
 }
 
-function getEnrichedSpecifications(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
+function getEnrichedSpecifications(product: Product) {
+  // Everything here is either recorded on the listing or derived from the
+  // product's own fitment and series — nothing is invented.
   const custom = product.customFit !== false;
   const existingSpecs = new Map<string, string>();
   if (Array.isArray(product.sp)) {
@@ -203,28 +156,17 @@ function getEnrichedSpecifications(product: Product, activeCar: { b: string; m: 
   }
 
   if (!existingSpecs.has('Vehicle Compatibility')) {
+    const fitment = readFitment(product);
     existingSpecs.set(
       'Vehicle Compatibility',
-      custom ? `${activeCar.y} ${activeCar.b} ${activeCar.m} (${activeCar.f}) · Laser Mapped` : 'Universal Multi-Vehicle Fit'
+      fitment.kind === 'vehicle' ? fitment.label : 'Universal multi-vehicle fit',
     );
   }
   if (!existingSpecs.has('Product Series') && product.s) {
     existingSpecs.set('Product Series', `CARXEN ${product.s} Series`);
   }
   if (!existingSpecs.has('Fitment Type')) {
-    existingSpecs.set('Fitment Type', custom ? 'Custom 3D Laser-Scanned Contours' : 'Universal Stretch-Fit');
-  }
-  if (!existingSpecs.has('Water Resistance')) {
-    existingSpecs.set('Water Resistance', '100% Water, Mud & Spill Resistant');
-  }
-  if (!existingSpecs.has('Cleaning & Care')) {
-    existingSpecs.set('Cleaning & Care', 'Wipe clean with damp microfiber cloth · Mild car shampoo safe');
-  }
-  if (!existingSpecs.has('Warranty')) {
-    existingSpecs.set('Warranty', '2-Year CARXEN Comprehensive Manufacturer Warranty');
-  }
-  if (!existingSpecs.has('Country of Origin')) {
-    existingSpecs.set('Country of Origin', 'India');
+    existingSpecs.set('Fitment Type', custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit');
   }
   if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
     existingSpecs.set('Package Dimensions', product.packageDimensions);
@@ -235,31 +177,45 @@ function getEnrichedSpecifications(product: Product, activeCar: { b: string; m: 
 
 function getFeatureHighlights(product: Product, activeCar: { b: string; m: string; y: string; f: string }) {
   const custom = product.customFit !== false;
+  const fitment = readFitment(product);
+  const builtFor = fitment.kind === 'vehicle' ? fitment.label : null;
+  const fitsMyCar = fitsVehicle(product, activeCar);
 
-  return [
+  const specs = new Map<string, string>();
+  for (const [key, value] of Array.isArray(product.sp) ? product.sp : []) {
+    if (key && value) specs.set(key.trim().toLowerCase(), String(value).trim());
+  }
+
+  const highlights: { title: string; desc: string; icon: string }[] = [
     {
-      title: custom ? `Laser-Mapped ${activeCar.m} Fitment` : 'Universal Multi-Vehicle Fitment',
+      title: custom
+        ? fitsMyCar
+          ? `Made For Your ${activeCar.m}`
+          : `Made For ${builtFor ?? 'A Specific Vehicle'}`
+        : 'Universal Multi-Vehicle Fitment',
       desc: custom
-        ? `Precision-engineered using 3D laser scanners for exact contours of the ${activeCar.b} ${activeCar.m} cabin with zero creasing or loose edges.`
-        : 'Engineered with flexible multi-anchor stretch tensioners to fit seamlessly across most passenger cars, sedans, and SUVs.',
+        ? `Vehicle fitment recorded for this item: ${builtFor ?? `${activeCar.b} ${activeCar.m}`}.`
+        : 'Fits most passenger cars, sedans and SUVs.',
       icon: 'laser',
     },
-    {
-      title: 'Automotive-Grade Premium Upholstery',
-      desc: 'Crafted with multi-layer high-density memory composite and breathable synthetic leatherette that resists UV cracking and daily friction.',
-      icon: 'shield',
-    },
-    {
-      title: 'All-Weather & Spill Defense',
-      desc: 'Hydrophobic coating ensures water, hot coffee, mud, and everyday dirt roll off without staining factory upholstery.',
-      icon: 'sparkles',
-    },
-    {
-      title: 'Easy DIY Installation',
-      desc: 'No drilling, vehicle modification, or specialized tools needed. Equipped with quick-clip anchors and clear illustrated steps.',
-      icon: 'wrench',
-    },
   ];
+
+  const design = specs.get('design');
+  if (design) {
+    highlights.push({ title: `${design} Design`, desc: 'Design recorded on this item.', icon: 'shield' });
+  }
+
+  const material = specs.get('fabric') ?? specs.get('material') ?? specs.get('upper');
+  if (material) {
+    highlights.push({ title: material, desc: 'Material recorded on this item.', icon: 'sparkles' });
+  }
+
+  const warranty = specs.get('warranty');
+  if (warranty) {
+    highlights.push({ title: `${warranty} Warranty`, desc: 'Manufacturer warranty recorded on this item.', icon: 'shield' });
+  }
+
+  return highlights;
 }
 
 function ProductDetailContent({ product }: { product: Product }) {
@@ -274,8 +230,6 @@ function ProductDetailContent({ product }: { product: Product }) {
     showToast,
     products,
     orders,
-    isVerifiedBuyer,
-    totalProductsBought,
   } = useApp();
 
   const activeCar = useMemo(() => {
@@ -425,7 +379,7 @@ function ProductDetailContent({ product }: { product: Product }) {
   };
 
   const installationDetails = useMemo(() => {
-    return getInstallationDetails(product, activeCar);
+    return getInstallationDetails(product);
   }, [product, activeCar]);
 
   const packageContents = useMemo(() => {
@@ -433,62 +387,33 @@ function ProductDetailContent({ product }: { product: Product }) {
   }, [product]);
 
   const enrichedSpecs = useMemo(() => {
-    return getEnrichedSpecifications(product, activeCar);
-  }, [product, activeCar]);
+    return getEnrichedSpecifications(product);
+  }, [product]);
 
   const featureHighlights = useMemo(() => {
     return getFeatureHighlights(product, activeCar);
   }, [product, activeCar]);
 
-  // Review reply interface for nested conversation thread
-  interface ReviewReply {
+  // A review exactly as the storefront API returns it — written by a verified
+  // buyer and published after moderation.
+  interface CustomerReview {
     id: string;
-    authorName: string;
-    authorAvatar?: string;
-    date: string;
-    text: string;
-    isVerifiedBuyer?: boolean;
-    isStaff?: boolean;
-  }
-
-  // Review item definition matching other customer reviews
-  interface ReviewRecord {
-    id: string;
-    name: string;
     rating: number;
-    date: string;
     title: string;
-    comment: string;
-    avatarUrl?: string;
-    isVerified?: boolean;
-    replies?: ReviewReply[];
+    body: string;
+    verifiedPurchase: boolean;
+    createdAt: string;
+    customerName: string;
   }
 
-  // Verification: check if the logged in customer has ordered this item
+  // Verification: has this customer ordered the product? The review API
+  // re-checks this server-side, so the UI state is only a hint.
   const hasOrderedThisProduct = useMemo(() => {
     const prodIdNum = Number(product.id);
-    if (orders && orders.length > 0) {
-      const match = orders.some((order) =>
-        order.items?.some((item) => Number(item.productId) === prodIdNum)
-      );
-      if (match) return true;
-    }
-    try {
-      const stored = localStorage.getItem('cx_order_history');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.some((order: any) =>
-            order.items?.some((item: any) => Number(item.productId) === prodIdNum)
-          );
-        }
-      }
-    } catch {}
-    return false;
+    return Boolean(
+      orders?.some((order) => order.items?.some((item) => Number(item.productId) === prodIdNum)),
+    );
   }, [orders, product.id]);
-
-  // Verified Buyer logic: users who have bought >= 3 products across orders, or ordered this product
-  const isEligibleToReview = Boolean(isVerifiedBuyer || hasOrderedThisProduct);
 
   // Review submission & modal state
   const [isWritingReview, setIsWritingReview] = useState(false);
@@ -497,33 +422,30 @@ function ProductDetailContent({ product }: { product: Product }) {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
-  const [userReviews, setUserReviews] = useState<ReviewRecord[]>([]);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Review reply state (conversation replies persisted per product)
-  const [customReplies, setCustomReplies] = useState<Record<string, ReviewReply[]>>({});
-  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState<string>('');
-  const [replyAuthor, setReplyAuthor] = useState<string>('');
+  // Published reviews loaded from the storefront API.
+  const [reviews, setReviews] = useState<CustomerReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
-  // Load persisted user-published reviews and replies on mount
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`cx_product_reviews_${product.id}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setUserReviews(parsed);
-      }
-    } catch {}
-
-    try {
-      const storedReplies = localStorage.getItem(`cx_reviews_replies_${product.id}`);
-      if (storedReplies) {
-        const parsedReplies = JSON.parse(storedReplies);
-        if (parsedReplies && typeof parsedReplies === 'object') {
-          setCustomReplies(parsedReplies);
-        }
-      }
-    } catch {}
+  useEffect(() => {
+    let cancelled = false;
+    setReviewsLoading(true);
+    fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
+      cache: 'no-store',
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        if (Array.isArray(payload.reviews)) setReviews(payload.reviews);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setReviewsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [product.id]);
 
   // Review filter pills state (default to 'all' so users see all verified reviews and pagination)
@@ -534,8 +456,19 @@ function ProductDetailContent({ product }: { product: Product }) {
     ? Math.round((1 - product.p / product.o) * 100)
     : 0;
 
-  const categoryLabel =
-    product.categoryLabel || CATEGORIES_LIST.find((c) => c[0] === product.c)?.[1] || 'Accessories';
+  const categoryLabel = resolveCategoryLabel(product.c, product.categoryLabel);
+
+  // Warranty is only shown when the listing actually records one.
+  const warrantyLabel = (Array.isArray(product.sp) ? product.sp : [])
+    .find(([label]) => /^warranty$/i.test(String(label).trim()))?.[1];
+
+  // Fitment claims come from the product's own record, never from the garage
+  // car alone — a Fortuner cover must not promise a Creta fit.
+  const productFitment = readFitment(product);
+  const builtFor = productFitment.kind === 'vehicle' ? productFitment.label : null;
+  const fitsMyCar = fitsVehicle(product, activeCar);
+  const myCarLabel = `${activeCar.b} ${activeCar.m}`.replace(/\s+/g, ' ').trim();
+  const fitTargetLabel = builtFor ?? myCarLabel;
 
   const handleBuyNow = () => {
     addToCart(product.id, quantity);
@@ -554,7 +487,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       return;
     }
 
-    if (!isEligibleToReview) {
+    if (!hasOrderedThisProduct) {
       setShowNotOrderedModal(true);
       return;
     }
@@ -565,73 +498,70 @@ function ProductDetailContent({ product }: { product: Product }) {
     }, 100);
   };
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewTitle.trim() || !reviewComment.trim()) {
       showToast('Please provide a review headline and details');
       return;
     }
 
-    if (!isEligibleToReview) {
+    if (!hasOrderedThisProduct) {
       setShowNotOrderedModal(true);
       return;
     }
 
-    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-    const newReview: ReviewRecord = {
-      id: `user-${Date.now()}`,
-      name: user?.name || 'Verified Driver',
-      rating: reviewRating,
-      date: today,
-      title: reviewTitle.trim(),
-      comment: reviewComment.trim(),
-      avatarUrl: user?.avatarUrl || '',
-      isVerified: true,
-      replies: [],
-    };
-
-    const updated = [newReview, ...userReviews];
-    setUserReviews(updated);
+    setSubmittingReview(true);
     try {
-      localStorage.setItem(`cx_product_reviews_${product.id}`, JSON.stringify(updated));
-    } catch {}
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) {
+          headers.Authorization = `Bearer ${data.session.access_token}`;
+        }
+      } catch {}
+      if (typeof window !== 'undefined') {
+        const demoUser = localStorage.getItem('cx_demo_user');
+        if (demoUser) {
+          const parsed = JSON.parse(demoUser);
+          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
+          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
+        }
+      }
 
-    setIsWritingReview(false);
-    setReviewTitle('');
-    setReviewComment('');
-    showToast(`Thank you, ${user?.name || 'Driver'}! Your verified review has been published.`);
-  };
+      const response = await fetch('/api/storefront/reviews', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          productId: product.id,
+          rating: reviewRating,
+          title: reviewTitle.trim(),
+          body: reviewComment.trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => null);
 
-  const handlePostReply = (reviewId: string) => {
-    if (!replyText.trim()) {
-      showToast('Please type your reply before posting');
-      return;
+      if (!response.ok) {
+        showToast(payload?.error || 'Could not submit your review. Please try again.');
+        return;
+      }
+
+      setIsWritingReview(false);
+      setReviewTitle('');
+      setReviewComment('');
+      if (payload?.status === 'PUBLISHED' && payload.review) {
+        setReviews((current) => [payload.review as CustomerReview, ...current]);
+        showToast('Your review is published. Thank you!');
+      } else {
+        showToast('Your review was submitted and will appear once approved.');
+      }
+    } catch {
+      showToast('Could not submit your review. Please try again.');
+    } finally {
+      setSubmittingReview(false);
     }
-
-    const newReply: ReviewReply = {
-      id: `rep-${Date.now()}`,
-      authorName: (replyAuthor.trim() || user?.name || 'Verified Driver').trim(),
-      authorAvatar: user?.avatarUrl || '',
-      date: 'Just now',
-      text: replyText.trim(),
-      isVerifiedBuyer: Boolean(isVerifiedBuyer || hasOrderedThisProduct),
-      isStaff: false,
-    };
-
-    const currentForReview = customReplies[reviewId] || [];
-    const updatedMap = {
-      ...customReplies,
-      [reviewId]: [...currentForReview, newReply],
-    };
-
-    setCustomReplies(updatedMap);
-    try {
-      localStorage.setItem(`cx_reviews_replies_${product.id}`, JSON.stringify(updatedMap));
-    } catch {}
-
-    setReplyText('');
-    setReplyingReviewId(null);
-    showToast('Reply published to conversation thread!');
   };
 
   const handleCheckPincode = () => {
@@ -713,174 +643,36 @@ function ProductDetailContent({ product }: { product: Product }) {
       .slice(0, 4);
   }, [product, products]);
 
-  // Pre-populated base customer reviews with genuine feedback and discussion threads
-  const baseReviews: ReviewRecord[] = useMemo(() => {
-    return [
-      {
-        id: 'base-1',
-        name: 'Lori Barnett',
-        rating: 5,
-        date: '02 May',
-        title: 'Incredible craftsmanship and flawless seams',
-        comment:
-          'Incredible craftsmanship and flawless seams. Looks OEM-fitted in the cabin and gives that premium minimalist aesthetic.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-        replies: [
-          {
-            id: 'rep-1-1',
-            authorName: 'CARXEN Support Team',
-            date: '03 May',
-            text: 'Thank you Lori! Delighted that our laser-measured contouring gave your car the flush OEM finish you were looking for.',
-            isStaff: true,
-          },
-        ],
-      },
-      {
-        id: 'base-2',
-        name: 'Phillip Douglas',
-        rating: 5,
-        date: '29 April',
-        title: 'Exact fitment on my Creta with zero creasing',
-        comment:
-          'The fitment on my Creta is exact with zero creasing or loose edges. Wipes clean easily and stitching is strong.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-      },
-      {
-        id: 'base-3',
-        name: 'Elena Rostova',
-        rating: 4,
-        date: '18 April',
-        title: 'Solid tactile feel and subtle styling',
-        comment:
-          'Very solid tactile feel, subtle stitching accents match the dashboard perfectly. Packaged nicely with clear installation instructions.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-        replies: [
-          {
-            id: 'rep-3-1',
-            authorName: 'Aditya Sen',
-            date: '19 April',
-            text: 'Did you need any special tools for the underside clips during installation?',
-            isVerifiedBuyer: true,
-          },
-          {
-            id: 'rep-3-2',
-            authorName: 'Elena Rostova',
-            date: '20 April',
-            text: 'No tools at all! The quick-release buckles clicked directly into the seat anchors in under 15 mins.',
-            isVerifiedBuyer: true,
-          },
-        ],
-      },
-      {
-        id: 'base-4',
-        name: 'Devansh Kulkarni',
-        rating: 5,
-        date: '12 April',
-        title: 'Breathable in Indian summer heat',
-        comment:
-          'The micro-perforated material does not get scorching hot under direct sunlight. Feels genuinely luxurious for daily office commutes.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-      },
-      {
-        id: 'base-5',
-        name: 'Meera Nambiar',
-        rating: 4,
-        date: '04 April',
-        title: 'Great quality, took 20 mins to fit',
-        comment:
-          'Very impressed with the leatherette thickness and finish. Took me roughly 20 minutes to mount without any tools.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-      },
-      {
-        id: 'base-6',
-        name: 'Rohit Mehta',
-        rating: 5,
-        date: '28 March',
-        title: 'Exceeded expectations completely',
-        comment:
-          'Far superior to typical aftermarket accessories. The fit around the seatbelt buckles and headrests is spot-on.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-      },
-      {
-        id: 'base-7',
-        name: 'Siddharth Roy',
-        rating: 3,
-        date: '19 March',
-        title: 'Good build quality but snug fit needs patience',
-        comment:
-          'Quality of material is top notch. The fit is intentionally very tight so stretching it over the rear bolsters takes two hands and patience.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-        replies: [
-          {
-            id: 'rep-7-1',
-            authorName: 'CARXEN Support Team',
-            date: '20 March',
-            text: 'Hello Siddharth! That snug contour is engineered intentionally so it stays firmly in place without bunching up over years of driving.',
-            isStaff: true,
-          },
-        ],
-      },
-      {
-        id: 'base-8',
-        name: 'Ananya Deshmukh',
-        rating: 5,
-        date: '10 March',
-        title: 'Premium cabin transformation',
-        comment:
-          'Transformed the whole interior vibe. Spill resistant too—accidentally dropped coffee on day 2 and wiped right off with zero stains.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&auto=format&fit=crop&q=80',
-        isVerified: true,
-      },
-    ];
-  }, []);
-
-  // Unified reviews list: user published reviews and other customer reviews
-  const allReviews = useMemo(() => {
-    return [...userReviews, ...baseReviews];
-  }, [userReviews, baseReviews]);
-
-  // Dynamic real-time star counts computed from actual reviews
+  // Review statistics and filters, derived from published reviews only.
   const starCounts = useMemo(() => {
-    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    allReviews.forEach((r) => {
-      const star = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
-      counts[star] = (counts[star] || 0) + 1;
+    const counts: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    reviews.forEach((review) => {
+      const star = Math.min(5, Math.max(1, Math.round(review.rating))) as 1 | 2 | 3 | 4 | 5;
+      counts[star] += 1;
     });
     return counts;
-  }, [allReviews]);
+  }, [reviews]);
 
-  // Dynamic overall average rating
   const averageRating = useMemo(() => {
-    if (allReviews.length === 0) return '5.0';
-    const total = allReviews.reduce((sum, r) => sum + r.rating, 0);
-    return (total / allReviews.length).toFixed(1);
-  }, [allReviews]);
+    if (reviews.length === 0) return '0.0';
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return (total / reviews.length).toFixed(1);
+  }, [reviews]);
 
-  // Filtered reviews based on active chip
   const filteredReviews = useMemo(() => {
-    if (activeReviewFilter === 'all') return allReviews;
-    if (activeReviewFilter === '5stars') return allReviews.filter((r) => r.rating === 5);
-    if (activeReviewFilter === '4stars') return allReviews.filter((r) => r.rating === 4);
-    if (activeReviewFilter === '3stars') return allReviews.filter((r) => r.rating === 3);
-    if (activeReviewFilter === '2stars') return allReviews.filter((r) => r.rating === 2);
-    if (activeReviewFilter === '1star') return allReviews.filter((r) => r.rating === 1);
-    return allReviews;
-  }, [activeReviewFilter, allReviews]);
+    if (activeReviewFilter === 'all') return reviews;
+    const star = Number(activeReviewFilter.replace('stars', '').replace('star', ''));
+    return Number.isFinite(star)
+      ? reviews.filter((review) => Math.round(review.rating) === star)
+      : reviews;
+  }, [activeReviewFilter, reviews]);
+
+  const formatReviewDate = (iso: string) => {
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   // Pagination system: page-by-page loading (4 reviews per page)
   const REVIEWS_PER_PAGE = 4;
@@ -937,7 +729,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   <span className={`ps-overlay-pill ${custom ? 'ps-custom-fit' : ''}`}>
                     {custom ? (
                       <>
-                        <span className="ps-fit-check">✓</span> Custom Fit · {activeCar.b} {activeCar.m}
+                        <span className="ps-fit-check">✓</span> Custom Fit · {fitTargetLabel}
                       </>
                     ) : (
                       'Universal Fit'
@@ -1090,23 +882,31 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <div className="ps-category-eyebrow">
                   <span>{product.c ? product.c.toUpperCase() : 'AUTOMOTIVE ESSENTIAL'}</span>
                   <span>•</span>
-                  <span>CARXEN SIGNATURE</span>
+                  <span>{product.s ? `CARXEN ${product.s.toUpperCase()}` : 'CARXEN'}</span>
                 </div>
                 <div className="ps-rating-score-row">
-                  <span className="ps-stars-gold">
-                    {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
-                  </span>
-                  <span className="ps-rating-num">{averageRating}</span>
-                  <a
-                    href="#reviews-section"
-                    className="ps-rating-count-link"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    ({allReviews.length})
-                  </a>
+                  {reviews.length > 0 ? (
+                    <>
+                      <span className="ps-stars-gold">
+                        {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
+                      </span>
+                      <span className="ps-rating-num">{averageRating}</span>
+                      <a
+                        href="#reviews-section"
+                        className="ps-rating-count-link"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        ({reviews.length})
+                      </a>
+                    </>
+                  ) : (
+                    <span className="ps-rating-num" style={{ color: 'var(--steel, #5d5d64)' }}>
+                      {reviewsLoading ? 'Loading reviews…' : 'No reviews yet'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1126,7 +926,15 @@ function ProductDetailContent({ product }: { product: Product }) {
                 </div>
                 <div className="ps-fitment-assurance">
                   <span className="ps-fitment-assurance-dot" />
-                  <span>{custom ? `Guaranteed Fit: ${activeCar.m}` : 'Universal Precision Fit'}</span>
+                  <span>
+                    {!custom
+                      ? 'Universal Precision Fit'
+                      : fitsMyCar
+                      ? `Guaranteed Fit: ${activeCar.m}`
+                      : builtFor
+                      ? `Made for ${builtFor} — not your ${myCarLabel}`
+                      : 'Custom fit — confirm your vehicle before ordering'}
+                  </span>
                 </div>
               </div>
               <div className="ps-tax-shipping-sub">
@@ -1279,7 +1087,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                     <span>Fitment</span>
                   </div>
                   <span className="ps-micro-spec-val">
-                    {custom ? `${activeCar.b} ${activeCar.m}` : 'Universal Fit'}
+                    {custom ? fitTargetLabel : 'Universal Fit'}
                   </span>
                 </div>
                 <div className="ps-micro-spec-item">
@@ -1301,17 +1109,20 @@ function ProductDetailContent({ product }: { product: Product }) {
               </div>
 
               {/* Editorial Description */}
-              <p className="ps-specs-desc">
-                {(product.d ? product.d.replace(/Full of Corona Virus/gi, '').replace(/\s+/g, ' ').trim() : '') ||
-                  'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
-              </p>
+              {product.d ? (
+                <p className="ps-specs-desc">
+                  {product.d.replace(/Full of Corona Virus/gi, '').replace(/\s+/g, ' ').trim()}
+                </p>
+              ) : null}
 
               {/* Assurance Badges Strip */}
               <div className="ps-card-assurance-strip">
-                <div className="ps-card-assurance-item">
-                  <ShieldCheck size={14} style={{ color: '#16a34a' }} />
-                  <span>2-Year Warranty</span>
-                </div>
+                {warrantyLabel && (
+                  <div className="ps-card-assurance-item">
+                    <ShieldCheck size={14} style={{ color: '#16a34a' }} />
+                    <span>{warrantyLabel} Warranty</span>
+                  </div>
+                )}
                 <div className="ps-card-assurance-item">
                   <Truck size={14} style={{ color: 'var(--red, #e2231a)' }} />
                   <span>2–4 Day Dispatch</span>
@@ -1415,68 +1226,68 @@ function ProductDetailContent({ product }: { product: Product }) {
           {/* TAB 2: INSTALLATION METHOD */}
           {activeInfoTab === 'install' && (
             <div className="ps-info-panel" role="tabpanel">
-              {/* Installation Meta Banner */}
-              <div className="ps-install-banner">
-                <div className="ps-install-banner-meta">
-                  <div className={`ps-install-chip ${
-                    installationDetails.difficulty.toLowerCase().includes('easy')
-                      ? 'difficulty-easy'
-                      : installationDetails.difficulty.toLowerCase().includes('pro')
-                      ? 'difficulty-pro'
-                      : 'difficulty-moderate'
-                  }`}>
-                    <Wrench size={13} />
-                    <span>Difficulty: {installationDetails.difficulty}</span>
-                  </div>
-                  <div className="ps-install-chip">
-                    <Clock size={13} style={{ color: 'var(--steel, #5d5d64)' }} />
-                    <span>Estimated Time: {installationDetails.time}</span>
-                  </div>
-                  <div className="ps-install-chip">
-                    <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
-                    <span>No Vehicle Modification Required</span>
-                  </div>
-                </div>
-
-                {installationDetails.videoUrl && (
-                  <a
-                    href={installationDetails.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ps-install-video-btn"
-                  >
-                    <PlayCircle size={15} />
-                    <span>Watch Video Tutorial</span>
-                    <ExternalLink size={12} />
-                  </a>
-                )}
-              </div>
-
-              {/* Step-by-Step Instructions */}
-              <div className="ps-install-steps-list">
-                {installationDetails.steps.map((stepText, idx) => {
-                  const cleanText = stepText.replace(/^Step\s*\d+:\s*/i, '');
-                  return (
-                    <div key={idx} className="ps-install-step-card">
-                      <div className="ps-install-step-num">
-                        {String(idx + 1).padStart(2, '0')}
+              {installationDetails.steps.length === 0 ? (
+                <p className="ps-spec-val" style={{ color: 'var(--steel, #5d5d64)' }}>
+                  No installation guide has been published for this item yet.
+                </p>
+              ) : (
+                <>
+                  {(installationDetails.difficulty || installationDetails.time || installationDetails.videoUrl) && (
+                    <div className="ps-install-banner">
+                      <div className="ps-install-banner-meta">
+                        {installationDetails.difficulty && (
+                          <div className={`ps-install-chip ${
+                            installationDetails.difficulty.toLowerCase().includes('easy')
+                              ? 'difficulty-easy'
+                              : installationDetails.difficulty.toLowerCase().includes('pro')
+                              ? 'difficulty-pro'
+                              : 'difficulty-moderate'
+                          }`}>
+                            <Wrench size={13} />
+                            <span>Difficulty: {installationDetails.difficulty}</span>
+                          </div>
+                        )}
+                        {installationDetails.time && (
+                          <div className="ps-install-chip">
+                            <Clock size={13} style={{ color: 'var(--steel, #5d5d64)' }} />
+                            <span>Estimated Time: {installationDetails.time}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="ps-install-step-body">
-                        <h4 className="ps-install-step-title">Step {idx + 1}</h4>
-                        <p className="ps-install-step-desc">{cleanText}</p>
-                      </div>
+
+                      {installationDetails.videoUrl && (
+                        <a
+                          href={installationDetails.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ps-install-video-btn"
+                        >
+                          <PlayCircle size={15} />
+                          <span>Watch Video Tutorial</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
+                  )}
 
-              {/* Pro Tips Callout */}
-              <div className="ps-install-pro-tips">
-                <AlertCircle size={18} className="ps-install-pro-tips-icon" />
-                <div className="ps-install-pro-tips-text">
-                  <strong>Pro Tip for Best Fitting:</strong> For custom leatherette contours and custom-molded mats, ensure the cabin surface is thoroughly vacuumed and dry before installation. Allow 24 to 48 hours of normal cabin use for the internal high-density memory composite and tension clips to settle completely flush against your {activeCar.b} {activeCar.m} upholstery.
-                </div>
-              </div>
+                  <div className="ps-install-steps-list">
+                    {installationDetails.steps.map((stepText, idx) => {
+                      const cleanText = stepText.replace(/^Step\s*\d+:\s*/i, '');
+                      return (
+                        <div key={idx} className="ps-install-step-card">
+                          <div className="ps-install-step-num">
+                            {String(idx + 1).padStart(2, '0')}
+                          </div>
+                          <div className="ps-install-step-body">
+                            <h4 className="ps-install-step-title">Step {idx + 1}</h4>
+                            <p className="ps-install-step-desc">{cleanText}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1487,10 +1298,15 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '8px' }}>
                   Detailed Description
                 </h3>
-                <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
-                  {product.d ||
-                    'Engineered with laser-measured ergonomic contours, premium climate-adaptive upholstery, and precision fitment for your vehicle.'}
-                </p>
+                {product.d ? (
+                  <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
+                    {product.d.replace(/Full of Corona Virus/gi, '').replace(/\s+/g, ' ').trim()}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
+                    No description has been published for this item yet.
+                  </p>
+                )}
 
                 {/* Technical Product Search Tags */}
                 {Array.isArray(product.tags) && product.tags.length > 0 && (
@@ -1541,10 +1357,18 @@ function ProductDetailContent({ product }: { product: Product }) {
                     </div>
                     <div>
                       <div className="ps-fitment-car-title">
-                        {custom ? '100% Guaranteed Exact Fit' : 'Universal Multi-Vehicle Fit'}
+                        {custom
+                          ? fitsMyCar
+                            ? 'Exact Fit Recorded'
+                            : 'Made-To-Measure Fit'
+                          : 'Universal Multi-Vehicle Fit'}
                       </div>
                       <div className="ps-fitment-car-sub">
-                        Configured for {activeCar.y} {activeCar.b} {activeCar.m} ({activeCar.f})
+                        {custom
+                          ? fitsMyCar
+                            ? `Configured for ${activeCar.y} ${activeCar.b} ${activeCar.m} (${activeCar.f})`
+                            : `Cut for ${builtFor ?? 'a specific vehicle'} — not your ${myCarLabel}`
+                          : 'Fits most passenger cars, sedans and SUVs'}
                       </div>
                     </div>
                   </div>
@@ -1557,21 +1381,23 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
                   <div style={{ padding: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <Award size={16} style={{ color: 'var(--red, #e2231a)' }} />
-                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Laser 3D Scanned</span>
+                      <Car size={16} style={{ color: 'var(--red, #e2231a)' }} />
+                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Recorded Fitment</span>
                     </div>
                     <p style={{ fontSize: '12.5px', color: 'var(--steel, #5d5d64)', lineHeight: '1.5' }}>
-                      Digitally mapped directly from OEM {activeCar.b} chassis molds to deliver zero bunching and glove-like tension.
+                      {custom
+                        ? `This item is made for ${builtFor ?? 'a specific vehicle'} as recorded in the product listing.`
+                        : 'Universal fit — not cut for a specific vehicle.'}
                     </p>
                   </div>
 
                   <div style={{ padding: '16px', background: '#ffffff', border: '1px solid var(--line, #dcdbd5)', borderRadius: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                       <ShieldCheck size={16} style={{ color: '#16a34a' }} />
-                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Fitment Guarantee</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>Fitment Type</span>
                     </div>
                     <p style={{ fontSize: '12.5px', color: 'var(--steel, #5d5d64)', lineHeight: '1.5' }}>
-                      If this accessory does not fit your {activeCar.b} {activeCar.m} cabin as described, we provide instant replacement or 100% refund.
+                      {custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit'}
                     </p>
                   </div>
                 </div>
@@ -1582,6 +1408,11 @@ function ProductDetailContent({ product }: { product: Product }) {
           {/* TAB 5: PACKAGE CONTENTS */}
           {activeInfoTab === 'box' && (
             <div className="ps-info-panel" role="tabpanel">
+              {packageContents.length === 0 ? (
+                <p className="ps-spec-val" style={{ color: 'var(--steel, #5d5d64)' }}>
+                  Package contents have not been published for this item yet.
+                </p>
+              ) : (
               <div className="ps-package-grid">
                 {packageContents.map((item, idx) => (
                   <div key={idx} className="ps-package-item-card">
@@ -1589,10 +1420,11 @@ function ProductDetailContent({ product }: { product: Product }) {
                       <PackageCheck size={16} style={{ color: 'var(--red, #e2231a)', flexShrink: 0 }} />
                       <span>{item.name}</span>
                     </div>
-                    <span className="ps-package-qty-badge">{item.qty}</span>
+                    {item.qty && <span className="ps-package-qty-badge">{item.qty}</span>}
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
         </section>
@@ -1610,7 +1442,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                 </div>
                 <h3 className="ps-bundle-title">Frequently bought together</h3>
                 <p className="ps-bundle-subtitle">
-                  Upgrade your cabin with compatible accessories tailored for your {activeCar.b} {activeCar.m}.
+                  Upgrade your cabin with accessories that pair well with this {categoryLabel.toLowerCase()}.
                 </p>
               </div>
               {bundleSavings > 0 && (
@@ -1742,10 +1574,6 @@ function ProductDetailContent({ product }: { product: Product }) {
                     <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
                     <span>Free express delivery across India</span>
                   </div>
-                  <div className="ps-bundle-perk-item">
-                    <ShieldCheck size={13} style={{ color: '#22c55e' }} />
-                    <span>2-Year warranty on every item</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1763,29 +1591,34 @@ function ProductDetailContent({ product }: { product: Product }) {
             <div className="ps-reviews-top">
               <h2 className="ps-reviews-title">Customer Reviews</h2>
               <div className="ps-reviews-score-cluster">
-                <span className="ps-overall-stars">
-                  {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
-                </span>
-                <span className="ps-overall-score">{averageRating}</span>
-                <span className="ps-overall-count">({allReviews.length} {allReviews.length === 1 ? 'review' : 'reviews'})</span>
+                {reviews.length > 0 ? (
+                  <>
+                    <span className="ps-overall-stars">
+                      {'★'.repeat(Math.round(Number(averageRating))) + '☆'.repeat(5 - Math.round(Number(averageRating)))}
+                    </span>
+                    <span className="ps-overall-score">{averageRating}</span>
+                    <span className="ps-overall-count">
+                      ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                    </span>
+                  </>
+                ) : (
+                  <span className="ps-overall-count">
+                    {reviewsLoading ? 'Loading reviews…' : 'No reviews yet'}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="ps-reviews-action-box">
               <button
                 type="button"
-                className={`ps-write-review-btn ${isEligibleToReview ? 'verified-buyer' : ''}`}
+                className={`ps-write-review-btn ${hasOrderedThisProduct ? 'verified-buyer' : ''}`}
                 onClick={handleStartReview}
                 aria-label="Write a Review"
               >
                 <Pencil style={{ width: '15px', height: '15px' }} />
                 <span>Write a Review</span>
-                {isVerifiedBuyer ? (
-                  <span className="ps-verified-pill-tag">
-                    <VerifiedBadge size={14} showTooltip={false} />
-                    Verified Buyer
-                  </span>
-                ) : hasOrderedThisProduct ? (
+                {hasOrderedThisProduct ? (
                   <span className="ps-verified-pill-tag">✓ Verified Buyer</span>
                 ) : (
                   <span className="ps-lock-pill-tag">Verified Only</span>
@@ -1794,14 +1627,15 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
           </div>
 
-          {/* Filter Pills Row (Dynamic counts, camera removed) */}
+          {/* Filter Pills Row (counts from published reviews only) */}
+          {reviews.length > 0 && (
           <div className="ps-filter-pills-row" role="group" aria-label="Review filters">
             <button
               type="button"
               className={`ps-filter-chip ${activeReviewFilter === 'all' ? 'ps-chip-active-dark' : ''}`}
               onClick={() => setActiveReviewFilter('all')}
             >
-              All ({allReviews.length})
+              All ({reviews.length})
             </button>
 
             <button
@@ -1844,6 +1678,7 @@ function ProductDetailContent({ product }: { product: Product }) {
               ★ ({starCounts[1]})
             </button>
           </div>
+          )}
 
           {/* Review Writer Card Form (only appears when triggered via the top button) */}
           {isWritingReview && (
@@ -1856,11 +1691,8 @@ function ProductDetailContent({ product }: { product: Product }) {
                     </h4>
                     <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                       Sharing review as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b>
-                      {isVerifiedBuyer && (
-                        <VerifiedBadge size={15} tooltipText="Verified User · Purchased 3+ products" />
-                      )}
                       <span style={{ color: '#16a34a', fontWeight: 600, marginLeft: '4px' }}>
-                        {isVerifiedBuyer ? '✓ Verified CARXEN Buyer' : `✓ Verified Owner of ${product.n}`}
+                        ✓ Verified Owner of {product.n}
                       </span>
                     </p>
                   </div>
@@ -1923,9 +1755,10 @@ function ProductDetailContent({ product }: { product: Product }) {
                   <button
                     type="submit"
                     className="ps-btn-buy-now"
-                    style={{ height: '42px', padding: '0 24px', fontSize: '13px' }}
+                    disabled={submittingReview}
+                    style={{ height: '42px', padding: '0 24px', fontSize: '13px', opacity: submittingReview ? 0.7 : 1 }}
                   >
-                    Publish Verified Review
+                    {submittingReview ? 'Submitting…' : 'Submit Review'}
                   </button>
                   <button
                     type="button"
@@ -1940,149 +1773,59 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Review Cards List with Reply Conversations & Page-by-Page Loading */}
+          {/* Review Cards List — published reviews only */}
           {filteredReviews.length === 0 ? (
             <div className="ps-reviews-empty">
-              <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}>
-                No reviews found for this rating filter.
-              </p>
-              <button
-                type="button"
-                className="ps-reviews-page-btn"
-                onClick={() => setActiveReviewFilter('all')}
-              >
-                Show All Reviews
-              </button>
+              {reviews.length === 0 ? (
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
+                  {reviewsLoading
+                    ? 'Loading reviews…'
+                    : 'No reviews yet. Verified buyers can write the first review.'}
+                </p>
+              ) : (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}>
+                    No reviews found for this rating filter.
+                  </p>
+                  <button
+                    type="button"
+                    className="ps-reviews-page-btn"
+                    onClick={() => setActiveReviewFilter('all')}
+                  >
+                    Show All Reviews
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="ps-review-cards-list">
-              {paginatedReviews.map((rev) => {
-                const combinedReplies = [...(rev.replies || []), ...(customReplies[rev.id] || [])];
-                const isReplying = replyingReviewId === rev.id;
-
-                return (
-                  <div key={rev.id} className="ps-review-item-card">
-                    <div className="ps-review-item-top">
-                      <div className="ps-review-author-wrap">
-                        <Avatar
-                          fallback={rev.name.slice(0, 2).toUpperCase()}
-                          src={rev.avatarUrl}
-                          style={{ width: '36px', height: '36px', fontSize: '12px' }}
-                        />
-                        <div className="ps-review-stars-user">
-                          <span className="ps-review-item-stars">
-                            {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
-                          </span>
-                          <span className="ps-review-user-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            {rev.name}
-                            {rev.isVerified && (
-                              <VerifiedBadge
-                                size={15}
-                                tooltipText="Verified User · Purchased 3+ products from CARXEN"
-                              />
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="ps-review-date">{rev.date}</span>
-                    </div>
-
-                    {rev.title && <div className="ps-review-item-title">{rev.title}</div>}
-                    <p className="ps-review-body-text">{rev.comment}</p>
-
-                    {/* Review Actions Footer: Reply Counter & Reply Toggle */}
-                    <div className="ps-review-footer-bar">
-                      <span className="ps-reply-count-tag">
-                        {combinedReplies.length > 0
-                          ? `${combinedReplies.length} ${combinedReplies.length === 1 ? 'reply' : 'replies'}`
-                          : 'No replies yet'}
-                      </span>
-                      <button
-                        type="button"
-                        className="ps-reply-trigger-btn"
-                        onClick={() => {
-                          if (isReplying) {
-                            setReplyingReviewId(null);
-                          } else {
-                            setReplyingReviewId(rev.id);
-                            setReplyText('');
-                            setReplyAuthor(user?.name || '');
-                          }
-                        }}
-                      >
-                        <MessageSquare style={{ width: '13px', height: '13px' }} />
-                        <span>{isReplying ? 'Close Reply' : 'Reply'}</span>
-                      </button>
-                    </div>
-
-                    {/* Inline Reply Form to Continue Conversation */}
-                    {isReplying && (
-                      <div className="ps-reply-form-card">
-                        <div className="ps-reply-form-author" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          Replying as: <b>{user?.name || 'Verified Driver'}</b>
-                          {isVerifiedBuyer && (
-                            <VerifiedBadge
-                              size={15}
-                              tooltipText="Verified User · Purchased 3+ products from CARXEN"
-                            />
+              {paginatedReviews.map((rev) => (
+                <div key={rev.id} className="ps-review-item-card">
+                  <div className="ps-review-item-top">
+                    <div className="ps-review-author-wrap">
+                      <Avatar
+                        fallback={rev.customerName.slice(0, 2).toUpperCase()}
+                        style={{ width: '36px', height: '36px', fontSize: '12px' }}
+                      />
+                      <div className="ps-review-stars-user">
+                        <span className="ps-review-item-stars">
+                          {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
+                        </span>
+                        <span className="ps-review-user-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {rev.customerName}
+                          {rev.verifiedPurchase && (
+                            <VerifiedBadge size={15} tooltipText="Verified purchase" />
                           )}
-                        </div>
-                        <textarea
-                          className="ps-reply-textarea"
-                          placeholder={`Write your reply to ${rev.name}...`}
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          rows={2}
-                          autoFocus
-                        />
-                        <div className="ps-reply-actions">
-                          <button
-                            type="button"
-                            className="ps-reviews-page-btn"
-                            onClick={() => setReplyingReviewId(null)}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="ps-reviews-page-btn"
-                            style={{ background: 'var(--ink, #0e0e0f)', color: '#ffffff', borderColor: 'var(--ink, #0e0e0f)' }}
-                            onClick={() => handlePostReply(rev.id)}
-                          >
-                            Post Reply
-                          </button>
-                        </div>
+                        </span>
                       </div>
-                    )}
-
-                    {/* Replies Thread */}
-                    {combinedReplies.length > 0 && (
-                      <div className="ps-replies-thread">
-                        {combinedReplies.map((rep) => (
-                          <div key={rep.id} className="ps-reply-item">
-                            <div className="ps-reply-item-top">
-                              <div className="ps-reply-author-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <span className="ps-reply-author-name">{rep.authorName}</span>
-                                {rep.isStaff && (
-                                  <span className="ps-staff-badge">CARXEN Team</span>
-                                )}
-                                {rep.isVerifiedBuyer && !rep.isStaff && (
-                                  <VerifiedBadge
-                                    size={14}
-                                    tooltipText="Verified User · Purchased 3+ products from CARXEN"
-                                  />
-                                )}
-                              </div>
-                              <span className="ps-reply-date">{rep.date}</span>
-                            </div>
-                            <p className="ps-reply-text">{rep.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    </div>
+                    <span className="ps-review-date">{formatReviewDate(rev.createdAt)}</span>
                   </div>
-                );
-              })}
+
+                  {rev.title && <div className="ps-review-item-title">{rev.title}</div>}
+                  <p className="ps-review-body-text">{rev.body}</p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -2166,7 +1909,7 @@ function ProductDetailContent({ product }: { product: Product }) {
 
               <div className="ps-modal-body">
                 <p className="ps-modal-text">
-                  To ensure all reviews on CARXEN are 100% genuine and trustworthy for fellow enthusiasts, <b>only Verified Buyers (customers who have purchased 3+ products from CARXEN) or customers who ordered this item can publish a review.</b>
+                  Reviews on CARXEN come only from customers who have ordered the item, so every review is tied to a real purchase.
                 </p>
 
                 <div className="ps-modal-product-preview">
@@ -2179,15 +1922,9 @@ function ProductDetailContent({ product }: { product: Product }) {
                   </div>
                   <div className="ps-modal-info">
                     <span className="ps-modal-item-name">{product.n}</span>
-                    <span className="ps-modal-status-chip">
-                      {totalProductsBought}/3 Products Purchased · Not Yet Verified
-                    </span>
+                    <span className="ps-modal-status-chip">No order for this item found</span>
                   </div>
                 </div>
-
-                <p className="ps-modal-subtext">
-                  You need {Math.max(1, 3 - totalProductsBought)} more product purchase{3 - totalProductsBought === 1 ? '' : 's'} to unlock your platform Verified User badge, or purchase this product directly to review.
-                </p>
               </div>
 
               <div className="ps-modal-actions">
@@ -2240,7 +1977,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   onToggleFav={toggleFav}
                   onAddToCart={addToCart}
                   onOpenCart={openCart}
-                  fitText={isCustom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
+                  fitText={fitBadgeText(p, activeCar)}
                   isCustomFitBadge={isCustom}
                 />
               );

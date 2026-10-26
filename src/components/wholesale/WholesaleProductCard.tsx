@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
+import { categoryLabel } from '@/lib/storefront/categories';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { Plus, Minus, Check, Layers, ChevronRight, Sparkles } from 'lucide-react';
 
@@ -84,21 +85,7 @@ export function WholesaleProductCard({
     setTimeout(() => setIsAdding(false), 700);
   };
 
-  const categoryName = (() => {
-    if (product.categoryLabel) return product.categoryLabel;
-    switch (product.c) {
-      case 'seats':
-        return 'Seat Covers';
-      case 'mats':
-        return 'Floor Mats';
-      case 'steering':
-        return 'Steering Covers';
-      case 'comfort':
-        return 'Cabin Comfort';
-      default:
-        return product.s ? `${product.s} Series` : 'Automotive';
-    }
-  })();
+  const categoryName = product.categoryLabel?.trim() || categoryLabel(product.c);
 
   const getFitmentString = (): string => {
     if (!product.fitment) return 'Universal Fit';

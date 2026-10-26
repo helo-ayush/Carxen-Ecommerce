@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import type {
   Product,
   ProductArtKey,
@@ -8,6 +9,13 @@ import type {
   ProductTintOption,
 } from '@/data/products';
 import type { StorefrontProductsResponse } from './types';
+import {
+  categoryArtKey,
+  categoryLabel as resolveCategoryLabel,
+  isMatCategory,
+  isSeatCategory,
+  normalizeCategoryKey,
+} from './categories';
 
 type StoreId = string | number;
 
@@ -19,6 +27,7 @@ export interface EcommerceStoreRow {
 }
 
 export interface EcommerceProductRow {
+  id: string;
   publicId: number | string;
   storeId: StoreId;
   slug: string;
@@ -77,6 +86,7 @@ class CatalogDatabaseError extends Error {
 }
 
 const PRODUCT_COLUMNS = [
+  'id',
   'publicId',
   'storeId',
   'slug',
@@ -110,7 +120,6 @@ const PRODUCT_COLUMNS = [
   'b2bMoq',
 ].join(', ');
 
-const CATEGORY_KEYS = ['seats', 'mats', 'steering', 'comfort'] as const;
 const SERIES_KEYS = ['Signature', 'Sport', 'Urban', 'Essentials'] as const;
 const ART_KEYS = ['seat', 'mats', 'wheel', 'pillow', 'arm', 'trunk'] as const;
 
@@ -147,14 +156,7 @@ function asNonEmptyString(value: unknown): string | null {
 }
 
 function asCategory(value: unknown): ProductCategory {
-  if (typeof value === 'string') {
-    const lower = value.toLowerCase().trim();
-    if (lower === 'seats' || lower.includes('seat')) return 'seats';
-    if (lower === 'mats' || lower.includes('mat') || lower.includes('floor')) return 'mats';
-    if (lower === 'steering' || lower.includes('steer') || lower.includes('wheel')) return 'steering';
-    if (lower === 'comfort' || lower.includes('pillow') || lower.includes('cushion') || lower.includes('interior')) return 'comfort';
-  }
-  return 'seats';
+  return normalizeCategoryKey(value);
 }
 
 function asSeries(value: unknown): ProductSeries {
@@ -190,11 +192,7 @@ function asArtKey(value: unknown, category?: ProductCategory | null): ProductArt
   if (typeof value === 'string' && ART_KEYS.includes(value as ProductArtKey)) {
     return value as ProductArtKey;
   }
-  if (category === 'seats') return 'seat';
-  if (category === 'mats') return 'mats';
-  if (category === 'steering') return 'wheel';
-  if (category === 'comfort') return 'pillow';
-  return 'seat';
+  return categoryArtKey(category ?? 'accessories') as ProductArtKey;
 }
 
 function asSpecifications(value: unknown): [string, string][] {
@@ -279,33 +277,11 @@ function asColors(value: unknown): ProductColor[] | undefined {
   return colors.length > 0 ? colors : undefined;
 }
 
-function getFallbackTags(category: ProductCategory, isCustomFit: boolean, name: string): string[] {
-  const lowerName = name.toLowerCase();
-  if (category === 'seats') {
-    return ['Custom Fit', 'Nappa Leather', 'Waterproof', 'Breathable', 'Easy Clean', 'SUV', 'Sedan'];
-  }
-  if (category === 'mats') {
-    return ['All-Weather', 'Waterproof', 'Custom Fit', 'Anti-Slip', 'Easy Clean', 'OEM Grade'];
-  }
-  if (category === 'steering') {
-    return ['Anti-Slip', 'Nappa Leather', 'Breathable', 'Custom Fit', 'Easy Clean'];
-  }
-  if (category === 'comfort') {
-    if (lowerName.includes('pillow') || lowerName.includes('neck')) {
-      return ['Breathable', 'Easy Clean', 'OEM Grade', 'SUV', 'Sedan'];
-    }
-    if (lowerName.includes('organiser') || lowerName.includes('organizer')) {
-      return ['Waterproof', 'Easy Clean', 'Scratch-Resistant', 'SUV', 'OEM Grade'];
-    }
-    return ['Breathable', 'Easy Clean', 'OEM Grade', 'Sedan', 'SUV'];
-  }
-  return ['OEM Grade', 'Easy Clean', 'Scratch-Resistant'];
-}
-
 function mapProductRow(
   row: EcommerceProductRow,
   isWholesale?: boolean,
-  wholesaleTier?: 'tier1' | 'tier2'
+  wholesaleTier?: 'tier1' | 'tier2',
+  reviewAggregate?: { sum: number; count: number },
 ): Product | null {
   const id = asFiniteNumber(row.publicId) ?? 1;
   const name = asNonEmptyString(row.name) || 'CarXen Accessory';
@@ -313,8 +289,11 @@ function mapProductRow(
   const series = asSeries(row.series);
   const rawPrice = asFiniteNumber(row.price);
   const price = rawPrice !== null && rawPrice >= 0 ? rawPrice : 999;
-  const rating = Math.min(5, Math.max(1, asFiniteNumber(row.rating) ?? 4.8));
-  const reviewCount = Math.max(0, asFiniteNumber(row.reviewCount) ?? 12);
+  // Ratings come only from published reviews — never from stored marketing values.
+  const reviewCount = reviewAggregate?.count ?? 0;
+  const rating = reviewCount > 0
+    ? Math.min(5, Math.max(0, reviewAggregate!.sum / reviewCount))
+    : 0;
   const artKey = asArtKey(row.artKey, category);
   const rawImages = Array.isArray(row.images)
     ? (row.images as unknown[]).filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
@@ -327,11 +306,9 @@ function mapProductRow(
   const isCustomFit =
     typeof row.isCustomFit === 'boolean'
       ? row.isCustomFit
-      : category === 'seats' || category === 'mats';
-  const tags = rawTags.length > 0 ? rawTags : getFallbackTags(category, isCustomFit, name);
-  const description =
-    asNonEmptyString(row.description) ??
-    'Engineered automotive accessory for enhanced cabin aesthetics and protection.';
+      : isSeatCategory(category) || isMatCategory(category);
+  const tags = rawTags;
+  const description = asNonEmptyString(row.description) ?? '';
   const specifications = asSpecifications(row.specifications);
 
   const originalPrice =
@@ -349,7 +326,7 @@ function mapProductRow(
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   const categoryLabel =
-    asNonEmptyString(row.categoryLabel) || asNonEmptyString(row.categoryKey) || 'Accessories';
+    resolveCategoryLabel(category, asNonEmptyString(row.categoryLabel));
   const colors = asColors(row.colors);
   const tintOptions = asTintOptions(row.colors) || asTintOptions(row.tintOptions);
   const packageDimensions = (() => {
@@ -477,8 +454,29 @@ export async function getStorefrontProducts(options?: {
   }
 
   const rows = (productRows || []) as unknown as EcommerceProductRow[];
+
+  const reviewAggregates = new Map<string, { sum: number; count: number }>();
+  if (rows.length > 0) {
+    // Reviews are behind RLS for anon reads; aggregates need the service key.
+    const { data: reviewRows } = await getSupabaseAdmin()
+      .from('ecommerce_reviews')
+      .select('productId, rating')
+      .eq('storeId', store.id)
+      .eq('status', 'PUBLISHED')
+      .not('publishedAt', 'is', null);
+    for (const review of reviewRows || []) {
+      const key = String(review.productId);
+      const entry = reviewAggregates.get(key) || { sum: 0, count: 0 };
+      entry.sum += Math.min(5, Math.max(1, Math.round(Number(review.rating) || 0)));
+      entry.count += 1;
+      reviewAggregates.set(key, entry);
+    }
+  }
+
   const products = rows
-    .map((row) => mapProductRow(row, options?.isWholesale, options?.wholesaleTier))
+    .map((row) =>
+      mapProductRow(row, options?.isWholesale, options?.wholesaleTier, reviewAggregates.get(row.id)),
+    )
     .filter((product): product is Product => product !== null);
 
   return {

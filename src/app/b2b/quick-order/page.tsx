@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
+import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 import {
   getWholesaleTiers,
   getEffectiveWholesaleUnitPrice,
@@ -46,6 +47,18 @@ export default function QuickOrderPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const categories = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const product of products) {
+      map.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [
+      { id: 'all', label: 'All Products' },
+      ...[...map.entries()]
+        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+        .map(([id, label]) => ({ id, label })),
+    ];
+  }, [products]);
   // Local quantity map for quick-order draft before adding to cart
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
@@ -305,13 +318,7 @@ export default function QuickOrderPage() {
 
         {/* Categories */}
         <div className="b2b-qo-cat-pills">
-          {[
-            { id: 'all', label: 'All Products' },
-            { id: 'seats', label: 'Seat Covers' },
-            { id: 'mats', label: 'Floor Mats' },
-            { id: 'steering', label: 'Steering Grips' },
-            { id: 'comfort', label: 'Comfort & Cushions' },
-          ].map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               type="button"

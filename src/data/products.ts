@@ -1,4 +1,6 @@
-export type ProductCategory = 'seats' | 'mats' | 'steering' | 'comfort';
+import { isMatCategory, isSeatCategory } from '@/lib/storefront/categories';
+
+export type ProductCategory = string;
 export type ProductSeries = 'Signature' | 'Sport' | 'Urban' | 'Essentials';
 export type ProductArtKey = 'seat' | 'mats' | 'wheel' | 'pillow' | 'arm' | 'trunk';
 export type ProductTintOption = [string, string, string];
@@ -84,30 +86,13 @@ export const SERIES_LIST: [string, string][] = [
   ['Essentials', '#b91a12'],
 ];
 
-export const CATEGORIES_LIST: [string, string][] = [
-  ['all', 'All parts'],
-  ['seats', 'Seat covers'],
-  ['mats', 'Floor mats'],
-  ['steering', 'Steering'],
-  ['comfort', 'Comfort'],
-];
-
-export const SAMPLE_REVIEWS: [string, string, string][] = [
-  ['Aarav M.', 'Perfect fit, zero gaps', 'Fitted in under an hour. Stitching looks factory-original.'],
-  ['Priya K.', 'Worth every rupee', 'Premium material and a spotless finish. Delivery was quick.'],
-  ['Vikram S.', 'Better than OEM', 'Fits like it was made for the car. Much more comfortable on long drives.'],
-  ['Neha R.', 'Easy to clean', 'Wipes clean in seconds and still looks new after three months.'],
-  ['Rohan T.', 'Solid build quality', 'Seams are tight and nothing has loosened. Would buy again.'],
-  ['Ishita G.', 'Good value', 'Does exactly what it promises. Neat packaging too.'],
-];
-
 export const TINT_OPTIONS: [string, string, string][] = [
   ['Red stitch', 'none', '#e2231a'],
   ['Blue stitch', 'hue-rotate(200deg)', '#2f6fe0'],
   ['Amber stitch', 'hue-rotate(35deg) saturate(1.3)', '#f5a623'],
 ];
 
-export const isCustomFit = (p: Product) => p.customFit ?? (p.c === 'seats' || p.c === 'mats');
+export const isCustomFit = (p: Product) => p.customFit ?? (isSeatCategory(p.c) || isMatCategory(p.c));
 
 export const formatINR = (n: number) => '₹' + n.toLocaleString('en-IN');
 

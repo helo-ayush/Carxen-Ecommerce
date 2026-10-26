@@ -6,11 +6,16 @@ import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import {
   TINT_OPTIONS,
-  CATEGORIES_LIST,
   formatINR,
   isCustomFit,
 } from '@/data/products';
 import type { Product } from '@/data/products';
+import {
+  categoryLabel,
+  isMatCategory,
+  isSeatCategory,
+  isSteeringCategory,
+} from '@/lib/storefront/categories';
 import { ProductArt } from '@/components/ProductArt';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
@@ -277,19 +282,11 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   }, [product]);
 
   const categoryName = useMemo(() => {
-    if (product.categoryLabel) return product.categoryLabel;
-    switch (product.c) {
-      case 'seats':
-        return 'Custom Seat Covers';
-      case 'mats':
-        return '7D Luxury Floor Mats';
-      case 'steering':
-        return 'Ergonomic Steering Covers';
-      case 'comfort':
-        return 'Cabin Comfort Cushions';
-      default:
-        return product.s ? `${product.s} Series` : 'Automotive Essentials';
-    }
+    const label = product.categoryLabel?.trim() || categoryLabel(product.c);
+    if (isSeatCategory(product.c)) return `${label} · Custom Fit`;
+    if (isMatCategory(product.c)) return `${label} · All-Weather`;
+    if (isSteeringCategory(product.c)) return `${label} · Ergonomic`;
+    return label;
   }, [product]);
 
   const handleQtyChange = (val: number) => {
@@ -935,11 +932,11 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                 <div className="ws-spec-item">
                   <span className="ws-spec-key">Material Construction</span>
                   <span className="ws-spec-val">
-                    {product.c === 'mats'
+                    {isMatCategory(product.c)
                       ? '7D Multi-Layer EVA with Reinforced Carbon Heel-Pad'
-                      : product.c === 'seats'
+                      : isSeatCategory(product.c)
                       ? 'High-Density Breathable Memory Foam & Ultra-Nappa Leatherette'
-                      : product.c === 'steering'
+                      : isSteeringCategory(product.c)
                       ? 'Natural Odorless Rubber Core with Double-Stitched Ergonomic Grip'
                       : 'High-Density Orthopedic Memory Core with Breathable Mesh'}
                   </span>

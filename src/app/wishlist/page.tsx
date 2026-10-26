@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { formatINR, isCustomFit } from '@/data/products';
+import { fitBadgeText } from '@/lib/storefront/fitment';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductCard } from '@/components/ProductCard';
 import { Footer } from '@/components/Footer';
@@ -165,7 +166,7 @@ export default function WishlistPage() {
                       onToggleFav={toggleFav}
                       onAddToCart={addToCart}
                       onOpenCart={openCart}
-                      fitText={custom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
+                      fitText={fitBadgeText(p, activeCar)}
                       isCustomFitBadge={custom}
                     />
                   );
@@ -226,7 +227,7 @@ export default function WishlistPage() {
                           onToggleFav={toggleFav}
                           onAddToCart={addToCart}
                           onOpenCart={openCart}
-                          fitText={custom ? `✓ Fits ${activeCar.m}` : 'Universal fit'}
+                          fitText={fitBadgeText(p, activeCar)}
                           isCustomFitBadge={custom}
                         />
                       );

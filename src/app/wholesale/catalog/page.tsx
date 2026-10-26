@@ -8,6 +8,7 @@ import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
 import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter } from 'lucide-react';
@@ -31,14 +32,6 @@ const POPULAR_MODELS: Record<string, string[]> = {
   Kia: ['Seltos', 'Sonet', 'Carens'],
   Toyota: ['Innova Hycross', 'Fortuner', 'Urban Cruiser Hyryder'],
 };
-
-const CATEGORIES = [
-  { id: 'all', label: 'All Categories' },
-  { id: 'mats', label: '7D Floor Mats' },
-  { id: 'seats', label: 'Seat Covers' },
-  { id: 'steering', label: 'Steering Wraps' },
-  { id: 'comfort', label: 'Comfort Cushions' },
-];
 
 export default function WholesaleCatalogPage() {
   const router = useRouter();
@@ -68,6 +61,18 @@ export default function WholesaleCatalogPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const categories = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const product of products) {
+      map.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [
+      { id: 'all', label: 'All Categories' },
+      ...[...map.entries()]
+        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+        .map(([id, label]) => ({ id, label })),
+    ];
+  }, [products]);
   const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
   const [selectedModel, setSelectedModel] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -314,7 +319,7 @@ export default function WholesaleCatalogPage() {
           </div>
 
           <div className="ws-category-chips">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"

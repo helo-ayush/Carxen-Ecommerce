@@ -8,17 +8,10 @@ import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { Plus, Minus, X, ArrowRight, Check } from 'lucide-react';
 import '../wholesale.css';
-
-const CATEGORIES = [
-  { id: 'all', label: 'All Products' },
-  { id: 'mats', label: '7D & All-Weather Mats' },
-  { id: 'seats', label: 'Seat Covers' },
-  { id: 'steering', label: 'Steering Wraps' },
-  { id: 'comfort', label: 'Ergonomic Cushions' },
-];
 
 export default function WholesaleQuickOrderPage() {
   const router = useRouter();
@@ -52,6 +45,18 @@ export default function WholesaleQuickOrderPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const categories = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const product of products) {
+      map.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [
+      { id: 'all', label: 'All Products' },
+      ...[...map.entries()]
+        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+        .map(([id, label]) => ({ id, label })),
+    ];
+  }, [products]);
   const [draftQuantities, setDraftQuantities] = useState<Record<number, number>>({});
 
   const getProductMoq = (p: Product) => Math.max(1, p.b2bMoq || 5);
@@ -232,7 +237,7 @@ export default function WholesaleQuickOrderPage() {
           </div>
 
           <div className="ws-category-chips">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"

@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { isCustomFit } from '@/data/products';
 import {
-  SERIES_LIST,
-  CATEGORIES_LIST,
-  formatINR,
-  isCustomFit,
-} from '@/data/products';
+  categoryLabel,
+  compareCategories,
+  isMatCategory,
+  isSeatCategory,
+  isSteeringCategory,
+  normalizeCategoryKey,
+} from '@/lib/storefront/categories';
+import { fitBadgeText, fitsVehicle } from '@/lib/storefront/fitment';
 import { CatalogState } from '@/components/CatalogState';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
@@ -24,20 +28,108 @@ import {
   CarFront,
 } from 'lucide-react';
 
-// Base tags from Reference
-const BASE_REFERENCE_TAGS = [
-  { tag: 'Waterproof', count: 7 },
-  { tag: 'Custom Fit', count: 8 },
-  { tag: 'Nappa Leather', count: 6 },
-  { tag: 'All-Weather', count: 3 },
-  { tag: 'Anti-Slip', count: 5 },
-  { tag: 'Scratch-Resistant', count: 5 },
-  { tag: 'OEM Grade', count: 8 },
-  { tag: 'SUV', count: 7 },
-  { tag: 'Sedan', count: 5 },
-  { tag: 'Breathable', count: 8 },
-  { tag: 'Easy Clean', count: 11 },
-];
+type PriceBand = { id: string; label: string; min: number; max: number; last: boolean };
+
+function formatPrice(value: number): string {
+  return `₹${Math.round(value).toLocaleString('en-IN')}`;
+}
+
+function niceStep(value: number): number {
+  const magnitude = 10 ** Math.floor(Math.log10(value || 1));
+  for (const factor of [1, 2, 2.5, 5, 10]) {
+    if (value <= factor * magnitude) return factor * magnitude;
+  }
+  return 10 * magnitude;
+}
+
+/**
+ * Price bands come from the catalog itself — tertile cuts rounded to a tidy
+ * step — so the labels always describe ranges that actually contain products.
+ * Empty bands are dropped rather than offered as dead ends.
+ */
+function buildPriceBands(prices: number[]): PriceBand[] {
+  const valid = prices.filter((price) => Number.isFinite(price));
+  if (valid.length === 0) return [];
+
+  const sorted = [...valid].sort((a, b) => a - b);
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  if (min === max) {
+    return [{ id: 'b0', label: formatPrice(min), min, max, last: true }];
+  }
+
+  const step = niceStep((max - min) / 3);
+  const cuts = [min];
+  for (const quantile of [1 / 3, 2 / 3]) {
+    const sample = sorted[Math.min(sorted.length - 1, Math.floor(quantile * sorted.length))];
+    const cut = Math.round(sample / step) * step;
+    if (cut > cuts[0] && cut < max && !cuts.includes(cut)) cuts.push(cut);
+  }
+  cuts.push(max);
+  cuts.sort((a, b) => a - b);
+
+  const bands: PriceBand[] = [];
+  for (let i = 0; i < cuts.length - 1; i += 1) {
+    const bandMin = cuts[i];
+    const bandMax = cuts[i + 1];
+    const last = i === cuts.length - 2;
+    const count = sorted.filter((price) =>
+      price >= bandMin && (last ? price <= bandMax : price < bandMax),
+    ).length;
+    if (count === 0) continue;
+    const label =
+      i === 0
+        ? `Under ${formatPrice(bandMax)}`
+        : last
+        ? `${formatPrice(bandMin)} and above`
+        : `${formatPrice(bandMin)} – ${formatPrice(bandMax)}`;
+    bands.push({ id: `b${bands.length}`, label, min: bandMin, max: bandMax, last });
+  }
+  return bands;
+}
+
+function CategoryIcon({ categoryKey }: { categoryKey: string }) {
+  if (isSeatCategory(categoryKey)) {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 3h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+        <path d="M7 10h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z" />
+      </svg>
+    );
+  }
+  if (isMatCategory(categoryKey)) {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6z" />
+        <path d="M8 9h8M8 12h8M8 15h8" />
+      </svg>
+    );
+  }
+  if (isSteeringCategory(categoryKey)) {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 6c-2 0-3 2-3 5s1 5 3 5c3 0 4-2 5-2s2 2 5 2c2 0 3-2 3-5s-1-5-3-5c-3 0-4 2-5 2s-2-2-5-2z" />
+      <path d="M12 10v4" />
+    </svg>
+  );
+}
+
+const ALL_CATEGORY_ICON = (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+    <rect x="3" y="3" width="7" height="7" rx="2" />
+    <rect x="14" y="3" width="7" height="7" rx="2" />
+    <rect x="3" y="14" width="7" height="7" rx="2" />
+    <rect x="14" y="14" width="7" height="7" rx="2" />
+  </svg>
+);
 
 function ShopContent() {
   const router = useRouter();
@@ -67,16 +159,41 @@ function ShopContent() {
 
   const vehicleTag = activeCar.m || 'Creta';
 
+  // Tags and their counts come from the live catalog. Category names are left
+  // out because the category pills already cover them.
   const referenceTagsData = useMemo(() => {
-    return [
-      ...BASE_REFERENCE_TAGS,
-      { tag: vehicleTag, count: 1 },
-    ];
-  }, [vehicleTag]);
+    const categoryNames = new Set(
+      products.map((product) => (product.categoryLabel || categoryLabel(product.c)).toLowerCase()),
+    );
+    const counts = new Map<string, { tag: string; count: number }>();
 
-  const [category, setCategory] = useState(catParam);
+    for (const product of products) {
+      for (const raw of product.tags ?? []) {
+        const tag = raw.trim();
+        if (!tag || tag.length > 24) continue;
+        const key = tag.toLowerCase();
+        if (categoryNames.has(key)) continue;
+        const entry = counts.get(key);
+        if (entry) entry.count += 1;
+        else counts.set(key, { tag, count: 1 });
+      }
+    }
+
+    const vehicleKey = vehicleTag.trim().toLowerCase();
+    return [...counts.values()]
+      .sort((a, b) => {
+        const aIsVehicle = a.tag.toLowerCase() === vehicleKey ? 1 : 0;
+        const bIsVehicle = b.tag.toLowerCase() === vehicleKey ? 1 : 0;
+        if (aIsVehicle !== bIsVehicle) return bIsVehicle - aIsVehicle;
+        if (b.count !== a.count) return b.count - a.count;
+        return a.tag.localeCompare(b.tag);
+      })
+      .slice(0, 12);
+  }, [products, vehicleTag]);
+
+  const [category, setCategory] = useState(() => (catParam === 'all' ? 'all' : normalizeCategoryKey(catParam)));
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
-  const [priceTier, setPriceTier] = useState<'all' | 'lo' | 'mid' | 'hi'>('all');
+  const [priceTier, setPriceTier] = useState<string>('all');
   const [seriesFilter, setSeriesFilter] = useState(seriesParam);
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [sortBy, setSortBy] = useState(sortParam);
@@ -91,47 +208,12 @@ function ShopContent() {
     series: true,
   });
 
-  // Short vehicle model name for concise, beautiful badges on mobile and desktop
-  const shortCarModel = useMemo(() => {
-    const m = (activeCar.m || 'Creta').trim();
-    const parts = m.split(' ').filter(Boolean);
-    if (parts.length > 0 && /^\d{4}$/.test(parts[0])) {
-      return parts[2] || parts[1] || parts[0];
-    }
-    return parts[0] || m;
-  }, [activeCar.m]);
-
-  // Smooth mouse drag-to-scroll for horizontal category pills
-  const pillsRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
-
-  const handlePillsMouseDown = (e: React.MouseEvent) => {
-    if (!pillsRef.current) return;
-    isDraggingRef.current = true;
-    startXRef.current = e.pageX - pillsRef.current.offsetLeft;
-    scrollLeftRef.current = pillsRef.current.scrollLeft;
-  };
-
-  const handlePillsMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !pillsRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - pillsRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 1.5;
-    pillsRef.current.scrollLeft = scrollLeftRef.current - walk;
-  };
-
-  const handlePillsMouseUpOrLeave = () => {
-    isDraggingRef.current = false;
-  };
-
   useEffect(() => {
     setSearchQuery(queryParam);
   }, [queryParam]);
 
   useEffect(() => {
-    setCategory(catParam);
+    setCategory(catParam === 'all' ? 'all' : normalizeCategoryKey(catParam));
   }, [catParam]);
 
   useEffect(() => {
@@ -183,12 +265,16 @@ function ShopContent() {
     router.replace(`/shop${qs ? `?${qs}` : ''}`, { scroll: false });
   };
 
-  const priceRanges = {
-    all: [0, 1e9],
-    lo: [0, 1999],
-    mid: [2000, 3999],
-    hi: [4000, 1e9],
-  };
+  const priceBands = useMemo(() => buildPriceBands(products.map((product) => product.p)), [products]);
+  const activePriceBand = priceBands.find((band) => band.id === priceTier);
+
+  const seriesOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) counts.set(product.s, (counts.get(product.s) ?? 0) + 1);
+    return [...counts.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const rawQuery = searchQuery.trim().toLowerCase();
@@ -202,8 +288,10 @@ function ShopContent() {
       const matchCat = category === 'all' || p.c === category;
       const matchFit =
         fitType === 'all' || (fitType === 'c') === isCustomFit(p);
-      const [minP, maxP] = priceRanges[priceTier];
-      const matchPrice = p.p >= minP && p.p <= maxP;
+      const matchPrice =
+        !activePriceBand ||
+        (p.p >= activePriceBand.min &&
+          (activePriceBand.last ? p.p <= activePriceBand.max : p.p < activePriceBand.max));
       const matchSeries = seriesFilter === 'all' || p.s === seriesFilter;
       const matchDeals = !dealsOnly || Boolean(p.isCombo || (p.o && p.o > p.p));
 
@@ -256,7 +344,7 @@ function ShopContent() {
   }, [
     category,
     fitType,
-    priceTier,
+    activePriceBand,
     seriesFilter,
     searchQuery,
     sortBy,
@@ -305,67 +393,31 @@ function ShopContent() {
     router.replace('/shop', { scroll: false });
   };
 
-  // Category items with exact icons from reference
-  const CATEGORY_ITEMS = [
-    {
-      id: 'all',
-      label: 'All Parts',
-      shortLabel: 'All',
-      icon: (
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-          <rect x="3" y="3" width="7" height="7" rx="2" />
-          <rect x="14" y="3" width="7" height="7" rx="2" />
-          <rect x="3" y="14" width="7" height="7" rx="2" />
-          <rect x="14" y="14" width="7" height="7" rx="2" />
-        </svg>
-      ),
-    },
-    {
-      id: 'seats',
-      label: 'Seat Covers',
-      shortLabel: 'Seats',
-      icon: (
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 3h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-          <path d="M7 10h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mats',
-      label: 'Floor Mats',
-      shortLabel: 'Mats',
-      icon: (
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6z" />
-          <path d="M8 9h8M8 12h8M8 15h8" />
-        </svg>
-      ),
-    },
-    {
-      id: 'steering',
-      label: 'Steering',
-      shortLabel: 'Steering',
-      icon: (
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
-        </svg>
-      ),
-    },
-    {
-      id: 'comfort',
-      label: 'Comfort',
-      shortLabel: 'Comfort',
-      icon: (
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 6c-2 0-3 2-3 5s1 5 3 5c3 0 4-2 5-2s2 2 5 2c2 0 3-2 3-5s-1-5-3-5c-3 0-4 2-5 2s-2-2-5-2z" />
-          <path d="M12 10v4" />
-        </svg>
-      ),
-    },
-  ];
+  const categoryItems = useMemo(() => {
+    const categories = new Map<string, string>();
+    for (const product of products) {
+      categories.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [
+      { id: 'all', label: 'All Parts', shortLabel: 'All', icon: ALL_CATEGORY_ICON },
+      ...[...categories.entries()]
+        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+        .map(([id, label]) => ({ id, label, shortLabel: label, icon: <CategoryIcon categoryKey={id} /> })),
+    ];
+  }, [products]);
+
+  const activeCategoryLabel =
+    categoryItems.find((item) => item.id === category)?.label ?? categoryLabel(category);
+
+  const vehicleLabel =
+    `${activeCar.y ? `${activeCar.y} ` : ''}${activeCar.b} ${activeCar.m}`.replace(/\s+/g, ' ').trim();
+
+  // Only products that are universal or actually built for this vehicle count
+  // as a fit — the collection can also hold parts for other cars.
+  const fitCount = useMemo(
+    () => filteredProducts.filter((product) => fitsVehicle(product, activeCar)).length,
+    [filteredProducts, activeCar],
+  );
 
   return (
     <div className="in-shop">
@@ -380,7 +432,11 @@ function ShopContent() {
             <span style={{ color: 'var(--red, #e2231a)' }}>.</span>
           </h1>
           <p className="shop-hero-subtitle">
-            {filteredProducts.length} precision-fit parts compatible with your {activeCar.y ? `${activeCar.y} ` : ''}{activeCar.b} {activeCar.m}
+            {filteredProducts.length === 0
+              ? 'No parts match these filters'
+              : fitCount === filteredProducts.length
+              ? `${fitCount} precision-fit parts for your ${vehicleLabel}`
+              : `${fitCount} of ${filteredProducts.length} parts fit your ${vehicleLabel}`}
           </p>
         </div>
       </section>
@@ -429,6 +485,7 @@ function ShopContent() {
 
             <div className="shop-filter-groups-scroll">
               {/* Section 1: Search Tags */}
+            {referenceTagsData.length > 0 && (
             <div className="shop-filter-group">
               <button
                 type="button"
@@ -467,6 +524,7 @@ function ShopContent() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Section 2: Fit type */}
             <div className="shop-filter-group">
@@ -532,27 +590,30 @@ function ShopContent() {
                   <span>Price</span>
                 </div>
                 {expandedSections.price ? (
-                  <ChevronDown className="shop-filter-chevron" />
-                ) : (
                   <ChevronUp className="shop-filter-chevron" />
+                ) : (
+                  <ChevronDown className="shop-filter-chevron" />
                 )}
               </button>
               {expandedSections.price && (
                 <div className="shop-filter-pills-wrap" style={{ gap: '6px' }}>
-                  {[
-                    ['all', 'Any'],
-                    ['lo', 'Under ₹2,000'],
-                    ['mid', '₹2,000 – ₹3,999'],
-                    ['hi', '₹4,000+'],
-                  ].map(([val, label]) => (
+                  <button
+                    type="button"
+                    className={`shop-pill-chip ${priceTier === 'all' ? 'active' : ''}`}
+                    onClick={() => setPriceTier('all')}
+                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                  >
+                    Any
+                  </button>
+                  {priceBands.map((band) => (
                     <button
-                      key={val}
+                      key={band.id}
                       type="button"
-                      className={`shop-pill-chip ${priceTier === val ? 'active' : ''}`}
-                      onClick={() => setPriceTier(val as any)}
+                      className={`shop-pill-chip ${priceTier === band.id ? 'active' : ''}`}
+                      onClick={() => setPriceTier(band.id)}
                       style={{ padding: '5px 13px', fontSize: '11.5px' }}
                     >
-                      {label}
+                      {band.label}
                     </button>
                   ))}
                 </div>
@@ -560,6 +621,7 @@ function ShopContent() {
             </div>
 
             {/* Section 4: Series */}
+            {seriesOptions.length > 1 && (
             <div className="shop-filter-group">
               <button
                 type="button"
@@ -587,25 +649,22 @@ function ShopContent() {
                   >
                     All
                   </button>
-                  <button
-                    type="button"
-                    className={`shop-pill-chip ${seriesFilter === 'Signature' ? 'active' : ''}`}
-                    onClick={() => setSeriesFilter('Signature')}
-                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
-                  >
-                    Signature
-                  </button>
-                  <button
-                    type="button"
-                    className={`shop-pill-chip ${seriesFilter === 'Sport' ? 'active' : ''}`}
-                    onClick={() => setSeriesFilter('Sport')}
-                    style={{ padding: '5px 13px', fontSize: '11.5px' }}
-                  >
-                    Sport
-                  </button>
+                  {seriesOptions.map(([series, count]) => (
+                    <button
+                      key={series}
+                      type="button"
+                      className={`shop-pill-chip ${seriesFilter === series ? 'active' : ''}`}
+                      onClick={() => setSeriesFilter(series)}
+                      style={{ padding: '5px 13px', fontSize: '11.5px' }}
+                    >
+                      <span>{series}</span>
+                      <span className="count">({count})</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
+            )}
             </div>
             <div className="mobile-filter-drawer-actions">
               <button type="button" className="btn dark" onClick={() => setIsFilterOpen(false)}>Apply filters</button>
@@ -618,7 +677,7 @@ function ShopContent() {
             {/* TOP BAR: CATEGORY PILLS (LEFT) + SORT BY (RIGHT) */}
             <div className="shop-top-bar">
               <div className="shop-category-pills">
-                {CATEGORY_ITEMS.map((cat) => (
+                {categoryItems.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
@@ -682,7 +741,7 @@ function ShopContent() {
                     className="active-filter-chip"
                     onClick={() => handleCategorySelect('all')}
                   >
-                    <span>Category: {category}</span>
+                    <span>Category: {activeCategoryLabel}</span>
                     <X style={{ width: 12, height: 12 }} />
                   </button>
                 )}
@@ -702,7 +761,7 @@ function ShopContent() {
                     className="active-filter-chip"
                     onClick={() => setPriceTier('all')}
                   >
-                    <span>Price: {priceTier}</span>
+                    <span>Price: {activePriceBand?.label ?? 'Any'}</span>
                     <X style={{ width: 12, height: 12 }} />
                   </button>
                 )}
@@ -758,7 +817,7 @@ function ShopContent() {
                         onAddToCart={addToCart}
                         onOpenCart={openCart}
                         onTagClick={handleTagSelect}
-                        fitText={custom ? `✓ Fits ${shortCarModel}` : 'Universal'}
+                        fitText={fitBadgeText(p, activeCar)}
                         isCustomFitBadge={custom}
                       />
                     );

@@ -2,8 +2,21 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useApp } from '@/context/AppContext';
+import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
 
 export function Footer() {
+  const { products } = useApp();
+  const categoryLinks = React.useMemo(() => {
+    const categories = new Map<string, string>();
+    for (const product of products) {
+      categories.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [...categories.entries()]
+      .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+      .slice(0, 4);
+  }, [products]);
+
   return (
     <footer>
       <div className="wrap">
@@ -35,10 +48,10 @@ export function Footer() {
           </div>
           <div>
             <h6>Shop</h6>
-            <Link href="/shop?cat=seats">Seat covers</Link>
-            <Link href="/shop?cat=mats">Floor mats</Link>
-            <Link href="/shop?cat=steering">Steering covers</Link>
-            <Link href="/shop?cat=comfort">Comfort</Link>
+            <Link href="/shop">All products</Link>
+            {categoryLinks.map(([key, label]) => (
+              <Link key={key} href={`/shop?cat=${encodeURIComponent(key)}`}>{label}</Link>
+            ))}
           </div>
           <div>
             <h6>Support</h6>

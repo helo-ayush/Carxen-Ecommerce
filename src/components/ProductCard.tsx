@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
+import {
+  categoryLabel,
+  isMatCategory,
+  isSeatCategory,
+  isSteeringCategory,
+} from '@/lib/storefront/categories';
 
 export interface ProductCardProps {
   product: Product;
@@ -89,25 +95,40 @@ export function ProductCard({
     onToggleFav(product.id);
   };
 
+  const isSeats = isSeatCategory(product.c);
+  const isMats = isMatCategory(product.c);
+  const isSteering = isSteeringCategory(product.c);
+
   const categoryName = (() => {
     if (product.categoryLabel) return product.categoryLabel;
-    switch (product.c) {
-      case 'seats':
+    switch (true) {
+      case isSeats:
         return 'Seat Covers';
-      case 'mats':
+      case isMats:
         return 'Floor Mats';
-      case 'steering':
+      case isSteering:
         return 'Steering Covers';
-      case 'comfort':
-        return 'Cabin Comfort';
       default:
-        return product.s ? `${product.s} Series` : 'Car Accessories';
+        return categoryLabel(product.c);
     }
+  })();
+
+  // First meaningful line from the factory spec sheet — design and colour when
+  // the item has them, so the chip is a real attribute instead of set dressing.
+  const specChip = (() => {
+    const specs = Array.isArray(product.sp) ? product.sp : [];
+    const find = (pattern: RegExp) => specs.find(([key]) => pattern.test(key.trim()));
+    const design = find(/^design( pattern)?$/i);
+    const colour = find(/^(upper|colour|color|fabric|material|mat type)$/i);
+    if (design && colour) return `${design[1]} · ${colour[1]}`;
+    const fallback =
+      design || colour || specs.find(([key]) => !/^(item code|uom|hsn|gst|sku)$/i.test(key.trim()));
+    return fallback ? fallback[1] : null;
   })();
 
   // Single subtle luxury tag matching clean UI
   const badge = (() => {
-    if (isCustomFitBadge && fitText && product.c === 'mats' && (product.id === 2 || !product.o)) {
+    if (isCustomFitBadge && fitText && isMats && (product.id === 2 || !product.o)) {
       return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     }
     if (discountPercent > 0) return { type: 'sale', label: `${discountPercent}% OFF` };
@@ -173,9 +194,15 @@ export function ProductCard({
           <div className="ref-meta-row">
             <span className="ref-category">{categoryName}</span>
             <div className="ref-rating">
-              <span className="star">★</span>
-              <span className="score">{product.r.toFixed(1)}</span>
-              <span className="count">({product.rv})</span>
+              {product.rv > 0 ? (
+                <>
+                  <span className="star">★</span>
+                  <span className="score">{product.r.toFixed(1)}</span>
+                  <span className="count">({product.rv})</span>
+                </>
+              ) : (
+                <span className="count">No reviews yet</span>
+              )}
             </div>
           </div>
 
@@ -188,20 +215,13 @@ export function ProductCard({
             {product.n}
           </h3>
 
-          {/* Glassmorphic Feature Chips */}
+          {/* Feature chips: real fitment, then a real attribute from the spec sheet */}
           <div className="ref-feature-chips">
             <span className="ref-feature-chip fit">
-              {product.customFit !== false ? 'Laser Mapped' : 'Universal Fit'}
+              {fitText?.replace(/^[✓✔\s]+/, '') ||
+                (product.customFit !== false ? 'Custom fit' : 'Universal fit')}
             </span>
-            <span className="ref-feature-chip spec">
-              {product.c === 'seats'
-                ? 'Breathable Composite'
-                : product.c === 'mats'
-                ? 'All-Weather Defense'
-                : product.c === 'steering'
-                ? 'Ergonomic Grip'
-                : 'High-Density Foam'}
-            </span>
+            {specChip && <span className="ref-feature-chip spec">{specChip}</span>}
           </div>
         </div>
 

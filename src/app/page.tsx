@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Link from 'next/navigation';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -11,6 +10,11 @@ import {
   formatINR,
 } from '@/data/products';
 import { CatalogState } from '@/components/CatalogState';
+import {
+  categoryLabel,
+  compareCategories,
+  normalizeCategoryKey,
+} from '@/lib/storefront/categories';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import AppleCardsCarouselDemo from '@/components/ui/apple-cards-carousel-demo';
@@ -104,37 +108,74 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
-  // Shop Filters State
   const [filterCat, setFilterCat] = useState('all');
   const [priceMin, setPriceMin] = useState(0);
-  const [priceMax, setPriceMax] = useState(7000);
-  const [starRating, setStarRating] = useState(4);
-  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(
-    new Set(['Signature', 'Sport', 'Urban', 'Essentials'])
-  );
+  // null = "up to the priciest product in the catalog"
+  const [priceMax, setPriceMax] = useState<number | null>(null);
+  const [starRating, setStarRating] = useState(0);
+  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
   const [deliveryType, setDeliveryType] = useState('std');
   const [sortBy, setSortBy] = useState('pop');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  const categoryPills = useMemo(() => {
+    const categories = new Map<string, string>();
+    for (const product of products) {
+      categories.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+    }
+    return [
+      { key: 'all', label: 'All categories' },
+      ...[...categories.entries()]
+        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
+        .map(([key, label]) => ({ key, label })),
+      { key: 'deals', label: 'Deals' },
+    ];
+  }, [products]);
+
+  // Price scale, average and series list all follow the live catalog instead of
+  // fixed assumptions, so a pricier product never falls off the slider.
+  const priceCeiling = useMemo(() => {
+    const highest = products.reduce((max, product) => Math.max(max, product.p), 0);
+    return highest > 0 ? Math.ceil(highest / 500) * 500 : 7000;
+  }, [products]);
+  const effectivePriceMax = priceMax ?? priceCeiling;
+
+  const averagePrice = useMemo(() => {
+    if (products.length === 0) return 0;
+    return Math.round(products.reduce((sum, product) => sum + product.p, 0) / products.length);
+  }, [products]);
+
+  const seriesOptions = useMemo(() => {
+    const palette = new Map(SERIES_LIST);
+    const counts = new Map<string, number>();
+    for (const product of products) counts.set(product.s, (counts.get(product.s) ?? 0) + 1);
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([series, count]) => ({ series, count, color: palette.get(series) ?? '#5d5d64' }));
+  }, [products]);
+
+  useEffect(() => {
+    setSelectedSeries(new Set(products.map((product) => product.s)));
+  }, [products]);
+
   // Dynamic Histogram
   const bins = 14;
-  const bmax = 7000;
   const histogramCounts = useMemo(() => {
     const counts = Array(bins).fill(0);
     products.forEach((p) => {
-      const index = Math.min(bins - 1, Math.floor(p.p / (bmax / bins)));
+      const index = Math.min(bins - 1, Math.floor(p.p / (priceCeiling / bins)));
       counts[index]++;
     });
     const maxVal = Math.max(...counts, 1);
     return counts.map((count, i) => {
-      const lo = (i * bmax) / bins;
-      const hi = lo + bmax / bins;
-      const isIn = hi > priceMin && lo < priceMax;
+      const lo = (i * priceCeiling) / bins;
+      const hi = lo + priceCeiling / bins;
+      const isIn = hi > priceMin && lo < effectivePriceMax;
       const height = 8 + (count / maxVal) * 92;
       return { height, isIn };
     });
-  }, [priceMin, priceMax, products]);
+  }, [priceMin, effectivePriceMax, priceCeiling, products]);
 
   const handleSeriesToggle = (seriesName: string) => {
     setSelectedSeries((prev) => {
@@ -146,18 +187,18 @@ export default function HomePage() {
   };
 
   const handleResetSeries = () => {
-    setSelectedSeries(new Set(['Signature', 'Sport', 'Urban', 'Essentials']));
+    setSelectedSeries(new Set(products.map((product) => product.s)));
   };
 
   const handleResetPrice = () => {
     setPriceMin(0);
-    setPriceMax(7000);
+    setPriceMax(null);
   };
 
   const handleClearFilters = () => {
     setFilterCat('all');
     setPriceMin(0);
-    setPriceMax(7000);
+    setPriceMax(null);
     setStarRating(0);
     handleResetSeries();
     setDeliveryType('std');
@@ -170,7 +211,7 @@ export default function HomePage() {
       const matchCat =
         filterCat === 'all' ||
         (filterCat === 'deals' ? !!p.o : p.c === filterCat);
-      const matchPrice = p.p >= priceMin && p.p <= priceMax;
+      const matchPrice = p.p >= priceMin && p.p <= effectivePriceMax;
       const matchStar = p.r >= starRating;
       const matchSeries = selectedSeries.has(p.s);
       const matchDelivery = deliveryType === 'std' || p.pk;
@@ -198,7 +239,7 @@ export default function HomePage() {
   }, [
     filterCat,
     priceMin,
-    priceMax,
+    effectivePriceMax,
     starRating,
     selectedSeries,
     deliveryType,
@@ -214,7 +255,7 @@ export default function HomePage() {
   // Automatically reset to page 1 whenever any filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterCat, priceMin, priceMax, starRating, selectedSeries, deliveryType, sortBy, searchQuery]);
+  }, [filterCat, priceMin, effectivePriceMax, starRating, selectedSeries, deliveryType, sortBy, searchQuery]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
   const paginatedProducts = useMemo(() => {
@@ -252,46 +293,51 @@ export default function HomePage() {
     showToast(`Fitment confirmed — ${count} matches found`);
   };
 
-  // Reviews Carousel
-  const defaultReviews = [
-    {
-      text: (
-        <>
-          The seat covers fit my Creta like they came from the factory. Stitching is genuinely{' '}
-          <b>better than the dealership</b> offered at triple the price.
-        </>
-      ),
-      author: 'Arjun Rao',
-      sub: 'Hyundai Creta — Bengaluru',
-      avatar: 'AR',
-      bg: '#e2231a',
-    },
-    {
-      text: (
-        <>
-          Ordered mats before monsoon. Mud, rain, spilled chai — it all{' '}
-          <b>just wipes off</b>. Zero slip, perfect fit.
-        </>
-      ),
-      author: 'Priya Kapoor',
-      sub: 'Tata Nexon — Gurugram',
-      avatar: 'PK',
-      bg: '#1b1b1e',
-    },
-    {
-      text: (
-        <>
-          The steering cover <b>transformed my commute</b>. Grip is phenomenal and the red accent gets noticed by everyone who sits inside.
-        </>
-      ),
-      author: 'Vikram Mehta',
-      sub: 'Mahindra Thar — Pune',
-      avatar: 'VM',
-      bg: '#5d5d64',
-    },
-  ];
-  const activeReviewsList: any[] = (reviewsConfig?.items && reviewsConfig.items.length > 0) ? reviewsConfig.items : defaultReviews;
+  // Reviews carousel — only real, published reviews from verified buyers.
+  type HomeReview = {
+    id: string;
+    text: string;
+    author: string;
+    sub: string;
+    avatar: string;
+    bg: string;
+    rating: number;
+  };
+  const [activeReviewsList, setActiveReviewsList] = useState<HomeReview[]>([]);
   const [activeReview, setActiveReview] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/storefront/reviews?latest=6', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload || !Array.isArray(payload.reviews)) return;
+        const palette = ['#e2231a', '#1b1b1e', '#5d5d64', '#b91a12', '#2a2d34'];
+        setActiveReviewsList(
+          payload.reviews.map((review: any, index: number) => {
+            const name = String(review.customerName || 'Verified Buyer');
+            return {
+              id: String(review.id),
+              text: String(review.body || review.title || ''),
+              author: name,
+              sub: review.productName ? String(review.productName) : 'Verified purchase',
+              avatar: name
+                .split(/\s+/)
+                .map((part: string) => part[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase(),
+              bg: palette[index % palette.length],
+              rating: Number(review.rating) || 0,
+            };
+          }),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -346,7 +392,10 @@ export default function HomePage() {
               categoriesList={categoriesConfig?.cards}
               heading={categoriesConfig}
               onCategorySelect={(filter) => {
-                setFilterCat(filter);
+                // Store settings can still carry legacy keys like "seats".
+                setFilterCat(
+                  filter === 'all' || filter === 'deals' ? filter : normalizeCategoryKey(filter),
+                );
                 document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
               }}
             />
@@ -535,20 +584,13 @@ export default function HomePage() {
           </div>
 
           <div className="pills rv in" id="pills">
-            {[
-              ['all', 'All categories'],
-              ['seats', 'Seat covers'],
-              ['mats', 'Floor mats'],
-              ['steering', 'Steering'],
-              ['comfort', 'Comfort'],
-              ['deals', 'Deals'],
-            ].map(([c, label]) => (
+            {categoryPills.map((category) => (
               <button
-                key={c}
-                className={`pill ${filterCat === c ? 'on' : ''}`}
-                onClick={() => setFilterCat(c)}
+                key={category.key}
+                className={`pill ${filterCat === category.key ? 'on' : ''}`}
+                onClick={() => setFilterCat(category.key)}
               >
-                {label}
+                {category.label}
               </button>
             ))}
           </div>
@@ -586,7 +628,7 @@ export default function HomePage() {
                   Price range <button onClick={handleResetPrice}>Reset</button>
                 </h4>
                 <p className="sub">
-                  The average price is <b>₹2,400</b>
+                  The average price is <b>{formatINR(averagePrice)}</b>
                 </p>
                 <div className="hist" id="hist">
                   {histogramCounts.map((item, i) => (
@@ -603,27 +645,27 @@ export default function HomePage() {
                     className="fl2"
                     id="rf"
                     style={{
-                      left: `${priceMin / 70}%`,
-                      right: `${100 - priceMax / 70}%`,
+                      left: `${(priceMin / priceCeiling) * 100}%`,
+                      right: `${100 - (effectivePriceMax / priceCeiling) * 100}%`,
                     }}
                   />
                   <input
                     type="range"
                     min="0"
-                    max="7000"
+                    max={priceCeiling}
                     step="100"
                     value={priceMin}
                     onChange={(e) => {
-                      const val = Math.min(Number(e.target.value), priceMax - 300);
+                      const val = Math.min(Number(e.target.value), effectivePriceMax - 300);
                       setPriceMin(val);
                     }}
                   />
                   <input
                     type="range"
                     min="0"
-                    max="7000"
+                    max={priceCeiling}
                     step="100"
-                    value={priceMax}
+                    value={effectivePriceMax}
                     onChange={(e) => {
                       const val = Math.max(Number(e.target.value), priceMin + 300);
                       setPriceMax(val);
@@ -632,7 +674,7 @@ export default function HomePage() {
                 </div>
                 <div className="prv">
                   <span id="p1">{formatINR(priceMin)}</span>
-                  <span id="p2">{formatINR(priceMax)}</span>
+                  <span id="p2">{formatINR(effectivePriceMax)}</span>
                 </div>
               </div>
 
@@ -657,21 +699,22 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {seriesOptions.length > 0 && (
               <div className="fbox">
                 <h4>
                   Series <button onClick={handleResetSeries}>Reset</button>
                 </h4>
                 <div className="brands" id="brands">
-                  {SERIES_LIST.map(([s, color]) => (
-                    <label key={s} className="chk">
+                  {seriesOptions.map(({ series, count, color }) => (
+                    <label key={series} className="chk">
                       <span className="lg" style={{ background: color }}>
-                        {s[0]}
+                        {series[0]}
                       </span>
-                      {s}
+                      {series} ({count})
                       <input
                         type="checkbox"
-                        checked={selectedSeries.has(s)}
-                        onChange={() => handleSeriesToggle(s)}
+                        checked={selectedSeries.has(series)}
+                        onChange={() => handleSeriesToggle(series)}
                       />
                       <span className="bx">
                         <svg viewBox="0 0 24 24">
@@ -682,6 +725,7 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="fbox">
                 <h4>Delivery options</h4>
@@ -1044,14 +1088,16 @@ export default function HomePage() {
       )}
 
       {/* REVIEWS */}
-      {reviewsConfig?.enabled !== false && (
+      {reviewsConfig?.enabled !== false && activeReviewsList.length > 0 && (
         <section className="sec" id="reviews">
           <div className="wrap">
             <div className="sec-head rv in">
               <span className="no">{reviewsConfig?.sectionNumber || '07'}</span>
               <span className="t">{reviewsConfig?.eyebrow || 'Driver voices'}</span>
               <span className="rule" />
-              <span className="note">{reviewsConfig?.badge || '12,000+ five-star reviews'}</span>
+              <span className="note">
+                {activeReviewsList.length} verified review{activeReviewsList.length === 1 ? '' : 's'}
+              </span>
             </div>
             <div className="rev-g">
               <div className="rv-l in">
