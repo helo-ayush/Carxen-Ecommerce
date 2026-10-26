@@ -57,7 +57,6 @@ export function Footer() {
             <h6>Support</h6>
             <Link href="/#fitment">Fitment guide</Link>
             <Link href="/#top">Shipping</Link>
-            <Link href="/#top">Returns</Link>
             <Link href="/#top">Warranty</Link>
           </div>
           <div>

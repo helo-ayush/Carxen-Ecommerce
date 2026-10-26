@@ -159,7 +159,7 @@ function LoginForm() {
               <br />
               your car<span className="red">.</span>
             </h2>
-            <p>Free shipping over ₹1,499 · 2-year warranty · 30-day returns</p>
+            <p>Free shipping over ₹1,499 · 2-year warranty · Precision Custom Fit</p>
           </div>
         </div>
 

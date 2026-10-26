@@ -1422,7 +1422,7 @@ export default function CheckoutPage() {
                                     </div>
                                     <div className="inf-ck-trust-item">
                                       <Zap size={13} style={{ color: '#3b82f6' }} />
-                                      <span>Instant Refunds</span>
+                                      <span>Instant Confirmation</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1581,7 +1581,7 @@ export default function CheckoutPage() {
                         </button>
 
                         <div style={{ textAlign: 'center', fontSize: 11.5, color: '#71717a', marginTop: -8 }}>
-                          🔒 100% Cryptographically Verified &bull; Direct Carrier Tracking &bull; Hassle-Free Returns
+                          🔒 100% Cryptographically Verified &bull; Direct Carrier Tracking &bull; 24h Cancellation Relief
                         </div>
                       </div>
                     )}

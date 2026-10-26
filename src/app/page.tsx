@@ -370,14 +370,14 @@ export default function HomePage() {
           <span>100+ vehicle models</span>
           <span>2-year warranty</span>
           <span>Free shipping over ₹1,499</span>
-          <span>30-day returns</span>
+          <span>100% Genuine Guaranteed</span>
           <span>Precision fit</span>
           <span>All-weather protection</span>
           <span>Premium leatherette</span>
           <span>100+ vehicle models</span>
           <span>2-year warranty</span>
           <span>Free shipping over ₹1,499</span>
-          <span>30-day returns</span>
+          <span>100% Genuine Guaranteed</span>
         </div>
       </div>
 

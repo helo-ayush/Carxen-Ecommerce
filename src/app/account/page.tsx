@@ -593,7 +593,7 @@ function AccountContent() {
   </div>
 
   <div class="footer">
-    Thank you for choosing CARXEN. Backed by CARXEN 2-Year Comprehensive Warranty and 30-Day Hassle-Free Returns.<br>
+    Thank you for choosing CARXEN. Backed by CARXEN 2-Year Comprehensive Warranty and Precision Fit Guarantee.<br>
     For support or inquiries, email care@carxen.io or call 1800-209-8899.
   </div>
 </body>
