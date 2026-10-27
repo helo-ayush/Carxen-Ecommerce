@@ -22,6 +22,7 @@ import {
   fitsVehicle,
   readFitment,
 } from '@/lib/storefront/fitment';
+import { rankSimilarProducts } from '@/lib/storefront/similar-products';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { ProductCard } from '@/components/ProductCard';
@@ -607,13 +608,16 @@ function ProductDetailContent({ product }: { product: Product }) {
     openCart();
   };
 
-  // Similar products (full product cards)
-  const similarProducts = useMemo(() => {
-    return products
-      .filter((x) => x.id !== product.id && x.c === product.c)
-      .concat(products.filter((x) => x.id !== product.id && x.c !== product.c))
-      .slice(0, 4);
-  }, [product, products]);
+  // Similar products (ranked locally — no server call)
+  const similarProducts = useMemo(
+    () =>
+      rankSimilarProducts(product, products, {
+        vehicle: activeCar,
+        excludeIds: recommendedProducts.map((entry) => entry.id),
+        limit: 4,
+      }),
+    [product, products, activeCar, recommendedProducts]
+  );
 
   // Review statistics and filters, derived from published reviews only.
   const starCounts = useMemo(() => {
