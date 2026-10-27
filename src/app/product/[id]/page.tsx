@@ -629,16 +629,9 @@ function ProductDetailContent({ product }: { product: Product }) {
     return bundleItems.filter((item) => selectedBundleIds.includes(item.id));
   }, [bundleItems, selectedBundleIds]);
 
-  const rawBundleTotal = useMemo(() => {
+  const bundleTotal = useMemo(() => {
     return selectedBundleItems.reduce((acc, curr) => acc + curr.p, 0);
   }, [selectedBundleItems]);
-
-  // 5% Bundle savings when 2 or more items are selected
-  const bundleSavings = useMemo(() => {
-    return selectedBundleItems.length >= 2 ? Math.round(rawBundleTotal * 0.05) : 0;
-  }, [selectedBundleItems.length, rawBundleTotal]);
-
-  const finalBundleTotal = rawBundleTotal - bundleSavings;
 
   const handleAddBundle = () => {
     selectedBundleItems.forEach((item) => addToCart(item.id, 1));
@@ -1464,12 +1457,6 @@ function ProductDetailContent({ product }: { product: Product }) {
                   Upgrade your cabin with accessories that pair well with this {categoryLabel.toLowerCase()}.
                 </p>
               </div>
-
-              {bundleSavings > 0 && (
-                <div className="ps-bundle-savings-pill">
-                  Save {formatINR(bundleSavings)} on this bundle (5% OFF)
-                </div>
-              )}
             </div>
 
             <div className="ps-bundle-main-layout">
@@ -1569,17 +1556,10 @@ function ProductDetailContent({ product }: { product: Product }) {
                 </div>
 
                 <div className="ps-bundle-summary-pricing">
-                  <div className="ps-bundle-final-price">{formatINR(finalBundleTotal)}</div>
-                  {bundleSavings > 0 ? (
-                    <div className="ps-bundle-savings-row">
-                      <span className="ps-bundle-raw-strike">{formatINR(rawBundleTotal)}</span>
-                      <span className="ps-bundle-discount-badge">5% BUNDLE SAVINGS</span>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '11.5px', color: 'var(--steel, #5d5d64)', marginTop: '4px' }}>
-                      Select 2 or more items to unlock 5% bundle savings
-                    </div>
-                  )}
+                  <div className="ps-bundle-final-price">{formatINR(bundleTotal)}</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--steel, #5d5d64)', marginTop: '4px' }}>
+                    Sum of the selected item prices.
+                  </div>
                 </div>
 
                 <button
