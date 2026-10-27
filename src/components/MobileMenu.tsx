@@ -37,6 +37,7 @@ export function MobileMenu() {
     wholesaleBasketSkuCount,
     refreshCustomerProfile,
     showToast,
+    openSupportModal,
   } = useApp();
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
@@ -239,21 +240,27 @@ export function MobileMenu() {
           <div className="b2b-drawer-section">
             <div className="b2b-drawer-section-label">Commercial Support Desk</div>
 
-            <a
-              href="https://wa.me/919876543210?text=Hi%20CarXen%20Commercial%20Desk,%20I%20have%20an%20inquiry%20regarding%20wholesale%20procurement."
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => {
+                closeMobileMenu();
+                openSupportModal({
+                  category: 'Wholesale Verification & Fast-Track Approval',
+                  initialMessage: 'Commercial inquiry from wholesale mobile workspace.',
+                });
+              }}
               className="b2b-drawer-support-card"
+              style={{ width: '100%', cursor: 'pointer', textAlign: 'left', background: 'none', border: '1px solid var(--ws-border-light)' }}
             >
               <div className="b2b-drawer-support-icon">
-                <PhoneCall size={18} />
+                <Building2 size={18} />
               </div>
               <div className="b2b-drawer-support-text">
-                <strong>Wholesale WhatsApp Verification Desk</strong>
-                <span>Mon–Sat 9:30 AM – 7:00 PM IST · +91 98765 43210</span>
+                <strong>Commercial Support Desk</strong>
+                <span>Direct inquiry channel synced to Veda ERP</span>
               </div>
-              <ExternalLink size={15} />
-            </a>
+              <ChevronRight size={15} />
+            </button>
           </div>
 
           {/* Bottom Actions: Switch to Retail & Sign out */}

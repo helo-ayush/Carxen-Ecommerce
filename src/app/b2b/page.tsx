@@ -48,9 +48,7 @@ function B2BErrorBanner({
         <div className="b2b-error-title">Application Submission Notice</div>
         <div className="b2b-error-msg">{message}</div>
         <div className="b2b-error-help">
-          <span>Need immediate assistance? Contact wholesale desk:</span>
-          <strong>+91 98765 43210</strong>
-          <span>·</span>
+          <span>Need immediate assistance? Reach out to our commercial desk:</span>
           <strong>b2b@carxen.in</strong>
         </div>
       </div>
@@ -81,6 +79,7 @@ export default function B2BWholesalePage() {
     refreshCustomerProfile,
     coupons,
     showToast,
+    openSupportModal,
   } = useApp();
 
   const [formData, setFormData] = useState({
@@ -727,21 +726,19 @@ export default function B2BWholesalePage() {
               </p>
             </div>
             <div className="b2b-fasttrack-actions">
-              <a href="tel:+919876543210" className="b2b-hotline-btn">
-                <PhoneCall size={14} />
-                <span>+91 98765 43210</span>
-              </a>
-              <a
-                href={`https://wa.me/919876543210?text=${encodeURIComponent(
-                  `Hi CarXen Wholesale Desk, I have submitted a wholesale application for ${activeBusiness} (Ref: ${referenceId}) and would like to expedite verification.`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="b2b-hotline-btn whatsapp"
+              <button
+                type="button"
+                onClick={() => openSupportModal({
+                  category: 'Wholesale Verification & Fast-Track Approval',
+                  businessName: activeBusiness,
+                  initialMessage: `Requesting expedited verification for application ${referenceId ? `(Ref: ${referenceId})` : ''} - urgent commercial order pending.`,
+                })}
+                className="b2b-hotline-btn"
+                style={{ cursor: 'pointer', background: '#0e0e0f', color: '#fff', border: 'none', padding: '10px 18px' }}
               >
                 <MessageSquare size={14} />
-                <span>WhatsApp Desk</span>
-              </a>
+                <span>Submit Verification Query to Support Desk</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1027,10 +1024,30 @@ export default function B2BWholesalePage() {
           {/* Support Box */}
           <div className="b2b-support-box">
             <strong>Need Bulk Assistance?</strong>
-            <span>Contact our dealership team directly:</span>
-            <div style={{ marginTop: 6, fontWeight: 700, color: '#0e0e0f' }}>
-              +91 98765 43210 · b2b@carxen.in
-            </div>
+            <span>Submit an inquiry to our commercial desk:</span>
+            <button
+              type="button"
+              onClick={() => openSupportModal({
+                category: 'Bulk Procurement & Factory Batch Quotation',
+                initialMessage: 'Commercial assistance inquiry regarding wholesale catalog and procurement options.',
+              })}
+              style={{
+                marginTop: 8,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                background: '#0e0e0f',
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <span>Contact Commercial Support Desk</span>
+            </button>
           </div>
         </div>
 

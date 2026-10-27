@@ -5,7 +5,12 @@ import { getAuthenticatedCustomer, STORE_ID, FACTORY_ID } from '@/lib/server/cus
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
-import { createRazorpayOrder, getRazorpayConfig, verifyRazorpaySignature } from '@/lib/server/razorpay';
+import {
+  createRazorpayOrder,
+  getRazorpayConfig,
+  verifyRazorpaySignature,
+  fetchAndVerifyRazorpayPayment,
+} from '@/lib/server/razorpay';
 
 export const dynamic = 'force-dynamic';
 
@@ -167,8 +172,17 @@ export async function POST(request: Request) {
     const paymentStatus: 'PAID' | 'PENDING' = isRazorpay ? 'PAID' : 'PENDING';
     const resolvedPaymentMethod = isRazorpay ? 'Razorpay Secure (UPI / Cards / NetBanking)' : 'Cash on delivery';
 
-    // Verify signature if payment is via Razorpay
-    if (isRazorpay && razorpayOrderId && razorpayPaymentId) {
+    // Step 1: Verification if payment is via Razorpay
+    let verifiedPayment: any = null;
+    if (isRazorpay) {
+      if (!razorpayOrderId || !razorpayPaymentId) {
+        return NextResponse.json(
+          { error: 'Missing Razorpay order ID or payment ID for online payment.' },
+          { status: 400 }
+        );
+      }
+
+      // Verify HMAC-SHA256 signature
       const isValid = verifyRazorpaySignature({
         razorpay_order_id: razorpayOrderId,
         razorpay_payment_id: razorpayPaymentId,
@@ -178,6 +192,38 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: 'Payment signature verification failed. Please try again.' },
           { status: 400 }
+        );
+      }
+
+      // Direct Razorpay API verification (checks status, order_id, and amount)
+      const amountInPaise = Math.round(totalOrderValue * 100);
+      try {
+        verifiedPayment = await fetchAndVerifyRazorpayPayment({
+          razorpay_payment_id: razorpayPaymentId,
+          expected_order_id: razorpayOrderId,
+          expected_amount_in_paise: amountInPaise,
+        });
+      } catch (paymentErr: any) {
+        console.error('Razorpay B2B payment verification failed:', paymentErr);
+        return NextResponse.json(
+          { error: paymentErr?.message || 'Payment could not be verified with Razorpay.' },
+          { status: 400 }
+        );
+      }
+
+      // Anti-replay protection: check if payment ID was already used
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: existingPaymentOrder } = await supabaseAdmin
+        .from('ecommerce_orders')
+        .select('id, orderNumber')
+        .contains('metadata', { razorpay_payment_id: razorpayPaymentId })
+        .maybeSingle();
+
+      if (existingPaymentOrder) {
+        console.error('Duplicate B2B payment reuse attempt:', razorpayPaymentId);
+        return NextResponse.json(
+          { error: 'This payment transaction has already been recorded for an existing order.' },
+          { status: 409 }
         );
       }
     }
@@ -237,6 +283,17 @@ export async function POST(request: Request) {
       factoryNotes?.trim() ? `Order Notes: ${factoryNotes.trim()}` : null,
     ].filter(Boolean).join(' | ');
 
+    const orderMetadata = isRazorpay
+      ? {
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
+          razorpay_signature: razorpaySignature || null,
+          paid_amount_in_paise: Math.round(totalOrderValue * 100),
+          paid_at: now,
+          payment_method: verifiedPayment?.method || 'razorpay',
+        }
+      : null;
+
     // Insert authoritative wholesale order in ecommerce_orders
     const { error: orderInsertErr } = await supabase
       .from('ecommerce_orders')
@@ -260,6 +317,7 @@ export async function POST(request: Request) {
         shippingAddressSnapshot: shippingSnapshot,
         billingAddressSnapshot: billingSnapshot,
         notes: formattedNotes || 'Wholesale Order placed via /wholesale portal.',
+        metadata: orderMetadata,
         placedAt: now,
         createdAt: now,
         updatedAt: now,
