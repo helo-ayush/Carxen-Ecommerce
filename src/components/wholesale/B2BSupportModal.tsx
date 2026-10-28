@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import {
   X,
@@ -8,13 +8,12 @@ import {
   Building2,
   Mail,
   User as UserIcon,
-  MessageSquare,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   Loader2,
-  ArrowRight,
+  ChevronDown,
 } from 'lucide-react';
+import './b2b-support-modal.css';
 
 const CATEGORIES = [
   'Wholesale Verification & Fast-Track Approval',
@@ -67,8 +66,34 @@ export function B2BSupportModal() {
       setBotCheck('');
       setError(null);
       setSubmitted(false);
+
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isSupportModalOpen, supportModalOptions, user, b2bProfile]);
+
+  // Handle Escape key
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeSupportModal();
+      }
+    },
+    [closeSupportModal]
+  );
+
+  useEffect(() => {
+    if (isSupportModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isSupportModalOpen, handleKeyDown]);
 
   if (!isSupportModalOpen) return null;
 
@@ -128,32 +153,32 @@ export function B2BSupportModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
+      aria-labelledby="b2b-support-title"
+      className="b2b-modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          closeSupportModal();
+        }
+      }}
     >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={closeSupportModal}
-      />
-
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-2xl transition-all dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="b2b-modal-card">
         {/* Header Ribbon */}
-        <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/70 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-800/40">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-[#e2231a]">
-              <Building2 className="h-5 w-5" />
+        <div className="b2b-modal-header">
+          <div className="b2b-modal-header-left">
+            <div className="b2b-modal-icon-badge">
+              <Building2 size={20} strokeWidth={2} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
-                  Commercial Support Desk
+            <div className="b2b-modal-header-text">
+              <div className="b2b-modal-title-row">
+                <h3 id="b2b-support-title" className="b2b-modal-title">
+                  Commercial Customer Support
                 </h3>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <span className="b2b-modal-sync-badge">
                   Veda Direct Sync
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="b2b-modal-subtitle">
                 Direct inquiry channel for wholesale buyers and commercial partners
               </p>
             </div>
@@ -162,132 +187,139 @@ export function B2BSupportModal() {
           <button
             type="button"
             onClick={closeSupportModal}
-            className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="b2b-modal-close-btn"
             aria-label="Close support modal"
           >
-            <X className="h-5 w-5" />
+            <X size={18} strokeWidth={2.2} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6">
+        <div className="b2b-modal-body">
           {submitted ? (
-            <div className="py-6 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                <CheckCircle2 className="h-8 w-8" />
+            <div className="b2b-success-container">
+              <div className="b2b-success-icon-wrap">
+                <CheckCircle2 size={32} strokeWidth={2.2} />
               </div>
-              <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+              <h4 className="b2b-success-title">
                 Inquiry Dispatched to Commercial Desk
               </h4>
-              <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <p className="b2b-success-desc">
                 Your query has been logged directly into the factory support inbox. Our commercial team will review your account dossier and reply to <strong>{email}</strong> shortly.
               </p>
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={closeSupportModal}
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-6 py-2.5 text-xs font-semibold text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                  Done
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={closeSupportModal}
+                className="b2b-btn-done"
+              >
+                Done
+              </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {error && (
-                <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                <div className="b2b-modal-error">
+                  <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* Business Name */}
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              <div className="b2b-form-group">
+                <label className="b2b-form-label">
                   Business / Dealership Name
                 </label>
-                <div className="relative">
-                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <div className="b2b-input-wrapper">
+                  <span className="b2b-input-icon">
+                    <Building2 size={16} />
+                  </span>
                   <input
                     type="text"
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
                     placeholder="e.g. Apex Auto Spares Ltd."
-                    className="h-10 w-full rounded-xl border border-zinc-200 bg-zinc-50/50 pl-9 pr-3 text-xs text-zinc-900 transition focus:border-[#e2231a] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#e2231a] dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-50 dark:focus:bg-zinc-900"
+                    className="b2b-input"
                   />
                 </div>
               </div>
 
               {/* Grid: Name & Email */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                    Authorized Contact <span className="text-red-500">*</span>
+              <div className="b2b-grid-2col">
+                <div className="b2b-form-group">
+                  <label className="b2b-form-label">
+                    Authorized Contact <span className="b2b-form-required">*</span>
                   </label>
-                  <div className="relative">
-                    <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                  <div className="b2b-input-wrapper">
+                    <span className="b2b-input-icon">
+                      <UserIcon size={16} />
+                    </span>
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your Full Name"
-                      className="h-10 w-full rounded-xl border border-zinc-200 bg-zinc-50/50 pl-9 pr-3 text-xs text-zinc-900 transition focus:border-[#e2231a] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#e2231a] dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-50 dark:focus:bg-zinc-900"
+                      className="b2b-input"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                    Work Email <span className="text-red-500">*</span>
+                <div className="b2b-form-group">
+                  <label className="b2b-form-label">
+                    Work Email <span className="b2b-form-required">*</span>
                   </label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                  <div className="b2b-input-wrapper">
+                    <span className="b2b-input-icon">
+                      <Mail size={16} />
+                    </span>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="buyer@dealership.com"
-                      className="h-10 w-full rounded-xl border border-zinc-200 bg-zinc-50/50 pl-9 pr-3 text-xs text-zinc-900 transition focus:border-[#e2231a] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#e2231a] dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-50 dark:focus:bg-zinc-900"
+                      className="b2b-input"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Topic Category */}
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              <div className="b2b-form-group">
+                <label className="b2b-form-label">
                   Inquiry Topic
                 </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 text-xs text-zinc-900 transition focus:border-[#e2231a] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#e2231a] dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-50 dark:focus:bg-zinc-900"
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+                <div className="b2b-select-wrapper">
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="b2b-select"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="b2b-select-chevron">
+                    <ChevronDown size={16} />
+                  </span>
+                </div>
               </div>
 
               {/* Query Message */}
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                  Query Details <span className="text-red-500">*</span>
+              <div className="b2b-form-group">
+                <label className="b2b-form-label">
+                  Query Details <span className="b2b-form-required">*</span>
                 </label>
-                <div className="relative">
-                  <textarea
-                    rows={3}
-                    required
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Specify your reference number, verification details, or volume requirement..."
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-xs text-zinc-900 transition placeholder:text-zinc-400 focus:border-[#e2231a] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#e2231a] dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-50 dark:focus:bg-zinc-900"
-                  />
-                </div>
+                <textarea
+                  rows={3}
+                  required
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Specify your reference number, verification details, or volume requirement..."
+                  className="b2b-textarea"
+                />
               </div>
 
               {/* Honeypot field (hidden from real users) */}
@@ -298,20 +330,20 @@ export function B2BSupportModal() {
                 aria-hidden="true"
                 value={botCheck}
                 onChange={(e) => setBotCheck(e.target.value)}
-                className="pointer-events-none absolute -left-[9999px] h-0 w-0 opacity-0"
+                className="b2b-honeypot"
               />
 
               {/* Actions */}
-              <div className="mt-2 flex items-center justify-between gap-3 pt-2">
-                <span className="text-[11px] text-zinc-400">
-                  Replies are dispatched to your email inbox.
+              <div className="b2b-modal-footer">
+                <span className="b2b-modal-note">
+                  Replies are dispatched to your work email inbox.
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="b2b-modal-actions">
                   <button
                     type="button"
                     onClick={closeSupportModal}
-                    className="rounded-xl border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    className="b2b-btn-cancel"
                   >
                     Cancel
                   </button>
@@ -319,16 +351,16 @@ export function B2BSupportModal() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#e2231a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c81e16] disabled:opacity-50"
+                    className="b2b-btn-submit"
                   >
                     {loading ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 size={14} className="ws-spin" />
                         <span>Sending...</span>
                       </>
                     ) : (
                       <>
-                        <Send className="h-3.5 w-3.5" />
+                        <Send size={14} />
                         <span>Submit Query</span>
                       </>
                     )}

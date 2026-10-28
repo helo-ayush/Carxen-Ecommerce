@@ -1,0 +1,470 @@
+/* ==========================================================================
+   CARXEN B2B / COMMERCIAL SUPPORT MODAL STYLES
+   Engineered for clean rendering without external Tailwind dependencies.
+   ========================================================================== */
+
+@keyframes b2bFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes b2bSlideUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.b2b-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: b2bFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box;
+}
+
+.b2b-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 530px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+  animation: b2bSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* Modal Header */
+.b2b-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.b2b-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.b2b-modal-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #e2231a;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.b2b-modal-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.b2b-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.b2b-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.b2b-modal-sync-badge {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.b2b-modal-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.b2b-modal-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.b2b-modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Modal Body */
+.b2b-modal-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(90vh - 100px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Error Banner */
+.b2b-modal-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.b2b-modal-error svg {
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+/* Form Layout */
+.b2b-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.b2b-form-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.b2b-form-required {
+  color: #e2231a;
+}
+
+.b2b-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .b2b-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.b2b-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.b2b-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.b2b-input {
+  width: 100%;
+  height: 42px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 14px 0 38px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.b2b-input:focus {
+  background: #ffffff;
+  border-color: #e2231a;
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.12);
+  outline: none;
+}
+
+.b2b-input::placeholder {
+  color: #94a3b8;
+}
+
+.b2b-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.b2b-select {
+  width: 100%;
+  height: 42px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 36px 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.b2b-select:focus {
+  background: #ffffff;
+  border-color: #e2231a;
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.12);
+  outline: none;
+}
+
+.b2b-select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.b2b-textarea {
+  width: 100%;
+  min-height: 96px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.b2b-textarea:focus {
+  background: #ffffff;
+  border-color: #e2231a;
+  box-shadow: 0 0 0 3px rgba(226, 35, 26, 0.12);
+  outline: none;
+}
+
+.b2b-textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Honeypot field */
+.b2b-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Footer / Actions */
+.b2b-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.b2b-modal-note {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.b2b-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.b2b-btn-cancel {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.b2b-btn-cancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.b2b-btn-submit {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: none;
+  background: #e2231a;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(226, 35, 26, 0.25);
+  font-family: inherit;
+}
+
+.b2b-btn-submit:hover:not(:disabled) {
+  background: #c81e16;
+}
+
+.b2b-btn-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Success View */
+.b2b-success-container {
+  padding: 24px 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.b2b-success-icon-wrap {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: #ecfdf5;
+  color: #059669;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.b2b-success-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.b2b-success-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+  max-width: 420px;
+  margin: 0;
+}
+
+.b2b-btn-done {
+  margin-top: 10px;
+  height: 40px;
+  padding: 0 30px;
+  border-radius: 10px;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.b2b-btn-done:hover {
+  background: #1e293b;
+}
+
+.ws-spin {
+  animation: wsSpin 0.9s linear infinite;
+}
+
+@keyframes wsSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1099,6 +1099,13 @@ body:has(.wholesale-sidebar) {
   text-decoration: none;
   transition: all 0.16s ease;
   position: relative;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .wholesale-sidebar-link:hover {
