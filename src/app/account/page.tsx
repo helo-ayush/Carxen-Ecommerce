@@ -31,7 +31,6 @@ import {
   Copy,
   ExternalLink,
   ShieldCheck,
-  Sparkles,
   Phone,
   Mail,
   Calendar,
@@ -44,7 +43,6 @@ import {
   AlertTriangle,
   HelpCircle,
 } from 'lucide-react';
-import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import './account.css';
 
 type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
@@ -220,17 +218,6 @@ function AccountContent() {
   const phone = user?.phone || '';
   const avatarUrl = user?.avatarUrl;
 
-  // Retail-only membership tier (never show B2B wholesale tiers in personal B2C profile)
-  const retailTier = useMemo(() => {
-    if (!user?.tier || user.tier === 'Apex Gold Member') return null;
-    const t = user.tier.toLowerCase();
-    if (t.includes('wholesale') || t.includes('tier 1') || t.includes('tier 2') || t.includes('commercial')) {
-      return null;
-    }
-    return user.tier;
-  }, [user?.tier]);
-
-  const points = user?.rewardPoints ?? 250;
   const initials = getInitials(name);
 
   // Strictly B2C retail orders (commercial / wholesale consignments excluded)
@@ -241,15 +228,6 @@ function AccountContent() {
   const hasCommercialOrders = useMemo(() => {
     return (orders || []).some(isB2BOrder);
   }, [orders]);
-
-  // Strictly B2C items bought
-  const b2cProductsBought = useMemo(() => {
-    return b2cOrders
-      .filter((o) => o.status !== 'CANCELLED')
-      .reduce((sum, o) => sum + o.items.reduce((iSum, it) => iSum + (it.quantity || 1), 0), 0);
-  }, [b2cOrders]);
-
-  const b2cVerifiedBuyer = b2cProductsBought >= 3;
 
   // Strictly personal consumer shipping addresses (commercial warehouse hubs excluded)
   const b2cAddresses = useMemo(() => {
@@ -959,30 +937,6 @@ function AccountContent() {
                     <div>
                       <div className="ac-user-heading">
                         <span className="ac-user-name">{name}</span>
-                        {b2cVerifiedBuyer && (
-                          <VerifiedBadge
-                            size={20}
-                            tooltipText="Verified Retail Buyer · Purchased 3+ items from CARXEN"
-                          />
-                        )}
-                        {retailTier && (
-                          <span className="ac-member-pill">
-                            <Sparkles size={12} color="#e2231a" />
-                            {retailTier}
-                          </span>
-                        )}
-                        {b2cVerifiedBuyer ? (
-                          <span className="ac-verified-buyer-tag">
-                            Verified Buyer ({b2cProductsBought} items)
-                          </span>
-                        ) : (
-                          <span
-                            className="ac-buyer-progress-tag"
-                            title={`${Math.max(0, 3 - b2cProductsBought)} more item(s) needed to unlock Verified User badge`}
-                          >
-                            {b2cProductsBought}/3 to Verified
-                          </span>
-                        )}
                       </div>
                       <div className="ac-user-subtext">
                         <span>
@@ -1097,15 +1051,10 @@ function AccountContent() {
                     onClick={() => { setActiveTab('orders'); setOrderFilter('ALL'); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="ac-stat-number" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      {b2cOrders.length}
-                      {b2cVerifiedBuyer && (
-                        <VerifiedBadge size={16} tooltipText="Verified Retail Buyer · Purchased 3+ products" />
-                      )}
-                    </div>
+                    <div className="ac-stat-number">{b2cOrders.length}</div>
                     <div className="ac-stat-tag">
                       <Package size={12} />
-                      {b2cVerifiedBuyer ? `${b2cProductsBought} Items (Verified)` : `${b2cOrders.length} Orders (${b2cProductsBought} Items)`}
+                      Total Orders
                     </div>
                   </div>
 
