@@ -391,10 +391,10 @@ export default function WholesaleOrdersPage() {
                   ) : (
                     (() => {
                       const hoursElapsed = (Date.now() - new Date(ord.placedAt).getTime()) / (1000 * 60 * 60);
-                      const isWithin24h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 24 : true;
-                      const hoursLeft = Math.max(0, Math.ceil(24 - hoursElapsed));
+                      const isWithin6h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 6 : true;
+                      const hoursLeft = Math.max(0, Math.ceil(6 - hoursElapsed));
 
-                      if (isWithin24h && ord.status !== 'DELIVERED') {
+                      if (isWithin6h && ord.status !== 'DELIVERED') {
                         return (
                           <button
                             type="button"
@@ -576,7 +576,7 @@ export default function WholesaleOrdersPage() {
             </div>
 
             <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px' }}>
-              You are within the <strong>24-hour relief period</strong>. If you confirm, production and dispatch scheduling for this consignment will be halted immediately.
+              You are within the <strong>6-hour relief period</strong>. If you confirm, production and dispatch scheduling for this consignment will be halted immediately.
             </p>
 
             <div

@@ -1581,7 +1581,7 @@ export default function CheckoutPage() {
                         </button>
 
                         <div style={{ textAlign: 'center', fontSize: 11.5, color: '#71717a', marginTop: -8 }}>
-                          🔒 100% Cryptographically Verified &bull; Direct Carrier Tracking &bull; 24h Cancellation Relief
+                          🔒 100% Cryptographically Verified &bull; Direct Carrier Tracking &bull; 6h Cancellation Relief
                         </div>
                       </div>
                     )}

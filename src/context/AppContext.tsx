@@ -953,7 +953,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOrders((prev) => {
         const updated = prev.map((o) =>
           o.orderNumber === orderNumber || o.id === orderNumber
-            ? { ...o, status: 'CANCELLED' as const, statusMessage: 'Order cancelled within 24h relief period' }
+            ? { ...o, status: 'CANCELLED' as const, statusMessage: 'Order cancelled within 6h relief period' }
             : o
         );
         try {

@@ -1496,14 +1496,14 @@ function AccountContent() {
                               flexWrap: 'wrap',
                             }}
                           >
-                            {/* 24-Hour Cancellation Relief Period vs Contact Support Action */}
+                            {/* 6-Hour Cancellation Relief Period vs Contact Support Action */}
                             {(() => {
                               const isCancelled = order.status === 'CANCELLED';
                               const isDelivered = order.status === 'DELIVERED';
                               const placedTime = new Date(order.placedAt).getTime();
                               const hoursElapsed = (Date.now() - placedTime) / (1000 * 60 * 60);
-                              const isWithin24h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 24 : true;
-                              const hoursLeft = Math.max(0, Math.ceil(24 - (Number.isFinite(hoursElapsed) ? hoursElapsed : 0)));
+                              const isWithin6h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 6 : true;
+                              const hoursLeft = Math.max(0, Math.ceil(6 - (Number.isFinite(hoursElapsed) ? hoursElapsed : 0)));
 
                               if (isCancelled) {
                                 return (
@@ -1526,7 +1526,7 @@ function AccountContent() {
                                 );
                               }
 
-                              if (!isDelivered && isWithin24h) {
+                              if (!isDelivered && isWithin6h) {
                                 return (
                                   <button
                                     type="button"
@@ -1545,7 +1545,7 @@ function AccountContent() {
                                       alignItems: 'center',
                                       gap: '5px',
                                     }}
-                                    title="Cancel order within 24-hour relief period"
+                                    title="Cancel order within 6-hour relief period"
                                   >
                                     <XCircle size={13} />
                                     <span>Cancel Order ({hoursLeft}h left)</span>
@@ -1553,7 +1553,7 @@ function AccountContent() {
                                 );
                               }
 
-                              if (!isDelivered && !isWithin24h) {
+                              if (!isDelivered && !isWithin6h) {
                                 return (
                                   <a
                                     href={`mailto:support@carxen.com?subject=${encodeURIComponent(`Cancellation Request for Order #${order.orderNumber}`)}&body=${encodeURIComponent(`Hi CarXen Support,\n\nI would like to request cancellation for Order #${order.orderNumber}.\n\nThank you,\n${user?.name || ''}`)}`}
@@ -1573,7 +1573,7 @@ function AccountContent() {
                                       alignItems: 'center',
                                       gap: '5px',
                                     }}
-                                    title="24-hour relief period has ended. Contact customer support to request cancellation."
+                                    title="6-hour relief period has ended. Contact customer support to request cancellation."
                                   >
                                     <HelpCircle size={13} />
                                     <span>Contact Support to Cancel</span>
@@ -3190,7 +3190,7 @@ function AccountContent() {
                   Cancel Order #{cancelModalOrder.orderNumber}?
                 </h3>
                 <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                  You are within the 24-hour self-service cancellation window. Are you sure you want to cancel this order?
+                  You are within the 6-hour self-service cancellation window. Are you sure you want to cancel this order?
                 </p>
               </div>
             </div>

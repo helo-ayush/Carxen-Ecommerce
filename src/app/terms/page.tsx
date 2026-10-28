@@ -172,7 +172,7 @@ export default function TermsOfServicePage() {
                 </div>
                 <div className="legal-trust-point">
                   <RotateCcw size={14} />
-                  <span><strong>24-Hour Relief Period:</strong> Instant self-service order cancellation window before production.</span>
+                  <span><strong>6-Hour Relief Period:</strong> Instant self-service order cancellation window before production.</span>
                 </div>
                 <div className="legal-trust-point">
                   <ShieldCheck size={14} />
@@ -317,13 +317,13 @@ export default function TermsOfServicePage() {
                     </thead>
                     <tbody>
                       <tr>
-                        <td><strong>24-Hour Relief Cancellation</strong></td>
-                        <td>Within 24 Hours of order placement</td>
+                        <td><strong>6-Hour Relief Cancellation</strong></td>
+                        <td>Within 6 Hours of order placement</td>
                         <td>Self-service 1-click cancellation available via Account Profile or Wholesale Orders dashboard. 100% full refund automatically issued.</td>
                       </tr>
                       <tr>
-                        <td><strong>Post-24-Hour Window</strong></td>
-                        <td>After 24 Hours until dispatch</td>
+                        <td><strong>Post-6-Hour Window</strong></td>
+                        <td>After 6 Hours until dispatch</td>
                         <td>Orders enter live production & cutting queue. Cancellations require customer support authorization (care@carxen.io) and cannot be guaranteed.</td>
                       </tr>
                       <tr>
