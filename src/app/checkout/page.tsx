@@ -949,9 +949,13 @@ export default function CheckoutPage() {
                           <span style={{ fontWeight: 700, color: '#0e0e10', background: '#f4f3ef', borderRadius: 6, padding: '2px 6px', fontSize: 11 }}>
                             {it.qty}×
                           </span>
-                          <span style={{ color: '#0e0e10', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>
+                          <Link
+                            href={`/product/${it.id}`}
+                            className="inf-ck-confirm-product-link"
+                            title={`View ${it.name}`}
+                          >
                             {it.name}
-                          </span>
+                          </Link>
                         </div>
                         <b style={{ color: '#0e0e10', whiteSpace: 'nowrap' }}>{formatINR(it.price * it.qty)}</b>
                       </div>
@@ -1602,7 +1606,13 @@ export default function CheckoutPage() {
                         {cartEntries.map(({ product, qty }) => (
                           <div className="inf-ck-item" key={product.id}>
                             <div className="inf-ck-item-thumb-wrap">
-                              <ProductArt product={product} />
+                              <Link
+                                href={`/product/${product.id}`}
+                                className="inf-ck-item-thumb-link"
+                                title={`View ${product.n}`}
+                              >
+                                <ProductArt product={product} />
+                              </Link>
                               <button
                                 type="button"
                                 className="inf-ck-item-remove-btn"
@@ -1613,9 +1623,13 @@ export default function CheckoutPage() {
                               </button>
                             </div>
 
-                            <div className="inf-ck-item-name" title={product.n}>
+                            <Link
+                              href={`/product/${product.id}`}
+                              className="inf-ck-item-name"
+                              title={`View ${product.n}`}
+                            >
                               {product.n}
-                            </div>
+                            </Link>
 
                             <div className="inf-ck-item-stepper">
                               <button

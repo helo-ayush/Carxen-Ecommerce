@@ -248,11 +248,23 @@ export function CartDrawer() {
                   <div className="cx-cart-upsells-list">
                     {upsellProducts.map((addon) => (
                       <div className="cx-cart-upsell-item" key={addon.id}>
-                        <div className="cx-cart-upsell-thumb">
+                        <Link
+                          href={`/product/${addon.id}`}
+                          onClick={closeCart}
+                          className="cx-cart-upsell-thumb"
+                          title={`View ${addon.n}`}
+                        >
                           <ProductArt product={addon} />
-                        </div>
+                        </Link>
                         <div className="cx-cart-upsell-info">
-                          <div className="cx-cart-upsell-name">{addon.n}</div>
+                          <Link
+                            href={`/product/${addon.id}`}
+                            onClick={closeCart}
+                            className="cx-cart-upsell-name"
+                            title={`View ${addon.n}`}
+                          >
+                            {addon.n}
+                          </Link>
                           <div className="cx-cart-upsell-price">{formatINR(addon.p)}</div>
                         </div>
                         <button
