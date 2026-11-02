@@ -248,7 +248,16 @@ class QueryBuilder<T = any> {
       return resolved;
     };
 
-    const returningCols = this.selectedColumns === '*' ? '*' : this.selectedColumns;
+    const returningCols = this.selectedColumns === '*'
+      ? '*'
+      : this.selectedColumns
+          .split(',')
+          .map((c) => {
+            const trimmed = c.trim();
+            if (trimmed.includes('"') || trimmed === '*') return trimmed;
+            return `"${trimmed}"`;
+          })
+          .join(', ');
 
     if (this.operation === 'INSERT') {
       const rows = Array.isArray(this.insertData) ? this.insertData : [this.insertData];

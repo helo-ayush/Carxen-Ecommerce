@@ -331,10 +331,11 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       })
       .eq('id', existing.id)
-      .select('id, createdAt')
+      .select('*')
       .single();
 
     if (updateErr || !updated) {
+      console.error('Failed to update review in postgres:', updateErr);
       return NextResponse.json({ error: 'Could not update your review. Please try again.' }, { status: 500 });
     }
 
@@ -345,6 +346,7 @@ export async function POST(request: NextRequest) {
           rating,
           title,
           body,
+          status,
           verifiedPurchase: true,
           createdAt: updated.createdAt,
           customerName: customer.name || 'Verified Buyer',
@@ -373,10 +375,11 @@ export async function POST(request: NextRequest) {
       publishedAt,
       updatedAt: new Date().toISOString(),
     })
-    .select('id, createdAt')
+    .select('*')
     .single();
 
   if (error || !inserted) {
+    console.error('Failed to insert review in postgres:', error);
     return NextResponse.json({ error: 'Could not save your review. Please try again.' }, { status: 500 });
   }
 
@@ -387,6 +390,7 @@ export async function POST(request: NextRequest) {
         rating,
         title,
         body,
+        status,
         verifiedPurchase: true,
         createdAt: inserted.createdAt,
         customerName: customer.name || 'Verified Buyer',

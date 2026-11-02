@@ -575,12 +575,25 @@ function ProductDetailContent({ product }: { product: Product }) {
       setIsWritingReview(false);
       setReviewTitle('');
       setReviewComment('');
-      if (payload?.status === 'PUBLISHED' && payload.review) {
-        setReviews((current) => [payload.review as CustomerReview, ...current]);
-        showToast('Your review is published. Thank you!');
-      } else {
-        showToast('Your review was submitted and will appear once approved.');
+      if (payload?.review) {
+        setReviews((current) => {
+          const filtered = current.filter((r) => r.id !== payload.review.id);
+          return [payload.review as CustomerReview, ...filtered];
+        });
+        showToast(payload.status === 'PUBLISHED' ? 'Your review is published. Thank you!' : 'Your review was submitted and is under moderation.');
       }
+
+      // Re-fetch reviews to stay completely in sync with database
+      try {
+        const syncRes = await fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
+          headers,
+          cache: 'no-store',
+        });
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          if (Array.isArray(syncData.reviews)) setReviews(syncData.reviews);
+        }
+      } catch {}
     } catch {
       showToast('Could not submit your review. Please try again.');
     } finally {
