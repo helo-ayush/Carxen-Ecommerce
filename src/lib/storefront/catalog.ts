@@ -124,25 +124,8 @@ const SERIES_KEYS = ['Signature', 'Sport', 'Urban', 'Essentials'] as const;
 const ART_KEYS = ['seat', 'mats', 'wheel', 'pillow', 'arm', 'trunk'] as const;
 
 function getCatalogConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-  const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim();
-
-  const missing = [
-    !supabaseUrl && 'NEXT_PUBLIC_SUPABASE_URL',
-    !supabaseAnonKey && 'NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-    !storeSlug && 'NEXT_PUBLIC_ECOMMERCE_STORE_SLUG',
-  ].filter((name): name is string => Boolean(name));
-
-  if (missing.length > 0) {
-    throw new CatalogConfigurationError(
-      `Catalog backend is not configured. Set ${missing.join(', ')}.`,
-    );
-  }
-
-  return { supabaseUrl: supabaseUrl!, supabaseAnonKey: supabaseAnonKey!, storeSlug: storeSlug! };
+  const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
+  return { storeSlug };
 }
 
 function asFiniteNumber(value: unknown): number | null {
@@ -414,14 +397,8 @@ export async function getStorefrontProducts(options?: {
   isWholesale?: boolean;
   wholesaleTier?: 'tier1' | 'tier2';
 }): Promise<StorefrontProductsResponse> {
-  const { supabaseUrl, supabaseAnonKey, storeSlug } = getCatalogConfig();
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
+  const { storeSlug } = getCatalogConfig();
+  const supabase = getSupabaseAdmin();
 
   const { data: storeData, error: storeError } = await supabase
     .from('ecommerce_stores')
