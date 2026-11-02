@@ -191,62 +191,35 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
     setActiveThumbIndex(0);
   }, [selectedColorIdx]);
 
-  // Gallery perspectives
+  // Gallery — only real uploaded images, never stock photos
   const galleryPerspectives = useMemo(() => {
-    const defaultAngles = [
-      {
-        url: product.image || '/quilted-seat-bench.jpg',
-        title: 'Factory Showcase Angle',
-        badge: 'Studio',
-        icon: 'car',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=85',
-        title: 'Cockpit Fitment View',
-        badge: 'Cockpit',
-        icon: 'gauge',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1583573278124-e8d4fd3edf3c?auto=format&fit=crop&w=1200&q=85',
-        title: 'Precision Quilt / Seam Macro',
-        badge: 'Texture',
-        icon: 'sparkles',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=85',
-        title: 'Side Bolsters & Foam Density',
-        badge: 'Bolsters',
-        icon: 'shield',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=85',
-        title: 'Installed Road Test Angle',
-        badge: 'Road Test',
-        icon: 'compass',
-      },
-    ];
+    const ICON_ORDER = ['car', 'gauge', 'sparkles', 'shield', 'compass'];
+    const labelFor = (idx: number): string => {
+      const meta = (product as any).imageMeta;
+      if (Array.isArray(meta) && meta[idx]?.label) return meta[idx].label;
+      return `Photo ${idx + 1}`;
+    };
 
-    // Priority 1: Images uploaded specifically for the selected color choice!
+    // Priority 1: color-specific images
     if (activeColor?.images && activeColor.images.length > 0) {
       return activeColor.images.map((img: string, idx: number) => ({
         url: img,
-        title: `${activeColor.name} Angle ${idx + 1}`,
-        badge: idx === 0 ? `${activeColor.name}` : `Angle ${idx + 1}`,
-        icon: defaultAngles[idx % defaultAngles.length]?.icon || 'car',
+        title: idx === 0 ? activeColor.name : `${activeColor.name} — Angle ${idx + 1}`,
+        badge: idx === 0 ? activeColor.name : `Angle ${idx + 1}`,
+        icon: ICON_ORDER[idx % ICON_ORDER.length],
       }));
     }
 
-    // Priority 2: Base gallery images of the product
-    if (Array.isArray(product.images) && product.images.length > 1) {
-      return product.images.map((img: string, idx: number) => ({
-        url: img,
-        title: defaultAngles[idx % defaultAngles.length].title,
-        badge: defaultAngles[idx % defaultAngles.length].badge,
-        icon: defaultAngles[idx % defaultAngles.length].icon,
-      }));
+    // Priority 2: base product images with owner labels
+    const baseImages = Array.isArray(product.images) && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+    if (baseImages.length > 0) {
+      return baseImages.map((img: string, idx: number) => {
+        const label = labelFor(idx);
+        return { url: img, title: label, badge: label, icon: ICON_ORDER[idx % ICON_ORDER.length] };
+      });
     }
 
-    return defaultAngles;
+    return [];
   }, [product, activeColor]);
 
   // Fixed 6-in-a-row thumbnail row pagination
@@ -382,7 +355,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
             {/* Perspective Label */}
             <div className="ws-pdp-perspective-tag">
               <Car size={13} />
-              <span>{galleryPerspectives[activeThumbIndex]?.title || 'Studio Showcase'}</span>
+              <span>{galleryPerspectives[activeThumbIndex]?.title || ''}</span>
             </div>
 
             {/* Chevron Navigation */}

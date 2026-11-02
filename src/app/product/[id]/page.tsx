@@ -275,62 +275,41 @@ function ProductDetailContent({ product }: { product: Product }) {
     setActiveThumbIndex(0);
   }, [selectedColorIdx]);
 
-  // Curated automotive perspective angles with unique car icons for slider testing
+  // Build gallery from ONLY real uploaded images — never show random stock photos
   const galleryPerspectives = useMemo(() => {
-    const defaultAngles = [
-      {
-        url: product.image || 'https://images.unsplash.com/photo-1549064233-945d7063292f?auto=format&fit=crop&w=1200&q=85',
-        title: 'Studio Overview',
-        badge: 'Studio',
-        icon: 'car',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=85',
-        title: 'Cockpit Fitment',
-        badge: 'Cockpit',
-        icon: 'gauge',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1583573278124-e8d4fd3edf3c?auto=format&fit=crop&w=1200&q=85',
-        title: 'Diamond Quilt Macro',
-        badge: 'Texture',
-        icon: 'sparkles',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=85',
-        title: 'Ergonomic Bolsters',
-        badge: 'Bolsters',
-        icon: 'shield',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=85',
-        title: 'Vehicle Road Perspective',
-        badge: 'Road Test',
-        icon: 'compass',
-      },
-    ];
+    const ICON_ORDER = ['car', 'gauge', 'sparkles', 'shield', 'compass'];
+    const labelFor = (idx: number): string => {
+      const meta = (product as any).imageMeta;
+      if (Array.isArray(meta) && meta[idx]?.label) return meta[idx].label;
+      return `Photo ${idx + 1}`;
+    };
 
-    // Priority 1: Images uploaded specifically for the selected color choice!
+    // Priority 1: color-specific images
     if (activeColor?.images && activeColor.images.length > 0) {
       return activeColor.images.map((img: string, idx: number) => ({
         url: img,
-        title: `${activeColor.name} Perspective ${idx + 1}`,
-        badge: idx === 0 ? `${activeColor.name}` : `Angle ${idx + 1}`,
-        icon: defaultAngles[idx % defaultAngles.length]?.icon || 'car',
+        title: idx === 0 ? `${activeColor.name}` : `${activeColor.name} — Angle ${idx + 1}`,
+        badge: idx === 0 ? activeColor.name : `Angle ${idx + 1}`,
+        icon: ICON_ORDER[idx % ICON_ORDER.length],
       }));
     }
 
-    // Priority 2: Base gallery images of the product
-    if (Array.isArray(product.images) && product.images.length > 1) {
-      return product.images.map((img: string, idx: number) => ({
-        url: img,
-        title: defaultAngles[idx % defaultAngles.length].title,
-        badge: defaultAngles[idx % defaultAngles.length].badge,
-        icon: defaultAngles[idx % defaultAngles.length].icon,
-      }));
+    // Priority 2: base product images with owner labels
+    const baseImages = Array.isArray(product.images) && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+    if (baseImages.length > 0) {
+      return baseImages.map((img: string, idx: number) => {
+        const label = labelFor(idx);
+        return {
+          url: img,
+          title: label,
+          badge: label,
+          icon: ICON_ORDER[idx % ICON_ORDER.length],
+        };
+      });
     }
 
-    return defaultAngles;
+    // No images uploaded — return empty (gallery will show placeholder)
+    return [];
   }, [product, activeColor]);
 
   const [activeThumbIndex, setActiveThumbIndex] = useState(0);
@@ -789,7 +768,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                 {/* Perspective Badge in Top-Right */}
                 <div className="ps-perspective-pill">
                   <Car size={13} />
-                  <span>{galleryPerspectives[activeThumbIndex]?.title || 'Studio Angle'}</span>
+                  <span>{galleryPerspectives[activeThumbIndex]?.title || ''}</span>
                 </div>
 
                 {/* In-Image Left/Right Navigation Chevrons */}
@@ -834,7 +813,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                 {/* Showcase Image with interactive cursor-following zoom */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={galleryPerspectives[activeThumbIndex]?.url || product.image}
+                  src={galleryPerspectives[activeThumbIndex]?.url || ''}
                   alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title}`}
                   style={{
                     transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
