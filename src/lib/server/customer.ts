@@ -71,9 +71,17 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 }> {
   const supabase = getSupabaseAdmin();
   const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.toLowerCase().startsWith('bearer ')
+  let token = authHeader.toLowerCase().startsWith('bearer ')
     ? authHeader.slice(7).trim()
     : null;
+
+  if (!token) {
+    const cookieHeader = request.headers.get('cookie') || '';
+    const match = cookieHeader.match(/cx_session=([^;]+)/);
+    if (match) {
+      token = decodeURIComponent(match[1].trim());
+    }
+  }
 
   let authUser: any = null;
 

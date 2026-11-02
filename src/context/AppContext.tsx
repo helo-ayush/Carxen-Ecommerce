@@ -260,11 +260,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
       try {
-        const cached = typeof window !== 'undefined' ? localStorage.getItem('cx_demo_user') : null;
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed.id) customHeaders['x-demo-user-id'] = parsed.id;
-          if (parsed.email) customHeaders['x-demo-user-email'] = parsed.email;
+        if (typeof window !== 'undefined') {
+          const directToken = localStorage.getItem('cx_auth_token');
+          if (directToken && !customHeaders['Authorization']) {
+            customHeaders['Authorization'] = `Bearer ${directToken}`;
+          }
+          const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.id) customHeaders['x-demo-user-id'] = parsed.id;
+            if (parsed.email) customHeaders['x-demo-user-email'] = parsed.email;
+          }
         }
       } catch {}
 
@@ -337,6 +343,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers['Authorization'] = `Bearer ${data.session.access_token}`;
       }
     } catch {}
+
+    if (!headers['Authorization'] && typeof window !== 'undefined') {
+      try {
+        const directToken = localStorage.getItem('cx_auth_token');
+        if (directToken) {
+          headers['Authorization'] = `Bearer ${directToken}`;
+        }
+      } catch {}
+    }
+
     if (user?.id) headers['x-demo-user-id'] = user.id;
     if (user?.email) headers['x-demo-user-email'] = user.email;
     return headers;
@@ -345,8 +361,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchCustomerBackendProfile = async (sessionToken?: string, u?: any) => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
+      let activeToken = sessionToken;
+      if (!activeToken && typeof window !== 'undefined') {
+        try {
+          activeToken = localStorage.getItem('cx_auth_token') || undefined;
+        } catch {}
+      }
+      if (activeToken) {
+        headers['Authorization'] = `Bearer ${activeToken}`;
       }
       const activeId = u?.id || user?.id;
       const activeEmail = u?.email || user?.email;
@@ -432,33 +454,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn('Supabase getSession warning:', error.message);
-          if (mounted) {
-            // Check for locally persisted active demo user
-            try {
-              const cached = localStorage.getItem('cx_demo_user');
-              if (cached) {
-                const parsed = JSON.parse(cached);
-                setUser(parsed);
-                void fetchCustomerBackendProfile(undefined, parsed);
-              } else {
-                setUser(null);
-              }
-            } catch {
-              setUser(null);
-            }
-            setAuthLoading(false);
-          }
-          return;
         }
         if (mounted) {
-          if (data.session?.user) {
+          if (data?.session?.user) {
             setUser(constructUserFromSession(data.session.user));
             void fetchCustomerBackendProfile(data.session.access_token, data.session.user);
           } else {
+            // Check for locally persisted active user session (direct DB auth or demo)
             try {
-              const cached = localStorage.getItem('cx_demo_user');
-              if (cached) {
-                const parsed = JSON.parse(cached);
+              const cachedProfile = localStorage.getItem('cx_user_profile');
+              const cachedToken = localStorage.getItem('cx_auth_token');
+              const cachedDemo = localStorage.getItem('cx_demo_user');
+
+              if (cachedProfile) {
+                const parsed = JSON.parse(cachedProfile);
+                setUser(parsed);
+                void fetchCustomerBackendProfile(cachedToken || undefined, parsed);
+              } else if (cachedDemo) {
+                const parsed = JSON.parse(cachedDemo);
                 setUser(parsed);
                 void fetchCustomerBackendProfile(undefined, parsed);
               } else {
@@ -473,7 +486,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Auth initialization error:', err);
         if (mounted) {
-          setUser(null);
+          try {
+            const cachedProfile = localStorage.getItem('cx_user_profile');
+            const cachedToken = localStorage.getItem('cx_auth_token');
+            if (cachedProfile) {
+              const parsed = JSON.parse(cachedProfile);
+              setUser(parsed);
+              void fetchCustomerBackendProfile(cachedToken || undefined, parsed);
+            } else {
+              setUser(null);
+            }
+          } catch {
+            setUser(null);
+          }
           setAuthLoading(false);
         }
       }
@@ -487,17 +512,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setUser(constructUserFromSession(session.user));
           void fetchCustomerBackendProfile(session.access_token, session.user);
         } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setOrders([]);
-          setAddresses([]);
-          setB2bProfile(null);
+          // Do not log out if user is signed in with a direct DB session
+          let hasDirectSession = false;
           try {
-            localStorage.removeItem('cx_demo_user');
-            localStorage.removeItem('cx_user');
-            localStorage.removeItem('cx_order_history');
-            localStorage.removeItem('cx_addresses');
-            localStorage.removeItem('cx_user_profile');
+            hasDirectSession = Boolean(localStorage.getItem('cx_auth_token') || localStorage.getItem('cx_user_profile'));
           } catch {}
+
+          if (!hasDirectSession) {
+            setUser(null);
+            setOrders([]);
+            setAddresses([]);
+            setB2bProfile(null);
+            try {
+              localStorage.removeItem('cx_demo_user');
+              localStorage.removeItem('cx_user');
+              localStorage.removeItem('cx_order_history');
+              localStorage.removeItem('cx_addresses');
+              localStorage.removeItem('cx_user_profile');
+              localStorage.removeItem('cx_auth_token');
+            } catch {}
+          }
         }
         setAuthLoading(false);
       }
@@ -680,7 +714,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           name: result.user.name || result.user.fullName || 'Driver',
           email: result.user.email,
           phone: result.user.phone || '',
-          avatar: '',
+          avatarUrl: '',
         };
         setUser(constructed);
         setOrders([]);
@@ -688,6 +722,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setB2bProfile(null);
         try {
           localStorage.setItem('cx_user_profile', JSON.stringify(constructed));
+          if (result.token) {
+            localStorage.setItem('cx_auth_token', result.token);
+            document.cookie = `cx_session=${encodeURIComponent(result.token)}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+          }
         } catch {}
         void fetchCustomerBackendProfile(result.token, result.user);
         showToast(`Welcome back, ${constructed.name}!`);
@@ -771,7 +809,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('cx_order_history');
       localStorage.removeItem('cx_addresses');
       localStorage.removeItem('cx_user_profile');
+      localStorage.removeItem('cx_auth_token');
       localStorage.removeItem('cx_custom_coupons');
+      document.cookie = 'cx_session=; path=/; max-age=0; SameSite=Lax';
     } catch (e) {}
     showToast('Signed out successfully');
   };

@@ -421,9 +421,13 @@ export default function CheckoutPage() {
 
     if (typeof window !== 'undefined') {
       try {
-        const demoUser = localStorage.getItem('cx_demo_user');
-        if (demoUser) {
-          const parsed = JSON.parse(demoUser);
+        const directToken = localStorage.getItem('cx_auth_token');
+        if (directToken && !headers['Authorization']) {
+          headers['Authorization'] = `Bearer ${directToken}`;
+        }
+        const cachedUser = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+        if (cachedUser) {
+          const parsed = JSON.parse(cachedUser);
           if (parsed.id) headers['x-demo-user-id'] = parsed.id;
           if (parsed.email) headers['x-demo-user-email'] = parsed.email;
         }

@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         );
       } catch {}
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         user: {
           id: userRow.id,
@@ -56,6 +56,16 @@ export async function POST(request: Request) {
         },
         token: userRow.id, // User ID acts as session token for direct DB auth
       });
+
+      // 30 days persistent cookie
+      response.cookies.set('cx_session', userRow.id, {
+        httpOnly: false,
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
+        sameSite: 'lax',
+      });
+
+      return response;
     }
 
     return NextResponse.json(
