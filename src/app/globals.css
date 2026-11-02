@@ -9296,7 +9296,7 @@ footer {
     max-width: 100%;
     box-sizing: border-box;
   }
-  .shop-sidebar-card { display: none; }
+  .shop-sidebar-card:not(.open) { display: none; }
 
 
   .shop-category-pills {

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { isOrderAccessToken } from './order-access';
 import type {
   StorefrontCheckoutRequest,
@@ -265,11 +266,22 @@ export function parseCheckoutPayload(value: unknown): StorefrontCheckoutRequest 
 }
 
 function getOrderConfig() {
+  const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
+  const hasPg = Boolean(process.env.DATABASE_URL?.trim() || process.env.DIRECT_URL?.trim());
+
+  if (hasPg) {
+    return {
+      storeSlug,
+      hasPg: true,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '',
+      supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '',
+    };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const supabaseAnonKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-  const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim();
 
   const missing = [
     !supabaseUrl && 'NEXT_PUBLIC_SUPABASE_URL',
@@ -287,16 +299,18 @@ function getOrderConfig() {
 
   return {
     supabaseUrl: supabaseUrl!,
-    // Orders intentionally use the public anon/publishable key. A service-role key is never
-    // read by this storefront route or sent to the browser.
     supabaseAnonKey: supabaseAnonKey!,
     storeSlug: storeSlug!,
+    hasPg: false,
   };
 }
 
 function getSupabaseClient() {
-  const { supabaseUrl, supabaseAnonKey } = getOrderConfig();
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  const config = getOrderConfig();
+  if (config.hasPg) {
+    return getSupabaseAdmin() as any;
+  }
+  return createClient(config.supabaseUrl, config.supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -305,21 +319,21 @@ function getSupabaseClient() {
   });
 }
 
-function throwRpcError(error: { code?: string | null }, operation: 'place' | 'get'): never {
+function throwRpcError(error: { code?: string | null; message?: string }, operation: 'place' | 'get'): never {
   if (error.code === 'P0001') {
     throw new StorefrontOrderError(
-      operation === 'place'
+      error.message || (operation === 'place'
         ? 'The order could not be placed. Check your cart, coupon, and checkout details, then try again.'
-        : 'The order could not be loaded right now.',
+        : 'The order could not be loaded right now.'),
       operation === 'place' ? 400 : 502,
       'rpc_validation',
     );
   }
 
   throw new StorefrontOrderError(
-    operation === 'place'
+    error.message || (operation === 'place'
       ? 'The order service could not save this order right now.'
-      : 'The order service could not load this order right now.',
+      : 'The order service could not load this order right now.'),
     502,
     'rpc_failure',
   );
