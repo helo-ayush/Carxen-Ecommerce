@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
+import { SITE_URL } from '@/lib/seo';
 import '@/app/legal.css';
 import {
   FileText,
@@ -21,14 +22,14 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | CARXEN — Precision Automotive Accessories',
+  title: 'Terms of Service',
   description:
     'Read the CarXen Terms of Service. Understand our terms of use, vehicle fitment guarantee, Google authentication integration, order fulfillment, warranty, cancellation relief, and no-returns policy.',
   openGraph: {
-    title: 'Terms of Service | CARXEN',
+    title: 'Terms of Service | Carxen',
     description:
       'CarXen Terms of Service — Clear, transparent rules for orders, custom fitment, and account security.',
-    url: 'https://carxen.com/terms',
+    url: `${SITE_URL}/terms`,
   },
 };
 

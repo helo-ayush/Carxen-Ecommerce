@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
+import { SITE_URL } from '@/lib/seo';
 import '@/app/legal.css';
 import {
   ShieldCheck,
@@ -21,14 +22,14 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | CARXEN — Precision Automotive Accessories',
+  title: 'Privacy Policy',
   description:
     'Read the CarXen Privacy Policy. Learn how we handle your personal information, protect your data, and adhere to Google API Services User Data Policy and Limited Use requirements.',
   openGraph: {
-    title: 'Privacy Policy | CARXEN',
+    title: 'Privacy Policy | Carxen',
     description:
       'CarXen Privacy Policy — Transparency, zero data selling, and Google OAuth compliance.',
-    url: 'https://carxen.com/privacy',
+    url: `${SITE_URL}/privacy`,
   },
 };
 

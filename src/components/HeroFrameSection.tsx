@@ -374,6 +374,21 @@ export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
             <p className="hv-finale-pre mono">{heroConfig?.preTitle || 'The complete car accessories brand'}</p>
             <h1 className="hv-finale-logo disp">
               <img src="/logo.png" alt="CARXEN Car Accessories" className="hv-finale-logo-img" />
+              <span
+                style={{
+                  position: 'absolute',
+                  width: '1px',
+                  height: '1px',
+                  padding: 0,
+                  margin: '-1px',
+                  overflow: 'hidden',
+                  clip: 'rect(0 0 0 0)',
+                  whiteSpace: 'nowrap',
+                  border: 0,
+                }}
+              >
+                Carxen — Premium Car Accessories Online: Seat Covers, Floor Mats &amp; Steering Covers
+              </span>
             </h1>
             <p className="hv-finale-slogan">{heroConfig?.slogan || 'Engineered for every drive.'}</p>
             <div className="hv-finale-line" />
