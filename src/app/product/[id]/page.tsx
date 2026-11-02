@@ -708,21 +708,18 @@ function ProductDetailContent({ product }: { product: Product }) {
       : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Pagination system: page-by-page loading (4 reviews per page)
-  const REVIEWS_PER_PAGE = 4;
-  const [reviewPage, setReviewPage] = useState(1);
+  // Progressive review loading (shows 5 reviews initially, loads 5 more per click)
+  const REVIEWS_BATCH_SIZE = 5;
+  const [visibleReviewCount, setVisibleReviewCount] = useState(REVIEWS_BATCH_SIZE);
 
-  // Reset page to 1 whenever active filter changes
+  // Reset to initial batch when filter changes
   React.useEffect(() => {
-    setReviewPage(1);
+    setVisibleReviewCount(REVIEWS_BATCH_SIZE);
   }, [activeReviewFilter]);
 
-  const totalReviewPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE));
-
-  const paginatedReviews = useMemo(() => {
-    const start = (reviewPage - 1) * REVIEWS_PER_PAGE;
-    return filteredReviews.slice(start, start + REVIEWS_PER_PAGE);
-  }, [filteredReviews, reviewPage]);
+  const displayedReviews = useMemo(() => {
+    return filteredReviews.slice(0, visibleReviewCount);
+  }, [filteredReviews, visibleReviewCount]);
 
   return (
     <div className="ps-page-wrapper">
@@ -1826,7 +1823,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
           ) : (
             <div className="ps-review-cards-list">
-              {paginatedReviews.map((rev) => (
+              {displayedReviews.map((rev) => (
                 <div key={rev.id} className="ps-review-item-card">
                   <div className="ps-review-item-top">
                     <div className="ps-review-author-wrap">
@@ -1868,59 +1865,58 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Pagination Controls Bar */}
+          {/* Progressive Load More Controls */}
           {filteredReviews.length > 0 && (
-            <div className="ps-reviews-pagination-wrap">
-              <div className="ps-reviews-pagination-info">
-                Showing {(reviewPage - 1) * REVIEWS_PER_PAGE + 1}–
-                {Math.min(reviewPage * REVIEWS_PER_PAGE, filteredReviews.length)} of {filteredReviews.length} reviews
+            <div className="ps-reviews-pagination-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '24px' }}>
+              <div className="ps-reviews-pagination-info" style={{ color: 'var(--steel, #5d5d64)', fontSize: '13px' }}>
+                Showing {displayedReviews.length} of {filteredReviews.length} reviews
               </div>
 
-              {totalReviewPages > 1 && (
-                <div className="ps-reviews-pagination-controls">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {filteredReviews.length > displayedReviews.length && (
                   <button
                     type="button"
                     className="ps-reviews-page-btn"
-                    disabled={reviewPage === 1}
-                    onClick={() => {
-                      setReviewPage((p) => Math.max(1, p - 1));
-                      document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    onClick={() => setVisibleReviewCount((prev) => prev + REVIEWS_BATCH_SIZE)}
+                    style={{
+                      height: '40px',
+                      padding: '0 22px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      background: 'var(--ink, #0e0e0f)',
+                      color: '#ffffff',
+                      borderColor: 'var(--ink, #0e0e0f)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
-                    aria-label="Previous page"
                   >
-                    ← Previous
+                    <span>Show more reviews</span>
+                    <span style={{ opacity: 0.75, fontSize: '12px', fontWeight: 500 }}>
+                      ({filteredReviews.length - displayedReviews.length} remaining)
+                    </span>
+                    <span>↓</span>
                   </button>
+                )}
 
-                  <div className="ps-reviews-page-numbers">
-                    {Array.from({ length: totalReviewPages }, (_, idx) => idx + 1).map((pageNum) => (
-                      <button
-                        key={pageNum}
-                        type="button"
-                        className={`ps-reviews-page-num ${reviewPage === pageNum ? 'active' : ''}`}
-                        onClick={() => {
-                          setReviewPage(pageNum);
-                          document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                      >
-                        {pageNum}
-                      </button>
-                    ))}
-                  </div>
-
+                {visibleReviewCount > REVIEWS_BATCH_SIZE && (
                   <button
                     type="button"
                     className="ps-reviews-page-btn"
-                    disabled={reviewPage === totalReviewPages}
                     onClick={() => {
-                      setReviewPage((p) => Math.min(totalReviewPages, p + 1));
+                      setVisibleReviewCount(REVIEWS_BATCH_SIZE);
                       document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
                     }}
-                    aria-label="Next page"
+                    style={{
+                      height: '40px',
+                      padding: '0 18px',
+                      fontSize: '12.5px',
+                    }}
                   >
-                    Next →
+                    Show less ↑
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </section>
