@@ -646,23 +646,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithEmail = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      // 1. Try Supabase Client
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (!error && data?.user) {
+          const constructed = constructUserFromSession(data.user);
+          setUser(constructed);
+          setOrders([]);
+          setAddresses([]);
+          setB2bProfile(null);
+          void fetchCustomerBackendProfile(data.session?.access_token, data.user);
+          showToast(`Welcome back, ${constructed.name}!`);
+          return { error: null };
+        }
+      } catch {}
+
+      // 2. Direct Database Login via /api/auth/login
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (error) {
-        return { error: error.message };
+      const result = await resp.json();
+      if (!resp.ok) {
+        return { error: result.error || 'Login failed' };
       }
-      if (data.user) {
-        const constructed = constructUserFromSession(data.user);
+      if (result.user) {
+        const constructed = {
+          id: result.user.id,
+          name: result.user.name || result.user.fullName || 'Driver',
+          email: result.user.email,
+          phone: result.user.phone || '',
+          avatar: '',
+        };
         setUser(constructed);
         setOrders([]);
         setAddresses([]);
         setB2bProfile(null);
-        void fetchCustomerBackendProfile(data.session?.access_token, data.user);
+        try {
+          localStorage.setItem('cx_user_profile', JSON.stringify(constructed));
+        } catch {}
+        void fetchCustomerBackendProfile(result.token, result.user);
         showToast(`Welcome back, ${constructed.name}!`);
+        return { error: null };
       }
-      return { error: null };
+      return { error: 'Login failed' };
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Login failed' };
     }
@@ -689,35 +720,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { error: result.error || 'Account creation failed' };
       }
 
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-
-      if (signInError) {
-        return {
-          error: null,
-          requiresEmailConfirmation: false,
-        };
-      }
-
-      if (signInData.user) {
-        const constructed = constructUserFromSession(signInData.user);
-        setUser(constructed);
-        setOrders([]);
-        setAddresses([]);
-        setB2bProfile(null);
-        try {
-          localStorage.removeItem('cx_order_history');
-          localStorage.removeItem('cx_addresses');
-          localStorage.removeItem('cx_user_profile');
-        } catch {}
-        void fetchCustomerBackendProfile(signInData.session?.access_token, signInData.user);
-        showToast(`Welcome to CARXEN, ${constructed.name}!`);
-      }
-
-      return { error: null, requiresEmailConfirmation: false };
+      // Automatically sign in the newly registered user
+      return await loginWithEmail(email, password);
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Sign up failed' };
     }
