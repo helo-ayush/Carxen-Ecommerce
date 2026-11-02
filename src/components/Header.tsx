@@ -373,27 +373,43 @@ function HeaderContent() {
             })}
           </div>
 
+          <div className="wholesale-nav-group">
+            <div className="wholesale-sidebar-label">Support</div>
+            <button
+              type="button"
+              onClick={() => openSupportModal({
+                category: 'General Commercial Support',
+                initialMessage: 'Customer support inquiry regarding wholesale operations.',
+              })}
+              className="wholesale-sidebar-link"
+              title="Open Customer Support modal"
+            >
+              <WholesaleIcon name="phone" size={18} />
+              <span>Customer Support</span>
+            </button>
+          </div>
+
           <div className="wholesale-sidebar-spacer" />
 
           {/* CarXen Commercial Support Desk in Sidebar */}
           <div className="wholesale-sidebar-card ws-sidebar-commercial-desk">
             <div className="ws-sidebar-card-header">
-              <WholesaleIcon name="invoice" size={14} />
-              <span>Commercial Support Desk</span>
+              <WholesaleIcon name="phone" size={14} />
+              <span>Customer Support Desk</span>
             </div>
             <p className="ws-sidebar-desk-desc">
-              Custom vehicle orders, bulk procurement &amp; priority allocation inquiries
+              Direct factory desk for order queries, bulk pricing &amp; allocations
             </p>
             <button
               type="button"
               onClick={() => openSupportModal({
-                category: 'Bulk Procurement & Factory Batch Quotation',
-                initialMessage: 'Inquiry regarding wholesale order allocation / procurement schedule.',
+                category: 'General Commercial Support',
+                initialMessage: 'Customer support inquiry regarding wholesale operations.',
               })}
               className="ws-sidebar-desk-wa-btn"
               style={{ width: '100%', cursor: 'pointer', border: 'none', textAlign: 'center', justifyContent: 'center' }}
             >
-              <span>Submit Support Query</span>
+              <span>Customer Support</span>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />

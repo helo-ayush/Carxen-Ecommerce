@@ -31,7 +31,6 @@ import {
   Copy,
   ExternalLink,
   ShieldCheck,
-  Sparkles,
   Phone,
   Mail,
   Calendar,
@@ -44,7 +43,6 @@ import {
   AlertTriangle,
   HelpCircle,
 } from 'lucide-react';
-import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import './account.css';
 
 type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
@@ -64,6 +62,37 @@ const ORDER_EVENT_LABELS: Record<string, string> = {
   CANCELLED: 'Order cancelled',
   STOCK_RELEASED: 'Stock released',
 };
+
+const WAREHOUSE_LABELS = [
+  'central workshop & warehouse',
+  'regional distribution hub',
+  'secondary fitting studio',
+  'showroom fitting depot',
+  'assembly & logistics unit',
+  'branch workshop 2',
+];
+
+function isB2BOrder(order: CustomerOrderHistoryRecord): boolean {
+  if (!order) return false;
+  const num = (order.orderNumber || '').toUpperCase();
+  if (num.startsWith('CX-B2B-')) return true;
+  if ((order as any).isWholesale) return true;
+  if ((order as any).channel === 'WHOLESALE') return true;
+  if ((order as any).metadata?.channel === 'WHOLESALE') return true;
+  if ((order as any).metadata?.isWholesale) return true;
+  if ((order as any).metadata?.poNumber) return true;
+  return false;
+}
+
+function isWarehouseAddress(addr: CustomerAddress): boolean {
+  if (!addr) return false;
+  if ((addr as any).addressType === 'COMMERCIAL') return true;
+  if ((addr as any).isWarehouse) return true;
+  const label = (addr.label || '').trim().toLowerCase();
+  if (WAREHOUSE_LABELS.includes(label)) return true;
+  if (label.includes('warehouse') || label.includes('distribution hub')) return true;
+  return false;
+}
 
 function getInitials(name?: string): string {
   if (!name || !name.trim()) return 'D';
@@ -95,13 +124,12 @@ function AccountContent() {
     setDefaultPayment,
     communicationPrefs,
     updateCommunicationPrefs,
-    gstBilling,
-    updateGstBilling,
+    b2bProfile,
+    isWholesaleApproved,
+    isWholesalePending,
     addToCart,
     openCart,
     showToast,
-    isVerifiedBuyer,
-    totalProductsBought,
     garageVehicles,
     addGarageVehicle,
     updateGarageVehicle,
@@ -200,27 +228,34 @@ function AccountContent() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
 
-  // GST Form state
-  const [gstForm, setGstForm] = useState({
-    enabled: gstBilling.enabled,
-    companyName: gstBilling.companyName,
-    gstin: gstBilling.gstin,
-  });
-
   const name = user?.name || 'Driver';
   const email = user?.email || '';
   const phone = user?.phone || '';
   const avatarUrl = user?.avatarUrl;
-  const tier = user?.tier && user.tier !== 'Apex Gold Member' ? user.tier : null;
-  const points = user?.rewardPoints ?? 250;
+
   const initials = getInitials(name);
 
-  const primaryAddress = addresses.find((a) => a.isPrimary) || addresses[0];
-  const secondaryAddresses = addresses.filter((a) => a.id !== primaryAddress?.id);
+  // Strictly B2C retail orders (commercial / wholesale consignments excluded)
+  const b2cOrders = useMemo(() => {
+    return (orders || []).filter((o) => !isB2BOrder(o));
+  }, [orders]);
 
-  // Filtered orders
+  const hasCommercialOrders = useMemo(() => {
+    return (orders || []).some(isB2BOrder);
+  }, [orders]);
+
+  // Strictly personal consumer shipping addresses (commercial warehouse hubs excluded)
+  const b2cAddresses = useMemo(() => {
+    const personal = (addresses || []).filter((a) => !isWarehouseAddress(a));
+    return personal.length > 0 ? personal : addresses;
+  }, [addresses]);
+
+  const primaryAddress = b2cAddresses.find((a) => a.isPrimary) || b2cAddresses[0];
+  const secondaryAddresses = b2cAddresses.filter((a) => a.id !== primaryAddress?.id);
+
+  // Filtered B2C orders
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return b2cOrders.filter((order) => {
       if (orderFilter === 'ACTIVE') {
         if (!ACTIVE_ORDER_STATUSES.includes(order.status)) {
           return false;
@@ -239,9 +274,9 @@ function AccountContent() {
 
       return true;
     });
-  }, [orders, orderFilter, orderSearch]);
+  }, [b2cOrders, orderFilter, orderSearch]);
 
-  const activeOrdersCount = orders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status)).length;
+  const activeOrdersCount = b2cOrders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status)).length;
 
   const handleSignOut = async () => {
     await logout();
@@ -803,12 +838,6 @@ function AccountContent() {
     }
   };
 
-  // GST save
-  const handleSaveGst = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateGstBilling(gstForm);
-  };
-
   return (
     <div className="in-shop" style={{ minHeight: '100vh', background: 'var(--bg, #f4f3ef)' }}>
       {/* Hidden File Input for Native Photo Upload */}
@@ -923,30 +952,6 @@ function AccountContent() {
                     <div>
                       <div className="ac-user-heading">
                         <span className="ac-user-name">{name}</span>
-                        {isVerifiedBuyer && (
-                          <VerifiedBadge
-                            size={20}
-                            tooltipText="Verified User · Purchased 3+ products from CARXEN"
-                          />
-                        )}
-                        {tier && (
-                          <span className="ac-member-pill">
-                            <Sparkles size={12} color="#e2231a" />
-                            {tier}
-                          </span>
-                        )}
-                        {isVerifiedBuyer ? (
-                          <span className="ac-verified-buyer-tag">
-                            Verified Buyer ({totalProductsBought} products)
-                          </span>
-                        ) : (
-                          <span
-                            className="ac-buyer-progress-tag"
-                            title={`${Math.max(0, 3 - totalProductsBought)} more item(s) needed to unlock Verified User badge`}
-                          >
-                            {totalProductsBought}/3 to Verified
-                          </span>
-                        )}
                       </div>
                       <div className="ac-user-subtext">
                         <span>
@@ -1061,15 +1066,10 @@ function AccountContent() {
                     onClick={() => { setActiveTab('orders'); setOrderFilter('ALL'); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="ac-stat-number" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      {orders.length}
-                      {isVerifiedBuyer && (
-                        <VerifiedBadge size={16} tooltipText="Verified User · Purchased 3+ products" />
-                      )}
-                    </div>
+                    <div className="ac-stat-number">{b2cOrders.length}</div>
                     <div className="ac-stat-tag">
                       <Package size={12} />
-                      {isVerifiedBuyer ? `${totalProductsBought} Items (Verified)` : `${orders.length} Orders (${totalProductsBought} Items)`}
+                      Total Orders
                     </div>
                   </div>
 
@@ -1090,7 +1090,7 @@ function AccountContent() {
                     onClick={() => setActiveTab('addresses')}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="ac-stat-number">{addresses.length}</div>
+                    <div className="ac-stat-number">{b2cAddresses.length}</div>
                     <div className="ac-stat-tag">
                       <MapPin size={12} />
                       Saved Addresses
@@ -1125,7 +1125,7 @@ function AccountContent() {
                 >
                   <Package size={15} />
                   Orders
-                  <span className="ac-tab-badge">{orders.length}</span>
+                  <span className="ac-tab-badge">{b2cOrders.length}</span>
                 </button>
                 <button
                   type="button"
@@ -1134,7 +1134,7 @@ function AccountContent() {
                 >
                   <MapPin size={15} />
                   Addresses
-                  <span className="ac-tab-badge">{addresses.length}</span>
+                  <span className="ac-tab-badge">{b2cAddresses.length}</span>
                 </button>
                 <button
                   type="button"
@@ -1167,6 +1167,45 @@ function AccountContent() {
               {/* ========================================================= */}
               {activeTab === 'orders' && (
                 <div>
+                  {/* Notice for Commercial / B2B Wholesalers */}
+                  {(hasCommercialOrders || isWholesaleApproved || isWholesalePending) && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        marginBottom: '16px',
+                        fontSize: '12.5px',
+                        color: '#334155',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '15px' }}>🏢</span>
+                        <span>Commercial &amp; bulk wholesale consignments are managed in your dedicated B2B portal.</span>
+                      </div>
+                      <Link
+                        href="/wholesale/orders"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 600,
+                          color: '#0284c7',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <span>View B2B Orders</span>
+                        <ExternalLink size={12} />
+                      </Link>
+                    </div>
+                  )}
+
                   {/* Toolbar */}
                   <div
                     style={{
@@ -1185,7 +1224,7 @@ function AccountContent() {
                         className={`ac-btn-outline ${orderFilter === 'ALL' ? 'ac-btn-dark' : ''}`}
                         style={{ height: '34px', fontSize: '12.5px', padding: '0 12px' }}
                       >
-                        All ({orders.length})
+                        All ({b2cOrders.length})
                       </button>
                       <button
                         type="button"
@@ -1202,7 +1241,7 @@ function AccountContent() {
                         style={{ height: '34px', fontSize: '12.5px', padding: '0 12px' }}
                       >
                         <Check size={14} />
-                        <span>Delivered ({orders.filter((o) => o.status === 'DELIVERED').length})</span>
+                        <span>Delivered ({b2cOrders.filter((o) => o.status === 'DELIVERED').length})</span>
                         <span className="ac-delivered-badge-pill">Verified</span>
                       </button>
                     </div>
@@ -1227,7 +1266,7 @@ function AccountContent() {
                   </div>
 
                   {/* Highlighted Delivered Spotlight Banner */}
-                  {orders.some((o) => o.status === 'DELIVERED') && (
+                  {b2cOrders.some((o) => o.status === 'DELIVERED') && (
                     <div className="ac-delivered-spotlight-bar">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="ac-delivered-icon-badge">
@@ -1235,7 +1274,7 @@ function AccountContent() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#14532d' }}>
-                            Delivered Purchases & Reviews Center ({orders.filter((o) => o.status === 'DELIVERED').length})
+                            Delivered Purchases & Reviews Center ({b2cOrders.filter((o) => o.status === 'DELIVERED').length})
                           </div>
                           <div style={{ fontSize: '12px', color: '#166534' }}>
                             These items have arrived safely. You can review your products, manage ratings, see full specifications, and download tax invoices.
@@ -1520,14 +1559,14 @@ function AccountContent() {
                               flexWrap: 'wrap',
                             }}
                           >
-                            {/* 24-Hour Cancellation Relief Period vs Contact Support Action */}
+                            {/* 6-Hour Cancellation Relief Period vs Contact Support Action */}
                             {(() => {
                               const isCancelled = order.status === 'CANCELLED';
                               const isDelivered = order.status === 'DELIVERED';
                               const placedTime = new Date(order.placedAt).getTime();
                               const hoursElapsed = (Date.now() - placedTime) / (1000 * 60 * 60);
-                              const isWithin24h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 24 : true;
-                              const hoursLeft = Math.max(0, Math.ceil(24 - (Number.isFinite(hoursElapsed) ? hoursElapsed : 0)));
+                              const isWithin6h = Number.isFinite(hoursElapsed) ? hoursElapsed <= 6 : true;
+                              const hoursLeft = Math.max(0, Math.ceil(6 - (Number.isFinite(hoursElapsed) ? hoursElapsed : 0)));
 
                               if (isCancelled) {
                                 return (
@@ -1550,7 +1589,7 @@ function AccountContent() {
                                 );
                               }
 
-                              if (!isDelivered && isWithin24h) {
+                              if (!isDelivered && isWithin6h) {
                                 return (
                                   <button
                                     type="button"
@@ -1569,7 +1608,7 @@ function AccountContent() {
                                       alignItems: 'center',
                                       gap: '5px',
                                     }}
-                                    title="Cancel order within 24-hour relief period"
+                                    title="Cancel order within 6-hour relief period"
                                   >
                                     <XCircle size={13} />
                                     <span>Cancel Order ({hoursLeft}h left)</span>
@@ -1577,7 +1616,7 @@ function AccountContent() {
                                 );
                               }
 
-                              if (!isDelivered && !isWithin24h) {
+                              if (!isDelivered && !isWithin6h) {
                                 return (
                                   <a
                                     href={`mailto:support@carxen.com?subject=${encodeURIComponent(`Cancellation Request for Order #${order.orderNumber}`)}&body=${encodeURIComponent(`Hi CarXen Support,\n\nI would like to request cancellation for Order #${order.orderNumber}.\n\nThank you,\n${user?.name || ''}`)}`}
@@ -1597,7 +1636,7 @@ function AccountContent() {
                                       alignItems: 'center',
                                       gap: '5px',
                                     }}
-                                    title="24-hour relief period has ended. Contact customer support to request cancellation."
+                                    title="6-hour relief period has ended. Contact customer support to request cancellation."
                                   >
                                     <HelpCircle size={13} />
                                     <span>Contact Support to Cancel</span>
@@ -2086,66 +2125,42 @@ function AccountContent() {
                     ))}
                   </div>
 
-                  {/* GST Billing */}
-                  <div
-                    style={{
-                      background: '#fff',
-                      border: '1px solid #e4e4e7',
-                      borderRadius: '14px',
-                      padding: '20px',
-                    }}
-                  >
-                    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '4px', color: '#09090b' }}>
-                      Business GST Details
-                    </h3>
-                    <p style={{ color: '#71717a', fontSize: '13px', marginBottom: '14px' }}>
-                      Enable to automatically include your company name and GSTIN on orders.
-                    </p>
-
-                    <form onSubmit={handleSaveGst}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={gstForm.enabled}
-                          onChange={(e) => setGstForm({ ...gstForm, enabled: e.target.checked })}
-                          style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
-                        />
-                        <span style={{ fontSize: '13.5px', fontWeight: 500 }}>
-                          I require GST tax invoices for my business
-                        </span>
-                      </label>
-
-                      {gstForm.enabled && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                          <div className="ac-field" style={{ margin: 0 }}>
-                            <label>Company Name</label>
-                            <input
-                              type="text"
-                              value={gstForm.companyName}
-                              onChange={(e) => setGstForm({ ...gstForm, companyName: e.target.value })}
-                              placeholder="e.g. Apex Motoring Pvt Ltd"
-                              required
-                            />
-                          </div>
-                          <div className="ac-field" style={{ margin: 0 }}>
-                            <label>15-Digit GSTIN</label>
-                            <input
-                              type="text"
-                              value={gstForm.gstin}
-                              onChange={(e) => setGstForm({ ...gstForm, gstin: e.target.value.toUpperCase() })}
-                              placeholder="e.g. 27AAAAA0000A1Z5"
-                              maxLength={15}
-                              required
-                            />
-                          </div>
+                  {/* Commercial B2B Partner Workspace Notice (only if user has a wholesale account) */}
+                  {(isWholesaleApproved || isWholesalePending || b2bProfile) && (
+                    <div
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '18px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>Commercial Partner Workspace</span>
+                          <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            B2B Portal
+                          </span>
                         </div>
-                      )}
-
-                      <button type="submit" className="ac-btn-dark" style={{ height: '36px', fontSize: '13px' }}>
-                        Save GST Information
-                      </button>
-                    </form>
-                  </div>
+                        <p style={{ color: '#64748b', fontSize: '12.5px', marginTop: '3px', margin: 0 }}>
+                          GSTIN tax credentials, legal company profile, and wholesale invoices are maintained in your B2B account.
+                        </p>
+                      </div>
+                      <Link
+                        href="/wholesale/account"
+                        className="ac-btn-outline"
+                        style={{ height: '34px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff' }}
+                      >
+                        <span>Manage B2B Profile</span>
+                        <ExternalLink size={13} />
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3237,7 +3252,7 @@ function AccountContent() {
                   Cancel Order #{cancelModalOrder.orderNumber}?
                 </h3>
                 <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                  You are within the 24-hour self-service cancellation window. Are you sure you want to cancel this order?
+                  You are within the 6-hour self-service cancellation window. Are you sure you want to cancel this order?
                 </p>
               </div>
             </div>

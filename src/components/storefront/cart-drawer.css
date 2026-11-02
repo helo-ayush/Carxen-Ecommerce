@@ -403,6 +403,13 @@
   display: grid;
   place-items: center;
   border: 1px solid #ebe9e2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.cx-cart-upsell-thumb:hover {
+  opacity: 0.85;
 }
 
 .cx-cart-upsell-thumb img {
@@ -423,6 +430,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.cx-cart-upsell-name:hover {
+  color: #e2231a;
+  text-decoration: underline;
 }
 
 .cx-cart-upsell-price {

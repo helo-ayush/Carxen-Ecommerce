@@ -566,6 +566,24 @@
   flex-shrink: 0;
 }
 
+.inf-ck-item-thumb-link {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  overflow: hidden;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.inf-ck-item-thumb-link:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
 .inf-ck-item-remove-btn {
   position: absolute;
   top: -5px;
@@ -602,6 +620,31 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.inf-ck-item-name:hover {
+  color: var(--red, #e2231a);
+  text-decoration: underline;
+}
+
+.inf-ck-confirm-product-link {
+  color: #0e0e10;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.inf-ck-confirm-product-link:hover {
+  color: var(--red, #e2231a);
+  text-decoration: underline;
 }
 
 .inf-ck-item-stepper {

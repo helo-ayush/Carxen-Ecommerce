@@ -31,16 +31,16 @@ export async function POST(request: Request) {
     }
 
     if (order) {
-      // 24-hour relief period verification
+      // 6-hour relief period verification
       const placedTimestamp = order.placedAt || order.createdAt;
       const placedTime = new Date(placedTimestamp).getTime();
       const hoursElapsed = (Date.now() - placedTime) / (1000 * 60 * 60);
 
-      if (Number.isFinite(hoursElapsed) && hoursElapsed > 24) {
+      if (Number.isFinite(hoursElapsed) && hoursElapsed > 6) {
         return NextResponse.json(
           {
             error:
-              'The 24-hour cancellation relief period has expired for this order. Please contact CarXen customer support to request cancellation.',
+              'The 6-hour cancellation relief period has expired for this order. Please contact CarXen customer support to request cancellation.',
             hoursElapsed: Math.round(hoursElapsed),
           },
           { status: 400 }
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
           updatedAt: new Date().toISOString(),
           customerSnapshot: {
             ...(order.customerSnapshot || {}),
-            cancellationReason: reason?.trim() || 'Cancelled by customer within 24h relief window',
+            cancellationReason: reason?.trim() || 'Cancelled by customer within 6h relief window',
             cancelledAt: new Date().toISOString(),
           },
         })
