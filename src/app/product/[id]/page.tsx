@@ -383,6 +383,7 @@ function ProductDetailContent({ product }: { product: Product }) {
     body: string;
     status?: string;
     verifiedPurchase: boolean;
+    isAuthor?: boolean;
     adminReply?: string | null;
     adminRepliedAt?: string | null;
     createdAt: string;
@@ -410,6 +411,13 @@ function ProductDetailContent({ product }: { product: Product }) {
   // Published reviews loaded from the storefront API.
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  // Detect whether current user already submitted a review for this product
+  const myExistingReview = useMemo(() => {
+    return reviews.find(
+      (r) => r.isAuthor || (user?.name && r.customerName && r.customerName.toLowerCase().startsWith(user.name.trim().toLowerCase().split(' ')[0]))
+    );
+  }, [reviews, user?.name]);
 
   useEffect(() => {
     let cancelled = false;
@@ -486,9 +494,15 @@ function ProductDetailContent({ product }: { product: Product }) {
       return;
     }
 
-    if (!hasOrderedThisProduct) {
+    if (!hasOrderedThisProduct && !myExistingReview) {
       setShowNotOrderedModal(true);
       return;
+    }
+
+    if (myExistingReview) {
+      setReviewRating(myExistingReview.rating || 5);
+      setReviewTitle(myExistingReview.title || '');
+      setReviewComment(myExistingReview.body || '');
     }
 
     setIsWritingReview(true);
@@ -504,7 +518,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       return;
     }
 
-    if (!hasOrderedThisProduct) {
+    if (!hasOrderedThisProduct && !myExistingReview) {
       setShowNotOrderedModal(true);
       return;
     }
@@ -554,12 +568,17 @@ function ProductDetailContent({ product }: { product: Product }) {
       setIsWritingReview(false);
       setReviewTitle('');
       setReviewComment('');
+      const isUpdate = Boolean(myExistingReview);
       if (payload?.review) {
         setReviews((current) => {
           const filtered = current.filter((r) => r.id !== payload.review.id);
           return [payload.review as CustomerReview, ...filtered];
         });
-        showToast(payload.status === 'PUBLISHED' ? 'Your review is published. Thank you!' : 'Your review was submitted and is under moderation.');
+        showToast(
+          payload.status === 'PUBLISHED'
+            ? isUpdate ? 'Your review has been updated!' : 'Your review is published. Thank you!'
+            : isUpdate ? 'Your updated review was submitted for review.' : 'Your review was submitted and is under moderation.'
+        );
       }
 
       // Re-fetch reviews to stay completely in sync with database
@@ -1628,13 +1647,17 @@ function ProductDetailContent({ product }: { product: Product }) {
             <div className="ps-reviews-action-box">
               <button
                 type="button"
-                className={`ps-write-review-btn ${hasOrderedThisProduct ? 'verified-buyer' : ''}`}
+                className={`ps-write-review-btn ${hasOrderedThisProduct || myExistingReview ? 'verified-buyer' : ''}`}
                 onClick={handleStartReview}
-                aria-label="Write a Review"
+                aria-label={myExistingReview ? 'Edit Your Review' : 'Write a Review'}
               >
                 <Pencil style={{ width: '15px', height: '15px' }} />
-                <span>Write a Review</span>
-                {hasOrderedThisProduct ? (
+                <span>{myExistingReview ? 'Edit Your Review' : 'Write a Review'}</span>
+                {myExistingReview ? (
+                  <span className="ps-verified-pill-tag" style={{ background: '#dbeafe', color: '#1e40af' }}>
+                    ★ {myExistingReview.rating}/5 Rated
+                  </span>
+                ) : hasOrderedThisProduct ? (
                   <span className="ps-verified-pill-tag">✓ Verified Buyer</span>
                 ) : (
                   <span className="ps-lock-pill-tag">Verified Only</span>
@@ -1703,7 +1726,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                 <div className="ps-review-writer-header">
                   <div>
                     <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--ink, #0e0e0f)' }}>
-                      Write a Verified Review
+                      {myExistingReview ? 'Edit Your Review' : 'Write a Verified Review'}
                     </h4>
                     <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--steel, #5d5d64)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                       Sharing review as <b style={{ color: 'var(--ink, #0e0e0f)' }}>{user?.name || 'Verified Driver'}</b>
@@ -1774,7 +1797,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                     disabled={submittingReview}
                     style={{ height: '42px', padding: '0 24px', fontSize: '13px', opacity: submittingReview ? 0.7 : 1 }}
                   >
-                    {submittingReview ? 'Submitting…' : 'Submit Review'}
+                    {submittingReview ? 'Saving…' : myExistingReview ? 'Update Review' : 'Submit Review'}
                   </button>
                   <button
                     type="button"
@@ -1840,7 +1863,32 @@ function ProductDetailContent({ product }: { product: Product }) {
                         </span>
                       </div>
                     </div>
-                    <span className="ps-review-date">{formatReviewDate(rev.createdAt)}</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      {(rev.isAuthor || (myExistingReview && rev.id === myExistingReview.id)) && (
+                        <button
+                          type="button"
+                          onClick={handleStartReview}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#f1f5f9',
+                            color: '#0f172a',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                          aria-label="Edit this review"
+                        >
+                          <Pencil style={{ width: '11px', height: '11px' }} />
+                          Edit
+                        </button>
+                      )}
+                      <span className="ps-review-date">{formatReviewDate(rev.createdAt)}</span>
+                    </div>
                   </div>
 
                   {rev.title && <div className="ps-review-item-title">{rev.title}</div>}

@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unable to load reviews.' }, { status: 500 });
   }
 
-  const rows = (data || []) as unknown as (ReviewRow & { status?: string })[];
+  const rows = (data || []) as unknown as (ReviewRow & { customerId?: string; status?: string })[];
   const reviews = rows.map((row) => ({
     id: row.id,
     rating: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 0))),
@@ -215,6 +215,7 @@ export async function GET(request: NextRequest) {
     verifiedPurchase: Boolean(row.verifiedPurchase),
     createdAt: row.createdAt,
     customerName: customerName(row),
+    isAuthor: Boolean(viewerCustomerId && row.customerId === viewerCustomerId),
     adminReply: row.adminReply || null,
     adminRepliedAt: row.adminRepliedAt || null,
   }));
