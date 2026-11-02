@@ -50,6 +50,21 @@ import './account.css';
 type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
 type OrderFilter = 'ALL' | 'ACTIVE' | 'DELIVERED';
 
+const ORDER_EVENT_LABELS: Record<string, string> = {
+  ORDER_PLACED: 'Order placed',
+  CONFIRMED: 'Order confirmed',
+  STOCK_RESERVED: 'Stock reserved',
+  STOCK_SHORT: 'Waiting for stock',
+  PACKED: 'Packed for dispatch',
+  RUN_ASSIGNED: 'Loaded for delivery',
+  SHIPPED: 'Dispatched',
+  OUT_FOR_DELIVERY: 'Out for delivery',
+  DELIVERED: 'Delivered',
+  DELIVERY_FAILED: 'Delivery attempted — rescheduled',
+  CANCELLED: 'Order cancelled',
+  STOCK_RELEASED: 'Stock released',
+};
+
 function getInitials(name?: string): string {
   if (!name || !name.trim()) return 'D';
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -1329,25 +1344,34 @@ function AccountContent() {
                           <div className="ac-courier-mini">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                               <Truck size={14} color="#e2231a" />
-                              <span style={{ fontWeight: 600, color: '#09090b' }}>{order.carrier}</span> · AWB:{' '}
-                              <span style={{ fontFamily: 'var(--mono, monospace)', fontWeight: 600 }}>{order.trackingNumber}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyTracking(order.trackingNumber)}
-                                title="Copy tracking number"
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '2px',
-                                  color: copiedTracking === order.trackingNumber ? '#16a34a' : '#71717a',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {copiedTracking === order.trackingNumber ? <Check size={13} /> : <Copy size={13} />}
-                              </button>
-                              <span style={{ color: '#71717a', marginLeft: '4px' }}>({order.estimatedDelivery})</span>
+                              <span style={{ fontWeight: 600, color: '#09090b' }}>{order.carrier}</span>
+                              {order.trackingNumber ? (
+                                <>
+                                  {' · Run:'}{' '}
+                                  <span style={{ fontFamily: 'var(--mono, monospace)', fontWeight: 600 }}>{order.trackingNumber}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyTracking(order.trackingNumber)}
+                                    title="Copy run reference"
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                      color: copiedTracking === order.trackingNumber ? '#16a34a' : '#71717a',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    {copiedTracking === order.trackingNumber ? <Check size={13} /> : <Copy size={13} />}
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ color: '#71717a' }}>· Awaiting dispatch</span>
+                              )}
+                              {order.estimatedDelivery && (
+                                <span style={{ color: '#71717a', marginLeft: '4px' }}>({order.estimatedDelivery})</span>
+                              )}
                             </div>
                             <button
                               type="button"
@@ -2622,13 +2646,36 @@ function AccountContent() {
                 <span className="ac-pulse-dot" />
                 {trackingModalOrder.statusMessage || 'In Transit'}
               </div>
-              <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>
-                Estimated Delivery: {trackingModalOrder.estimatedDelivery}
-              </div>
+              {trackingModalOrder.estimatedDelivery && (
+                <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>
+                  Estimated Delivery: {trackingModalOrder.estimatedDelivery}
+                </div>
+              )}
             </div>
 
             <div style={{ borderLeft: '2px solid #e2231a', paddingLeft: '14px', marginLeft: '6px' }}>
-              {trackingModalOrder.status === 'CANCELLED' ? (
+              {(trackingModalOrder.events ?? []).length > 0 ? (
+                (trackingModalOrder.events ?? []).map((event, idx) => (
+                  <div
+                    key={`${event.type}-${idx}`}
+                    style={{ marginBottom: idx === (trackingModalOrder.events ?? []).length - 1 ? 0 : '14px' }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {idx === 0 && <span className="ac-pulse-dot" />}
+                      {ORDER_EVENT_LABELS[event.type] || event.type.replace(/_/g, ' ').toLowerCase()}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#71717a' }}>
+                      {new Date(event.at).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : trackingModalOrder.status === 'CANCELLED' ? (
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '13px', color: '#09090b' }}>Order cancelled</div>
                   <div style={{ fontSize: '11.5px', color: '#71717a' }}>

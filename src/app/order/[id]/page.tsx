@@ -123,22 +123,13 @@ export default function OrderTrackingPage() {
     return () => controller.abort();
   }, [fetchOrder]);
 
-  const trackingNum =
-    localOrder?.trackingNumber ||
-    `CX-EXP-${orderNumber ? Math.abs(orderNumber.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)) % 900000 + 100000 : '482910'}`;
+  const trackingNum = localOrder?.trackingNumber || '';
 
-  const carrier =
-    localOrder?.carrier ||
-    (serverOrder?.shippingAmount && serverOrder.shippingAmount > 99
-      ? 'Blue Dart Air Express'
-      : 'Delhivery Priority');
+  const carrier = localOrder?.carrier || 'CarXen Delivery';
 
-  const trackingUrl =
-    localOrder?.trackingUrl || `https://www.delhivery.com/track/package/${trackingNum}`;
+  const trackingUrl = localOrder?.trackingUrl;
 
-  const estimatedDelivery =
-    localOrder?.estimatedDelivery ||
-    (carrier.includes('Air') ? 'Within 48 hours' : 'Within 3-4 days');
+  const estimatedDelivery = localOrder?.estimatedDelivery || '';
 
   const customerName =
     localOrder?.shippingAddress?.name || serverOrder?.customer?.name || 'Customer';
@@ -260,9 +251,11 @@ export default function OrderTrackingPage() {
                     <Truck style={{ width: 18, height: 18, color: 'var(--red, #e2231a)' }} />
                     Live Shipment Timeline
                   </div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#10b981' }}>
-                    Estimated Arrival: {estimatedDelivery}
-                  </div>
+                  {estimatedDelivery && (
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: '#10b981' }}>
+                      Estimated Arrival: {estimatedDelivery}
+                    </div>
+                  )}
                 </div>
 
                 <div className="trk-timeline-wrap">
@@ -325,35 +318,45 @@ export default function OrderTrackingPage() {
                           Logistics Partner
                         </span>
                         <span className="trk-carrier-name">{carrier}</span>
-                        <div className="trk-tracking-num-row">
-                          <span>AWB: <b style={{ fontFamily: 'monospace', color: '#0e0e10' }}>{trackingNum}</b></span>
-                          <button
-                            type="button"
-                            className="trk-copy-btn"
-                            onClick={handleCopyTracking}
-                          >
-                            <Copy style={{ width: 11, height: 11 }} />
-                            <span>{copiedTracking ? 'Copied!' : 'Copy'}</span>
-                          </button>
-                        </div>
+                        {trackingNum ? (
+                          <div className="trk-tracking-num-row">
+                            <span>Run: <b style={{ fontFamily: 'monospace', color: '#0e0e10' }}>{trackingNum}</b></span>
+                            <button
+                              type="button"
+                              className="trk-copy-btn"
+                              onClick={handleCopyTracking}
+                            >
+                              <Copy style={{ width: 11, height: 11 }} />
+                              <span>{copiedTracking ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="trk-tracking-num-row">
+                            <span style={{ color: '#71717a' }}>Awaiting dispatch</span>
+                          </div>
+                        )}
                       </div>
 
-                      <a
-                        href={trackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="trk-btn-outline"
-                        style={{ height: 36, padding: '0 12px', fontSize: 12 }}
-                      >
-                        Track with Carrier <ExternalLink style={{ width: 12, height: 12 }} />
-                      </a>
+                      {trackingUrl && (
+                        <a
+                          href={trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="trk-btn-outline"
+                          style={{ height: 36, padding: '0 12px', fontSize: 12 }}
+                        >
+                          Track with Carrier <ExternalLink style={{ width: 12, height: 12 }} />
+                        </a>
+                      )}
                     </div>
 
                     <div className="trk-info-rows">
-                      <div className="trk-info-row">
-                        <span>Expected Delivery Window</span>
-                        <b style={{ color: '#10b981' }}>{estimatedDelivery}</b>
-                      </div>
+                      {estimatedDelivery && (
+                        <div className="trk-info-row">
+                          <span>Expected Delivery Window</span>
+                          <b style={{ color: '#10b981' }}>{estimatedDelivery}</b>
+                        </div>
+                      )}
                       <div className="trk-info-row">
                         <span>Recipient</span>
                         <span>{customerName}</span>
@@ -457,14 +460,16 @@ export default function OrderTrackingPage() {
                 </Link>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <a
-                    href={trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="trk-btn-outline"
-                  >
-                    Open Courier Portal <ExternalLink style={{ width: 13, height: 13 }} />
-                  </a>
+                  {trackingUrl && (
+                    <a
+                      href={trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="trk-btn-outline"
+                    >
+                      Open Courier Portal <ExternalLink style={{ width: 13, height: 13 }} />
+                    </a>
+                  )}
                   <Link href="/shop" className="trk-btn-red">
                     Continue Shopping &rarr;
                   </Link>

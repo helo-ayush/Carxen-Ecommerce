@@ -5,6 +5,15 @@ import type { CustomerAddress, CustomerOrderHistoryRecord, OrderProgressStatus }
 export const STORE_ID = 'store_carxen';
 export const FACTORY_ID = 'fac_demo';
 
+function buildCarrierTrackingUrl(carrier: string, trackingNumber: string): string | undefined {
+  if (!trackingNumber) return undefined;
+  const c = (carrier || '').toLowerCase();
+  if (c.includes('delhivery')) return `https://www.delhivery.com/track/package/${encodeURIComponent(trackingNumber)}`;
+  if (c.includes('blue') || c.includes('dart')) return `https://www.bluedart.com/tracking?trackNumber=${encodeURIComponent(trackingNumber)}`;
+  if (c.includes('shiprocket')) return `https://shiprocket.co/tracking/${encodeURIComponent(trackingNumber)}`;
+  return undefined;
+}
+
 export interface CustomerDbRow {
   id: string;
   storeId: string;
@@ -335,6 +344,13 @@ export async function loadCustomerOrders(
     .select('*')
     .in('orderId', orderIds);
 
+  // Fetch the fulfilment event history written by VEDA
+  const { data: orderEvents } = await supabase
+    .from('ecommerce_order_events')
+    .select('id, orderId, type, source, createdAt')
+    .in('orderId', orderIds)
+    .order('createdAt', { ascending: false });
+
   const itemsByOrder = new Map<string, any[]>();
   (items || []).forEach((item: any) => {
     const list = itemsByOrder.get(item.orderId) || [];
@@ -349,21 +365,37 @@ export async function loadCustomerOrders(
     }
   });
 
+  const eventsByOrder = new Map<string, { type: string; source: string; at: string }[]>();
+  const customerVisibleEvents = new Set([
+    'ORDER_PLACED',
+    'CONFIRMED',
+    'PACKED',
+    'SHIPPED',
+    'OUT_FOR_DELIVERY',
+    'DELIVERED',
+    'DELIVERY_FAILED',
+    'CANCELLED',
+  ]);
+  (orderEvents || []).forEach((event: any) => {
+    if (!customerVisibleEvents.has(event.type)) return;
+    const list = eventsByOrder.get(event.orderId) || [];
+    list.push({ type: event.type, source: event.source, at: event.createdAt });
+    eventsByOrder.set(event.orderId, list);
+  });
+
   return orders.map((o: any): CustomerOrderHistoryRecord => {
     const orderItems = itemsByOrder.get(o.id) || [];
     const shipment = shipmentByOrder.get(o.id);
 
     const progressStatus = normalizeOrderStatus(shipment?.status || o.fulfillmentStatus || o.status);
-    const trackingNumber =
-      shipment?.trackingNumber || `CX-EXP-${o.orderNumber.replace(/[^A-Za-z0-9]/g, '').slice(-6)}`;
-    const carrier = shipment?.carrier || 'Delhivery Priority Express';
+    // CarXen delivers with its own fleet: the shipment reference is the daily run number.
+    const trackingNumber = shipment?.trackingNumber || '';
+    const carrier = shipment?.carrier || 'CarXen Delivery';
+    const trackingUrl = buildCarrierTrackingUrl(carrier, trackingNumber);
 
     const placedDate = o.placedAt || o.createdAt;
-    const estDeliveryDate = new Date(Date.parse(placedDate) + 3 * 864e5).toLocaleDateString('en-IN', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
+    const estimatedDelivery =
+      typeof shipment?.metadata?.estimatedDelivery === 'string' ? shipment.metadata.estimatedDelivery : '';
 
     const custSnap = (o.customerSnapshot || {}) as Record<string, any>;
     const shipSnap = (o.shippingAddressSnapshot || {}) as Record<string, any>;
@@ -378,8 +410,9 @@ export async function loadCustomerOrders(
       paymentMethod: custSnap.paymentMethod || 'UPI Payment',
       trackingNumber,
       carrier,
-      trackingUrl: `https://www.delhivery.com/track/package/${trackingNumber}`,
-      estimatedDelivery: estDeliveryDate,
+      trackingUrl,
+      estimatedDelivery,
+      events: eventsByOrder.get(o.id) || [],
       shippingAddress: {
         name: shipSnap.name || shipSnap.fullName || custSnap.name || 'Driver',
         phone: shipSnap.phone || custSnap.phone || '',

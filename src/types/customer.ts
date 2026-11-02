@@ -44,6 +44,7 @@ export interface CustomerOrderHistoryRecord {
   carrier: string;
   trackingUrl?: string;
   estimatedDelivery: string;
+  events?: { type: string; source?: string; at: string }[];
   shippingAddress: {
     name: string;
     phone: string;
