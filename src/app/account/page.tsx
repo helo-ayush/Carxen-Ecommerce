@@ -422,9 +422,30 @@ function AccountContent() {
     openCart();
   };
 
-  // Sync customer product reviews from localStorage across all purchased products
-  const loadCustomerReviews = React.useCallback(() => {
+  const getAccountHeaders = React.useCallback(() => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const directToken = localStorage.getItem('cx_auth_token');
+      if (directToken) {
+        headers['Authorization'] = `Bearer ${directToken}`;
+      }
+      const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
+          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
+        } catch {}
+      }
+    }
+    return headers;
+  }, []);
+
+  // Sync customer product reviews from backend API with localStorage fallback
+  const loadCustomerReviews = React.useCallback(async () => {
     const map: Record<number, any> = {};
+
+    // 1. First load from localStorage for instant offline availability
     if (orders && orders.length > 0) {
       orders.forEach((order) => {
         order.items?.forEach((it) => {
@@ -446,8 +467,36 @@ function AccountContent() {
         });
       });
     }
+
+    // 2. Fetch authoritative reviews from database API
+    try {
+      const res = await fetch('/api/storefront/reviews?myReviews=true', {
+        headers: getAccountHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.reviews)) {
+          data.reviews.forEach((r: any) => {
+            const pid = Number(r.productId || r.productPublicId);
+            if (Number.isFinite(pid)) {
+              map[pid] = {
+                id: r.id,
+                name: user?.name || 'Verified Driver',
+                rating: r.rating,
+                title: r.title,
+                comment: r.comment || r.body,
+                date: new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+                status: r.status,
+                replies: r.adminReply ? [{ text: r.adminReply, date: r.adminRepliedAt || 'Admin' }] : [],
+              };
+            }
+          });
+        }
+      }
+    } catch {}
+
     setCustomerReviews(map);
-  }, [orders, user?.name]);
+  }, [orders, user?.name, getAccountHeaders]);
 
   React.useEffect(() => {
     loadCustomerReviews();
@@ -476,7 +525,7 @@ function AccountContent() {
   };
 
   // Submit or update a verified customer review
-  const handleSubmitCustomerReview = (e: React.FormEvent) => {
+  const handleSubmitCustomerReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewModalData) return;
     if (!reviewTitle.trim() || !reviewComment.trim()) {
@@ -484,69 +533,99 @@ function AccountContent() {
       return;
     }
 
-    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     const prodId = reviewModalData.productId;
-    let reviewsList: any[] = [];
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
     try {
-      const stored = localStorage.getItem(`cx_product_reviews_${prodId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) reviewsList = parsed;
+      const response = await fetch('/api/storefront/reviews', {
+        method: 'POST',
+        headers: getAccountHeaders(),
+        body: JSON.stringify({
+          productId: prodId,
+          rating: reviewRating,
+          title: reviewTitle.trim(),
+          body: reviewComment.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        showToast(data?.error || 'Could not save your review. Please try again.');
+        return;
       }
-    } catch {}
 
-    const reviewId = reviewModalData.existingReview?.id || `user-${Date.now()}`;
-    const newRecord = {
-      id: reviewId,
-      name: user?.name || 'Verified Driver',
-      rating: reviewRating,
-      date: today,
-      title: reviewTitle.trim(),
-      comment: reviewComment.trim(),
-      avatarUrl: user?.avatarUrl || '',
-      isVerified: true,
-      replies: reviewModalData.existingReview?.replies || [],
-    };
+      // Also update local storage for smooth optimistic caching
+      const reviewId = data?.review?.id || reviewModalData.existingReview?.id || `user-${Date.now()}`;
+      const newRecord = {
+        id: reviewId,
+        name: user?.name || 'Verified Driver',
+        rating: reviewRating,
+        date: today,
+        title: reviewTitle.trim(),
+        comment: reviewComment.trim(),
+        avatarUrl: user?.avatarUrl || '',
+        isVerified: true,
+        status: data?.status || 'PENDING',
+        replies: reviewModalData.existingReview?.replies || [],
+      };
 
-    const existingIdx = reviewsList.findIndex((r: any) => r.id === reviewId);
-    if (existingIdx >= 0) {
-      reviewsList[existingIdx] = newRecord;
-    } else {
-      reviewsList = [newRecord, ...reviewsList];
+      try {
+        let reviewsList: any[] = [];
+        const stored = localStorage.getItem(`cx_product_reviews_${prodId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) reviewsList = parsed;
+        }
+        const existingIdx = reviewsList.findIndex((r: any) => r.id === reviewId);
+        if (existingIdx >= 0) {
+          reviewsList[existingIdx] = newRecord;
+        } else {
+          reviewsList = [newRecord, ...reviewsList];
+        }
+        localStorage.setItem(`cx_product_reviews_${prodId}`, JSON.stringify(reviewsList));
+      } catch {}
+
+      await loadCustomerReviews();
+      setReviewModalData(null);
+      showToast(reviewModalData.existingReview ? 'Review updated successfully!' : 'Verified review published!');
+    } catch {
+      showToast('Could not save your review. Please try again.');
     }
-
-    try {
-      localStorage.setItem(`cx_product_reviews_${prodId}`, JSON.stringify(reviewsList));
-    } catch {}
-
-    loadCustomerReviews();
-    setReviewModalData(null);
-    showToast(reviewModalData.existingReview ? 'Review updated successfully!' : 'Verified review published!');
   };
 
   // Delete an existing customer review
-  const handleDeleteCustomerReview = (productId: number, productName: string) => {
+  const handleDeleteCustomerReview = async (productId: number, productName: string) => {
     if (typeof window !== 'undefined' && !window.confirm(`Are you sure you want to delete your review for "${productName}"?`)) {
       return;
     }
 
     try {
-      const stored = localStorage.getItem(`cx_product_reviews_${productId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const filtered = parsed.filter((r: any) => {
-            const isUserReview = (user?.name && r.name && r.name.toLowerCase() === user.name.toLowerCase()) ||
-              (r.id && String(r.id).startsWith('user-'));
-            return !isUserReview;
-          });
-          localStorage.setItem(`cx_product_reviews_${productId}`, JSON.stringify(filtered));
-        }
-      }
-    } catch {}
+      await fetch(`/api/storefront/reviews?productId=${productId}`, {
+        method: 'DELETE',
+        headers: getAccountHeaders(),
+      });
 
-    loadCustomerReviews();
-    showToast(`Your review for "${productName}" has been deleted.`);
+      try {
+        const stored = localStorage.getItem(`cx_product_reviews_${productId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((r: any) => {
+              const isUserReview = (user?.name && r.name && r.name.toLowerCase() === user.name.toLowerCase()) ||
+                (r.id && String(r.id).startsWith('user-'));
+              return !isUserReview;
+            });
+            localStorage.setItem(`cx_product_reviews_${productId}`, JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+
+      await loadCustomerReviews();
+      showToast(`Your review for "${productName}" has been deleted.`);
+    } catch {
+      showToast('Could not delete review. Please try again.');
+    }
   };
 
   // Download official formatted tax invoice HTML/PDF document

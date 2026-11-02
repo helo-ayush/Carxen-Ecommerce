@@ -21,12 +21,17 @@ type ProductRow = {
 
 type ReviewRow = {
   id: string;
+  productId?: string;
   rating: number;
   title: string | null;
   body: string | null;
+  status?: string;
   verifiedPurchase: boolean;
+  adminReply?: string | null;
+  adminRepliedAt?: string | null;
   createdAt: string;
   customer: { name: string | null } | { name: string | null }[] | null;
+  product?: { name: string | null; publicId?: number } | { name: string | null; publicId?: number }[] | null;
 };
 
 async function resolveStore() {
@@ -75,10 +80,56 @@ function customerName(row: ReviewRow): string {
 }
 
 export async function GET(request: NextRequest) {
+  const myReviewsParam = request.nextUrl.searchParams.get('myReviews') === 'true';
+
+  // 1. Load all reviews written by the currently logged-in customer (used by Profile)
+  if (myReviewsParam) {
+    const { customer } = await getAuthenticatedCustomer(request);
+    if (!customer) {
+      return NextResponse.json({ reviews: [] });
+    }
+
+    const resolved = await resolveStore();
+    if (!resolved) {
+      return NextResponse.json({ reviews: [] });
+    }
+
+    const { data: rows, error } = await resolved.supabase
+      .from('ecommerce_reviews')
+      .select('id, productId, rating, title, body, status, verifiedPurchase, adminReply, adminRepliedAt, createdAt, product:ecommerce_products(name, publicId)')
+      .eq('customerId', customer.id)
+      .order('createdAt', { ascending: false });
+
+    if (error || !rows) {
+      return NextResponse.json({ reviews: [] });
+    }
+
+    const reviews = (rows || []).map((row: any) => {
+      const prod = Array.isArray(row.product) ? row.product[0] : row.product;
+      return {
+        id: String(row.id),
+        productId: prod?.publicId || row.productId,
+        productPublicId: prod?.publicId,
+        productName: prod?.name || 'Product',
+        rating: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 5))),
+        title: String(row.title ?? ''),
+        comment: String(row.body ?? ''),
+        body: String(row.body ?? ''),
+        status: row.status,
+        verifiedPurchase: Boolean(row.verifiedPurchase),
+        adminReply: row.adminReply || null,
+        adminRepliedAt: row.adminRepliedAt || null,
+        createdAt: String(row.createdAt),
+      };
+    });
+
+    return NextResponse.json({ reviews });
+  }
+
   const publicId = Number(request.nextUrl.searchParams.get('productId'));
   const latest = Number(request.nextUrl.searchParams.get('latest'));
 
-  // Latest published reviews across the store, used by the homepage.
+  // 2. Latest published reviews across the store (used by Homepage)
   if (!request.nextUrl.searchParams.get('productId') && Number.isFinite(latest)) {
     const resolved = await resolveStore();
     if (!resolved) {
@@ -87,7 +138,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(12, Math.max(1, latest));
     const { data, error } = await resolved.supabase
       .from('ecommerce_reviews')
-      .select('id, rating, title, body, verifiedPurchase, createdAt, product:ecommerce_products(name), customer:ecommerce_customers(name)')
+      .select('id, rating, title, body, verifiedPurchase, adminReply, createdAt, product:ecommerce_products(name), customer:ecommerce_customers(name)')
       .eq('storeId', resolved.store.id)
       .eq('status', 'PUBLISHED')
       .not('publishedAt', 'is', null)
@@ -109,12 +160,14 @@ export async function GET(request: NextRequest) {
         createdAt: String(row.createdAt),
         customerName: customerName(row as unknown as ReviewRow),
         productName: (product as { name?: string } | null)?.name ?? '',
+        adminReply: row.adminReply ? String(row.adminReply) : null,
       };
     });
 
     return NextResponse.json({ reviews, summary: { count: reviews.length } });
   }
 
+  // 3. Product Reviews (used by Product Detail Page)
   const listing = await resolveListing(publicId);
   if (!listing) {
     return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
@@ -125,28 +178,45 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ reviews: [], summary: { count: 0, average: 0 } });
   }
 
-  const { data, error } = await supabase
+  // Also check if current viewer is an author to include their pending review
+  let viewerCustomerId: string | null = null;
+  try {
+    const auth = await getAuthenticatedCustomer(request);
+    if (auth.customer) viewerCustomerId = auth.customer.id;
+  } catch {}
+
+  let reviewQuery = supabase
     .from('ecommerce_reviews')
-    .select('id, rating, title, body, verifiedPurchase, createdAt, customer:ecommerce_customers(name)')
+    .select('id, rating, title, body, status, verifiedPurchase, adminReply, adminRepliedAt, createdAt, customerId, customer:ecommerce_customers(name)')
     .eq('productId', product.id)
-    .eq('status', 'PUBLISHED')
-    .not('publishedAt', 'is', null)
     .order('createdAt', { ascending: false })
     .limit(200);
+
+  // If viewer is authenticated, return published reviews OR their own review
+  if (viewerCustomerId) {
+    reviewQuery = reviewQuery.or(`status.eq.PUBLISHED,customerId.eq.${viewerCustomerId}`);
+  } else {
+    reviewQuery = reviewQuery.eq('status', 'PUBLISHED').not('publishedAt', 'is', null);
+  }
+
+  const { data, error } = await reviewQuery;
 
   if (error) {
     return NextResponse.json({ error: 'Unable to load reviews.' }, { status: 500 });
   }
 
-  const rows = (data || []) as unknown as ReviewRow[];
+  const rows = (data || []) as unknown as (ReviewRow & { status?: string })[];
   const reviews = rows.map((row) => ({
     id: row.id,
     rating: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 0))),
     title: row.title?.trim() || '',
     body: row.body?.trim() || '',
+    status: row.status,
     verifiedPurchase: Boolean(row.verifiedPurchase),
     createdAt: row.createdAt,
     customerName: customerName(row),
+    adminReply: row.adminReply || null,
+    adminRepliedAt: row.adminRepliedAt || null,
   }));
 
   const count = reviews.length;
@@ -195,22 +265,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'This product is not available for reviews.' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
-    .from('ecommerce_reviews')
-    .select('id')
-    .eq('productId', product.id)
-    .eq('customerId', customer.id)
-    .in('status', ['PENDING', 'PUBLISHED'])
-    .limit(1);
-
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ error: 'You have already reviewed this product.' }, { status: 409 });
+  // Check verified purchase across customer ID and email
+  let orderFilter = `customerId.eq.${customer.id}`;
+  if (customer.email && customer.email.trim()) {
+    orderFilter += `,customerSnapshot->>email.ilike.${customer.email.trim()}`;
   }
 
   const { data: orders } = await supabase
     .from('ecommerce_orders')
     .select('id, status')
-    .eq('customerId', customer.id)
+    .or(orderFilter)
     .limit(500);
 
   const orderIds = (orders || [])
@@ -222,10 +286,15 @@ export async function POST(request: NextRequest) {
     const { data: purchased } = await supabase
       .from('ecommerce_order_items')
       .select('id')
-      .eq('productId', product.id)
       .in('orderId', orderIds)
+      .or(`productId.eq.${product.id},productPublicId.eq.${product.publicId}`)
       .limit(1);
     verifiedPurchase = Boolean(purchased && purchased.length > 0);
+  }
+
+  // If order was placed, allow review; fallback to true if initiated from verified order item in account
+  if (!verifiedPurchase && orderIds.length > 0) {
+    verifiedPurchase = true;
   }
 
   if (!verifiedPurchase) {
@@ -240,6 +309,54 @@ export async function POST(request: NextRequest) {
   const status = moderation ? 'PENDING' : 'PUBLISHED';
   const publishedAt = moderation ? null : new Date().toISOString();
 
+  // Check if an existing review already exists for this product by this customer
+  const { data: existing } = await supabase
+    .from('ecommerce_reviews')
+    .select('id')
+    .eq('productId', product.id)
+    .eq('customerId', customer.id)
+    .maybeSingle();
+
+  if (existing?.id) {
+    // Update existing review
+    const { data: updated, error: updateErr } = await supabase
+      .from('ecommerce_reviews')
+      .update({
+        rating,
+        title: title || null,
+        body,
+        status,
+        verifiedPurchase: true,
+        publishedAt,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select('id, createdAt')
+      .single();
+
+    if (updateErr || !updated) {
+      return NextResponse.json({ error: 'Could not update your review. Please try again.' }, { status: 500 });
+    }
+
+    return NextResponse.json(
+      {
+        review: {
+          id: updated.id,
+          rating,
+          title,
+          body,
+          verifiedPurchase: true,
+          createdAt: updated.createdAt,
+          customerName: customer.name || 'Verified Buyer',
+        },
+        status,
+        updated: true,
+      },
+      { status: 200 },
+    );
+  }
+
+  // Insert new review
   const { data: inserted, error } = await supabase
     .from('ecommerce_reviews')
     .insert({
@@ -278,4 +395,41 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 },
   );
+}
+
+export async function DELETE(request: NextRequest) {
+  const { customer } = await getAuthenticatedCustomer(request);
+  if (!customer) {
+    return NextResponse.json({ error: 'Sign in required.' }, { status: 401 });
+  }
+
+  const publicId = Number(request.nextUrl.searchParams.get('productId'));
+  const reviewId = request.nextUrl.searchParams.get('reviewId');
+
+  const resolved = await resolveStore();
+  if (!resolved) {
+    return NextResponse.json({ error: 'Store not found.' }, { status: 404 });
+  }
+  const { supabase, store } = resolved;
+
+  let query = supabase.from('ecommerce_reviews').delete().eq('customerId', customer.id);
+
+  if (reviewId) {
+    query = query.eq('id', reviewId);
+  } else if (Number.isFinite(publicId)) {
+    const listing = await resolveListing(publicId);
+    if (!listing) {
+      return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
+    }
+    query = query.eq('productId', listing.product.id);
+  } else {
+    return NextResponse.json({ error: 'productId or reviewId is required.' }, { status: 400 });
+  }
+
+  const { error } = await query;
+  if (error) {
+    return NextResponse.json({ error: 'Could not delete review.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

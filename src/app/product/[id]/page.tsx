@@ -402,7 +402,10 @@ function ProductDetailContent({ product }: { product: Product }) {
     rating: number;
     title: string;
     body: string;
+    status?: string;
     verifiedPurchase: boolean;
+    adminReply?: string | null;
+    adminRepliedAt?: string | null;
     createdAt: string;
     customerName: string;
   }
@@ -432,7 +435,23 @@ function ProductDetailContent({ product }: { product: Product }) {
   useEffect(() => {
     let cancelled = false;
     setReviewsLoading(true);
+
+    const headers: Record<string, string> = {};
+    if (typeof window !== 'undefined') {
+      const directToken = localStorage.getItem('cx_auth_token');
+      if (directToken) headers['Authorization'] = `Bearer ${directToken}`;
+      const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
+          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
+        } catch {}
+      }
+    }
+
     fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
+      headers,
       cache: 'no-store',
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -1824,6 +1843,11 @@ function ProductDetailContent({ product }: { product: Product }) {
                           {rev.verifiedPurchase && (
                             <VerifiedBadge size={15} tooltipText="Verified purchase" />
                           )}
+                          {rev.status === 'PENDING' && (
+                            <span style={{ fontSize: '10.5px', background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                              Pending Moderation
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1832,6 +1856,13 @@ function ProductDetailContent({ product }: { product: Product }) {
 
                   {rev.title && <div className="ps-review-item-title">{rev.title}</div>}
                   <p className="ps-review-body-text">{rev.body}</p>
+
+                  {rev.adminReply && (
+                    <div style={{ marginTop: '10px', padding: '10px 12px', background: '#f8fafc', borderLeft: '3px solid #0284c7', borderRadius: '4px', fontSize: '12px' }}>
+                      <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>CarXen Official Response</div>
+                      <div style={{ color: '#475569' }}>{rev.adminReply}</div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
