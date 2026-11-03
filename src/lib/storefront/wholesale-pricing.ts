@@ -29,18 +29,33 @@ export function getWholesaleTiers(product: {
   o?: number;
   wholesalePrice?: number | string | null;
   b2bMoq?: number;
+  wholesaleTier2Qty?: number | null;
+  wholesaleTier2Discount?: number | null;
+  wholesaleTier3Qty?: number | null;
+  wholesaleTier3Discount?: number | null;
 }): WholesaleTierInfo[] {
   const basePrice = getWholesaleBasePrice(product);
   const retailPrice = product.o || product.p;
   const moq = Math.max(1, product.b2bMoq || 5);
 
   const t1Min = moq;
-  const t2Min = Math.max(t1Min * 3, 15);
-  const t3Min = Math.max(t1Min * 10, 50);
+  const t2Min = typeof product.wholesaleTier2Qty === "number" && product.wholesaleTier2Qty > 0
+    ? product.wholesaleTier2Qty
+    : Math.max(t1Min * 3, 15);
+  const t3Min = typeof product.wholesaleTier3Qty === "number" && product.wholesaleTier3Qty > 0
+    ? product.wholesaleTier3Qty
+    : Math.max(t1Min * 10, 50);
+
+  const t2Discount = typeof product.wholesaleTier2Discount === "number" && product.wholesaleTier2Discount >= 0
+    ? product.wholesaleTier2Discount
+    : 8;
+  const t3Discount = typeof product.wholesaleTier3Discount === "number" && product.wholesaleTier3Discount >= 0
+    ? product.wholesaleTier3Discount
+    : 15;
 
   const t1Price = basePrice;
-  const t2Price = Math.round(basePrice * 0.92); // 8% volume break
-  const t3Price = Math.round(basePrice * 0.85); // 15% volume break
+  const t2Price = Math.round(basePrice * (1 - t2Discount / 100));
+  const t3Price = Math.round(basePrice * (1 - t3Discount / 100));
 
   return [
     {

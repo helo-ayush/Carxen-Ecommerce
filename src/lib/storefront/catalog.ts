@@ -376,6 +376,30 @@ function mapProductRow(
           return parsed !== null && parsed > 0 ? parsed : 5;
         })()
       : undefined,
+    wholesaleTier2Qty: isWholesale
+      ? (() => {
+          const s = row.specifications && typeof row.specifications === 'object' ? (row.specifications as any) : {};
+          return asFiniteNumber(s.wholesaleTier2Qty);
+        })()
+      : undefined,
+    wholesaleTier2Discount: isWholesale
+      ? (() => {
+          const s = row.specifications && typeof row.specifications === 'object' ? (row.specifications as any) : {};
+          return asFiniteNumber(s.wholesaleTier2Discount);
+        })()
+      : undefined,
+    wholesaleTier3Qty: isWholesale
+      ? (() => {
+          const s = row.specifications && typeof row.specifications === 'object' ? (row.specifications as any) : {};
+          return asFiniteNumber(s.wholesaleTier3Qty);
+        })()
+      : undefined,
+    wholesaleTier3Discount: isWholesale
+      ? (() => {
+          const s = row.specifications && typeof row.specifications === 'object' ? (row.specifications as any) : {};
+          return asFiniteNumber(s.wholesaleTier3Discount);
+        })()
+      : undefined,
     taxBreakdown: isWholesale
       ? (() => {
           const parsed = asFiniteNumber(row.wholesalePrice);
