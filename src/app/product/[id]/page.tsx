@@ -1480,8 +1480,8 @@ function ProductDetailContent({ product }: { product: Product }) {
         </section>
 
         {/* ------------------------------------------------------------------
-            FREQUENTLY BOUGHT TOGETHER (configured from VEDA batch option)
-            Shown ONLY when 1 or 2 products were selected in VEDA
+            FREQUENTLY BOUGHT TOGETHER (configured from CarXen product options)
+            Shown ONLY when 1 or 2 products were selected in CarXen
             ------------------------------------------------------------------ */}
         {recommendedProducts.length > 0 && (
           <section className="ps-bundle-section">

@@ -257,7 +257,7 @@ export function MobileMenu() {
               </div>
               <div className="b2b-drawer-support-text">
                 <strong>Commercial Support Desk</strong>
-                <span>Direct inquiry channel synced to Veda ERP</span>
+                <span>Direct inquiry channel with CARXEN team</span>
               </div>
               <ChevronRight size={15} />
             </button>

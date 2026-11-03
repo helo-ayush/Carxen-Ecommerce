@@ -175,7 +175,7 @@ export function B2BSupportModal() {
                   Commercial Customer Support
                 </h3>
                 <span className="b2b-modal-sync-badge">
-                  Veda Direct Sync
+                  CARXEN Priority Desk
                 </span>
               </div>
               <p className="b2b-modal-subtitle">

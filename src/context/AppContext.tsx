@@ -1546,7 +1546,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
             if (!res.ok) {
               const data = await res.json().catch(() => ({}));
-              showToast(data.error || 'Saved locally (server sync issue)');
+              showToast(data.error || 'Saved locally.');
               return { success: true };
             }
 

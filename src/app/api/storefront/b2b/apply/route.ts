@@ -182,7 +182,7 @@ export async function POST(request: Request) {
         success: true,
         b2bStatus: 'PENDING',
         referenceNumber,
-        message: 'Your B2B application has been received and is under review in Carxen Veda.',
+        message: 'Your B2B application has been received and is under review by CarXen.',
       });
     }
 
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
           success: true,
           b2bStatus: 'PENDING',
           referenceNumber,
-          message: 'Your B2B application has been received and is under review in Carxen Veda.',
+          message: 'Your B2B application has been received and is under review by CarXen.',
         });
       }
     }
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
       success: true,
       b2bStatus: 'PENDING',
       referenceNumber,
-      message: 'Your B2B application has been received and is under review in Carxen Veda.',
+      message: 'Your B2B application has been received and is under review by CarXen.',
     });
   } catch (err) {
     console.error('B2B application error:', err);

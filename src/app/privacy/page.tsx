@@ -194,7 +194,7 @@ export default function PrivacyPolicyPage() {
               </div>
               <div className="legal-prose">
                 <p>
-                  Welcome to <strong>CarXen</strong> (&ldquo;CarXen&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;), operated under VedaHub. This Privacy Policy applies to all services, websites, mobile interfaces, and digital platforms operated by CarXen (collectively, the &ldquo;Platform&rdquo;).
+                  Welcome to <strong>CarXen</strong> (&ldquo;CarXen&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;). This Privacy Policy applies to all services, websites, mobile interfaces, and digital platforms operated by CarXen (collectively, the &ldquo;Platform&rdquo;).
                 </p>
                 <p>
                   By visiting our Platform, creating a customer account, ordering engineered automotive accessories (including seat covers, floor mats, and steering accessories), or authenticating via third-party identity providers such as Google Sign-In, you acknowledge that you have read, understood, and agreed to the practices outlined in this policy.
@@ -490,7 +490,7 @@ export default function PrivacyPolicyPage() {
                     <p style={{ fontSize: '13px', color: '#52525b', lineHeight: 1.6 }}>
                       Email: <a href="mailto:privacy@carxen.com" style={{ fontWeight: 600 }}>privacy@carxen.com</a><br />
                       Support: <a href="mailto:support@carxen.com" style={{ fontWeight: 600 }}>support@carxen.com</a><br />
-                      Entity: VedaHub / CarXen Automotive Engineered Products<br />
+                      Entity: CarXen Automotive Engineered Products<br />
                       Operating Address: E-Commerce Division, Automotive Hub, India
                     </p>
                   </div>

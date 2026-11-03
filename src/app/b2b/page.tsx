@@ -110,7 +110,7 @@ export default function B2BWholesalePage() {
     setCheckingStatus(true);
     try {
       await refreshCustomerProfile();
-      showToast('Checked with Veda review desk: Application is currently under review.');
+      showToast('Checked with review desk: Application is currently under review.');
     } catch {
       showToast('Status checked: Under review by factory desk.');
     } finally {
@@ -536,7 +536,7 @@ export default function B2BWholesalePage() {
               <div className="b2b-meta-item">
                 <ShieldCheck size={14} style={{ color: '#10b981' }} />
                 <span>Verification Desk:</span>
-                <strong>CarXen Veda Factory Desk</strong>
+                <strong>CarXen Commercial Desk</strong>
               </div>
             </div>
 
@@ -557,7 +557,7 @@ export default function B2BWholesalePage() {
                 <div className="b2b-pending-step-num">2</div>
                 <div className="b2b-pending-step-content">
                   <div className="b2b-step-header-row">
-                    <strong>2. Veda Owner Desk Review</strong>
+                    <strong>2. CarXen Verification Review</strong>
                     <span className="b2b-step-status-chip active">In Review</span>
                   </div>
                   <span>GSTIN & wholesale tier matching (24–48h)</span>
@@ -776,7 +776,7 @@ export default function B2BWholesalePage() {
         {/* Prefilled Form */}
         <div className="b2b-form-card" style={{ maxWidth: 800, margin: '0 auto' }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0e0e0f', marginBottom: 4 }}>Respond to Inquiry & Update Information</h2>
-          <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Update requested fields and submit your response directly back to the Veda review table.</p>
+          <p style={{ fontSize: 13, color: '#71717a', marginBottom: 24 }}>Update requested fields and submit your response directly back to the CarXen review team.</p>
 
           {errorMessage && (
             <B2BErrorBanner
@@ -1007,7 +1007,7 @@ export default function B2BWholesalePage() {
                 <div className="b2b-timeline-dot">2</div>
                 <div className="b2b-timeline-content">
                   <strong>Factory Review</strong>
-                  <span>Reviewed in CarXen Veda within 24–48 hours.</span>
+                  <span>Reviewed by CarXen within 24–48 hours.</span>
                 </div>
               </div>
 

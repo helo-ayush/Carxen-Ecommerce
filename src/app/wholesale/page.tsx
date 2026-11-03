@@ -552,7 +552,7 @@ export default function WholesaleDashboardPage() {
                     <span>Contact Commercial Support Desk</span>
                     <ExternalLink size={13} />
                   </button>
-                  <span className="ws-desk-hours-note">Queries route directly into Veda ERP Desk</span>
+                  <span className="ws-desk-hours-note">Queries route directly to CARXEN Support Desk</span>
                 </div>
               </div>
             </div>

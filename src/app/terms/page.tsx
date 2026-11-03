@@ -194,7 +194,7 @@ export default function TermsOfServicePage() {
               </div>
               <div className="legal-prose">
                 <p>
-                  These Terms of Service (&ldquo;Terms&rdquo;) constitute a legally binding agreement between you (&ldquo;User&rdquo;, &ldquo;Customer&rdquo;, or &ldquo;you&rdquo;) and <strong>CarXen</strong> (&ldquo;CarXen&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;), under VedaHub.
+                  These Terms of Service (&ldquo;Terms&rdquo;) constitute a legally binding agreement between you (&ldquo;User&rdquo;, &ldquo;Customer&rdquo;, or &ldquo;you&rdquo;) and <strong>CarXen</strong> (&ldquo;CarXen&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;).
                 </p>
                 <p>
                   By creating an account, authenticating via Google Sign-In, browsing our storefront, adding items to your cart, or purchasing products, you affirm that:
@@ -403,7 +403,7 @@ export default function TermsOfServicePage() {
               </div>
               <div className="legal-prose">
                 <p>
-                  The CarXen name, logo, proprietary tailoring patterns, digital CAD blueprints, graphics, UI design, and website software are the exclusive intellectual property of CarXen and VedaHub.
+                  The CarXen name, logo, proprietary tailoring patterns, digital CAD blueprints, graphics, UI design, and website software are the exclusive intellectual property of CarXen.
                 </p>
                 <ul>
                   <li>You are granted a personal, non-exclusive, non-transferable license to access the platform for individual, non-commercial shopping purposes.</li>
