@@ -830,26 +830,33 @@ function ProductDetailContent({ product }: { product: Product }) {
                 </button>
 
                 {/* Showcase Image with interactive cursor-following zoom */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={galleryPerspectives[activeThumbIndex]?.url || ''}
-                  alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title}`}
-                  style={{
-                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
-                    transform: isHoverZooming ? 'scale(1.55)' : 'scale(1)',
-                    transition: isHoverZooming ? 'transform 0.08s ease-out' : 'transform 0.3s ease',
-                    filter:
-                      (!activeColor.images || activeColor.images.length === 0) &&
-                      activeColor.filter &&
-                      activeColor.filter !== 'none'
-                        ? activeColor.filter
-                        : undefined,
-                  }}
-                />
+                {galleryPerspectives[activeThumbIndex]?.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={galleryPerspectives[activeThumbIndex]?.url}
+                    alt={`${product.n} - ${galleryPerspectives[activeThumbIndex]?.title || ''}`}
+                    style={{
+                      transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                      transform: isHoverZooming ? 'scale(1.55)' : 'scale(1)',
+                      transition: isHoverZooming ? 'transform 0.08s ease-out' : 'transform 0.3s ease',
+                      filter:
+                        (!activeColor.images || activeColor.images.length === 0) &&
+                        activeColor.filter &&
+                        activeColor.filter !== 'none'
+                          ? activeColor.filter
+                          : undefined,
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: '80%', height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ProductArt product={product} />
+                  </div>
+                )}
               </div>
 
               {/* UNIQUE AUTOMOTIVE PERSPECTIVE SLIDER & THUMBNAILS CARD */}
-              <div className="ps-gallery-slider-card">
+              {galleryPerspectives.length > 0 && (
+                <div className="ps-gallery-slider-card">
                 <div className="ps-slider-header">
                   <div className="ps-slider-label">
                     <Car size={14} style={{ color: 'var(--red, #e2231a)' }} />
@@ -911,6 +918,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   })}
                 </div>
               </div>
+              )}
 
             </div>
           </div>
