@@ -61,7 +61,7 @@ export function getWholesaleTiers(product: {
       lotTotal: t2Price * t2Min,
       discountPercent: 8,
       marginPercent: Math.round(((retailPrice - t2Price) / retailPrice) * 100),
-      badge: 'Most Popular · Save 8%',
+      badge: 'Most Popular · Volume Tier',
     },
     {
       minQty: t3Min,
@@ -70,7 +70,7 @@ export function getWholesaleTiers(product: {
       lotTotal: t3Price * t3Min,
       discountPercent: 15,
       marginPercent: Math.round(((retailPrice - t3Price) / retailPrice) * 100),
-      badge: 'Max Profit · Save 15%',
+      badge: 'Master Batch · Max Tier',
     },
   ];
 }

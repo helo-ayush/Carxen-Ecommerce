@@ -298,7 +298,7 @@ export default function WholesaleAccountPage() {
             <span>Commercial Business Profile & Tax Registry</span>
           </h1>
           <p>
-            Enterprise profile, verified GSTIN identity, multi-warehouse dispatch locations, active volume pricing tiers, and assigned CarXen account manager.
+            Enterprise profile, verified GSTIN identity, multi-warehouse dispatch locations, active wholesale pricing, and assigned CarXen account manager.
           </p>
         </div>
         <div className="ws-header-actions">
@@ -835,7 +835,7 @@ export default function WholesaleAccountPage() {
                   Verified Wholesale Partner
                 </div>
                 <div className="ws-tier-badge-desc">
-                  Direct manufacturer pricing with GST tax invoicing. Extra tiered discounts and volume pricing are automatically applied via promotions and batch orders.
+                  Direct manufacturer pricing with GST tax invoicing. Bulk wholesale rates are automatically applied to your orders.
                 </div>
               </div>
 

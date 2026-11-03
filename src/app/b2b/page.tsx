@@ -95,7 +95,7 @@ export default function B2BWholesalePage() {
     city: b2bProfile?.city || '',
     state: b2bProfile?.state || '',
     pincode: b2bProfile?.pincode || '',
-    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume || '₹50k–₹2L (Tier 1)',
+    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume || '₹50k–₹2L',
     notes: '',
   });
 
@@ -299,7 +299,7 @@ export default function B2BWholesalePage() {
           <div className="b2b-auth-perks-row">
             <div className="b2b-auth-perk-pill">
               <span className="icon">🏷️</span>
-              <span>40%–55% Resale Margin</span>
+              <span>Wholesale Margins</span>
             </div>
             <div className="b2b-auth-perk-pill">
               <span className="icon">📦</span>
@@ -560,7 +560,7 @@ export default function B2BWholesalePage() {
                     <strong>2. CarXen Verification Review</strong>
                     <span className="b2b-step-status-chip active">In Review</span>
                   </div>
-                  <span>GSTIN & wholesale tier matching (24–48h)</span>
+                  <span>GSTIN & commercial account verification (24–48h)</span>
                 </div>
               </div>
 
@@ -605,7 +605,7 @@ export default function B2BWholesalePage() {
             <div className="b2b-spec-header">
               <div className="b2b-spec-title-wrap">
                 <h3>Submitted Application Record</h3>
-                <p>Verify the information submitted for wholesale tier approval and invoicing.</p>
+                <p>Verify the information submitted for wholesale partnership approval and invoicing.</p>
               </div>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#047857', background: '#ecfdf5', padding: '4px 10px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <CheckCircle2 size={13} />
@@ -669,7 +669,7 @@ export default function B2BWholesalePage() {
                   <span>Projected Order Volume</span>
                 </div>
                 <div className="b2b-spec-val">
-                  {b2bProfile?.expectedMonthlyVolume || formData.expectedMonthlyVolume || '₹50k–₹2L (Tier 1)'}
+                  {b2bProfile?.expectedMonthlyVolume || formData.expectedMonthlyVolume || '₹50k–₹2L'}
                 </div>
               </div>
 
@@ -694,7 +694,7 @@ export default function B2BWholesalePage() {
                 <Mail size={18} style={{ color: '#e2231a' }} />
               </div>
               <h4>Realtime Notification</h4>
-              <p>You will receive an automated email and SMS notification the moment your wholesale tier is approved.</p>
+              <p>You will receive an automated email and SMS notification the moment your wholesale account is approved.</p>
             </div>
 
             <div className="b2b-expect-card">
@@ -950,7 +950,7 @@ export default function B2BWholesalePage() {
                   <Percent size={16} />
                 </div>
                 <div className="b2b-perk-content">
-                  <strong>40%–55% Resale Margin</strong>
+                  <strong>Wholesale Margins</strong>
                   <span>Direct SKU wholesale pricing set straight from our manufacturing facility.</span>
                 </div>
               </div>
@@ -1015,7 +1015,7 @@ export default function B2BWholesalePage() {
                 <div className="b2b-timeline-dot">3</div>
                 <div className="b2b-timeline-content">
                   <strong>Wholesale Portal Unlocked</strong>
-                  <span>Instant bulk table ordering & tier rates.</span>
+                  <span>Instant bulk table ordering & wholesale rates.</span>
                 </div>
               </div>
             </div>
@@ -1210,9 +1210,9 @@ export default function B2BWholesalePage() {
                     onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
                   >
                     <option value="Under ₹50k">Under ₹50,000 / month</option>
-                    <option value="₹50k–₹2L (Tier 1)">₹50,000 – ₹2,00,000 / month (Tier 1 Standard)</option>
-                    <option value="₹2L–₹5L (Tier 2)">₹2,00,000 – ₹5,00,000 / month (Tier 2 High Volume)</option>
-                    <option value="Above ₹5L (Enterprise)">Above ₹5,00,000 / month (Enterprise VIP)</option>
+                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / month</option>
+                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / month</option>
+                    <option value="Above ₹5L">Above ₹5,00,000 / month</option>
                   </select>
                 </div>
               </div>

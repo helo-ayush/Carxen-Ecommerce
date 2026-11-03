@@ -101,7 +101,7 @@ export default function WholesaleDashboardPage() {
               Wholesale Partner Onboarding
             </h1>
             <p>
-              Unlock factory-direct procurement, tier pricing (up to 25% margin), and zero-website-payment commercial billing through CarXen.
+              Unlock factory-direct procurement, wholesale pricing, and zero-website-payment commercial billing through CarXen.
             </p>
           </div>
           <div className="ws-header-actions">
@@ -285,9 +285,9 @@ export default function WholesaleDashboardPage() {
                   <WholesaleIcon name="tier" size={20} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Volume Tier Pricing</strong>
+                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Wholesale Pricing</strong>
                   <span style={{ fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
-                    Automated 15% to 25% wholesale margins applied across all SKU quantities once verified.
+                    Direct wholesale bulk rates applied across all catalogue SKUs once approved.
                   </span>
                 </div>
               </div>
@@ -395,8 +395,8 @@ export default function WholesaleDashboardPage() {
                   <span className="ws-step-status-tag queued">03 · Queued</span>
                 </div>
                 <div className="ws-review-step-content">
-                  <h4>Margin Tier Setup</h4>
-                  <p>Assigning Tier 1 (15%) or Tier 2 (25%) factory procurement pricing.</p>
+                  <h4>Commercial Access Setup</h4>
+                  <p>Configuring direct wholesale procurement and commercial catalogue access.</p>
                 </div>
               </div>
 
@@ -465,8 +465,8 @@ export default function WholesaleDashboardPage() {
                   </div>
 
                   <div className="ws-data-tile">
-                    <span className="ws-data-tile-label">Target Margin Tier</span>
-                    <span className="ws-data-tile-value">Tier 1 (15% Baseline)</span>
+                    <span className="ws-data-tile-label">Wholesale Access</span>
+                    <span className="ws-data-tile-value">Full Catalogue Access</span>
                   </div>
                 </div>
               </div>
@@ -499,7 +499,7 @@ export default function WholesaleDashboardPage() {
                       <CheckCircle2 size={16} />
                     </div>
                     <div>
-                      <strong>Direct Factory Margins (15% – 25%)</strong>
+                      <strong>Direct Wholesale Pricing</strong>
                       <span>Guaranteed bulk wholesale pricing on 7D mats, custom seat covers & wraps.</span>
                     </div>
                   </div>
@@ -607,7 +607,7 @@ export default function WholesaleDashboardPage() {
       href: '/wholesale/account',
       icon: 'account' as const,
       title: 'Business Account',
-      description: 'Manage legal entity, GSTIN registration, delivery warehouse address, and tier settings.',
+      description: 'Manage legal entity, GSTIN registration, delivery warehouse address, and account settings.',
       action: 'View account',
     },
   ];
@@ -654,7 +654,7 @@ export default function WholesaleDashboardPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Pricing Tier:</span>
+                <span style={{ color: '#64748b' }}>Account Privilege:</span>
                 <strong style={{ color: '#0f172a' }}>{tierName}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

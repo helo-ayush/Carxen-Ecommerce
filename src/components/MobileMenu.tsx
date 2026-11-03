@@ -146,7 +146,7 @@ export function MobileMenu() {
               </div>
               <div className="b2b-drawer-item-text">
                 <strong>Wholesale Catalogue</strong>
-                <span>All vehicle fitments & tiered MOQ prices</span>
+                <span>All vehicle fitments & bulk MOQ prices</span>
               </div>
               <ChevronRight size={16} className="b2b-drawer-arrow" />
             </Link>

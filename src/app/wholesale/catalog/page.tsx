@@ -207,7 +207,7 @@ export default function WholesaleCatalogPage() {
             Wholesale Procurement Catalogue
           </h1>
           <p>
-            Full factory catalogue with multi-vehicle fitment filtering, commercial tier pricing, and instant MOQ validation.
+            Full factory catalogue with multi-vehicle fitment filtering, commercial wholesale pricing, and instant MOQ validation.
             <strong> Direct CarXen factory fulfillment with Razorpay and COD checkout.</strong>
           </p>
         </div>

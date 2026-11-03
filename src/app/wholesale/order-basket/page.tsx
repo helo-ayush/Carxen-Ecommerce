@@ -608,7 +608,7 @@ export default function WholesaleOrderBasketPage() {
                   <span>Procurement Batch Items ({basketLineItems.length} SKUs, {wholesaleBasketCount} Units)</span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  Auto-applied tier margins based on quantity
+                  Wholesale pricing applied to consignment
                 </div>
               </div>
 
@@ -1040,7 +1040,7 @@ export default function WholesaleOrderBasketPage() {
             </div>
             <div className="ws-price-row">
               <span>Factory Logistics</span>
-              <strong style={{ color: '#059669', fontSize: '12px' }}>FREE (Enterprise Tier)</strong>
+              <strong style={{ color: '#059669', fontSize: '12px' }}>FREE (Wholesale Partner)</strong>
             </div>
 
             <div className="ws-price-row total">
