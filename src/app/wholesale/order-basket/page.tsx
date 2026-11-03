@@ -175,6 +175,20 @@ export default function WholesaleOrderBasketPage() {
     }[];
   }, [wholesaleBasket, products]);
 
+  // Prune stale/orphaned basket entries if basketLineItems is empty
+  useEffect(() => {
+    if (products.length > 0 && basketLineItems.length === 0 && Object.keys(wholesaleBasket).length > 0) {
+      clearWholesaleBasket();
+    }
+  }, [products.length, basketLineItems.length, wholesaleBasket, clearWholesaleBasket]);
+
+  // Prune stale/orphaned basket entries if basketLineItems is empty
+  useEffect(() => {
+    if (products.length > 0 && basketLineItems.length === 0 && Object.keys(wholesaleBasket).length > 0) {
+      clearWholesaleBasket();
+    }
+  }, [products.length, basketLineItems.length, wholesaleBasket, clearWholesaleBasket]);
+
   const allMoqsMet = basketLineItems.every((item) => item.isMoqMet);
   const totalSubtotal = basketLineItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const gstAmount = Math.round(totalSubtotal * 0.18);

@@ -17,7 +17,11 @@ import {
   Sparkles, 
   Lock, 
   ExternalLink,
-  BadgeCheck
+  BadgeCheck,
+  MessageSquare,
+  XCircle,
+  RotateCcw,
+  Edit3
 } from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -30,6 +34,8 @@ export default function WholesaleDashboardPage() {
     b2bProfile,
     isWholesaleApproved,
     isWholesalePending,
+    isWholesaleInquiry,
+    isWholesaleRejected,
     applyForWholesale,
     wholesaleBasketSkuCount,
     setWorkspaceMode,
@@ -58,6 +64,25 @@ export default function WholesaleDashboardPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isEditingApplication, setIsEditingApplication] = useState(false);
+
+  useEffect(() => {
+    if (b2bProfile) {
+      setFormData((prev) => ({
+        ...prev,
+        businessName: b2bProfile.businessName || prev.businessName,
+        tradeName: b2bProfile.tradeName || prev.tradeName,
+        gstin: b2bProfile.gstin || prev.gstin,
+        pan: b2bProfile.pan || prev.pan,
+        businessType: b2bProfile.businessType || prev.businessType,
+        businessAddress: b2bProfile.businessAddress || prev.businessAddress,
+        city: b2bProfile.city || prev.city,
+        state: b2bProfile.state || prev.state,
+        pincode: b2bProfile.pincode || prev.pincode,
+        expectedMonthlyVolume: b2bProfile.expectedMonthlyVolume || prev.expectedMonthlyVolume,
+      }));
+    }
+  }, [b2bProfile]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,6 +104,7 @@ export default function WholesaleDashboardPage() {
     if (!result.success) {
       setErrorMessage(formatUserFriendlyB2BError(result.error));
     } else {
+      setIsEditingApplication(false);
       showToast('Wholesale application submitted for CarXen verification.');
     }
   };
@@ -86,8 +112,11 @@ export default function WholesaleDashboardPage() {
   // 1. Auth Gate
   if (!authLoading && !user) return null;
 
-  // 2. Application Gate: Unregistered Partner Onboarding
-  if (!isWholesaleApproved && !isWholesalePending) {
+  const isUnderInquiry = isWholesaleInquiry && !isEditingApplication;
+  const isDeclined = isWholesaleRejected && !isEditingApplication;
+
+  // 2. Application Gate: Unregistered Partner Onboarding or Editing
+  if ((!isWholesaleApproved && !isWholesalePending && !isUnderInquiry && !isDeclined) || isEditingApplication) {
     return (
       <div className="ws-page-container">
         <div className="ws-header-bar">
@@ -311,8 +340,8 @@ export default function WholesaleDashboardPage() {
     );
   }
 
-  // 3. Application Gate: Verification In Progress
-  if (isWholesalePending) {
+  // 3. Application Gate: Under Review, Inquiry, or Declined
+  if (isWholesalePending || isUnderInquiry || isDeclined) {
     const applicantName = b2bProfile?.businessName || user?.name || 'Apex Automotive';
     const applicantGstin = b2bProfile?.gstin || '';
     const refCode = b2bProfile?.referenceNumber || `CX-B2B-${(applicantGstin ? applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) : (user?.id ? user.id.replace(/[^A-Za-z0-9]/g, '').slice(-4) : '8841')).toUpperCase()}`;

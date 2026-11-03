@@ -1162,6 +1162,18 @@ nav.main a.active {
   color: #fbbf24;
 }
 
+.b2b-drawer-tier-pill.inquiry {
+  background: rgba(2, 132, 199, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.b2b-drawer-tier-pill.rejected {
+  background: rgba(225, 29, 72, 0.15);
+  border: 1px solid rgba(253, 164, 175, 0.35);
+  color: #fb7185;
+}
+
 .b2b-drawer-tier-dot {
   width: 7px;
   height: 7px;

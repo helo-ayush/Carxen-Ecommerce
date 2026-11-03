@@ -75,6 +75,8 @@ export default function B2BWholesalePage() {
     b2bProfile,
     isWholesaleApproved,
     isWholesalePending,
+    isWholesaleInquiry,
+    isWholesaleRejected,
     applyForWholesale,
     refreshCustomerProfile,
     coupons,
@@ -82,6 +84,7 @@ export default function B2BWholesalePage() {
     openSupportModal,
   } = useApp();
 
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -479,7 +482,10 @@ export default function B2BWholesalePage() {
   // --------------------------------------------------------------------------
   // 3. PENDING REVIEW VIEW
   // --------------------------------------------------------------------------
-  if (isWholesalePending || justSubmitted) {
+  const isB2bInquiry = isWholesaleInquiry && !isEditing;
+  const isB2bRejected = isWholesaleRejected && !isEditing;
+
+  if (isWholesalePending || isB2bInquiry || isB2bRejected || justSubmitted) {
     const activeBusiness = b2bProfile?.businessName || formData.businessName || 'Your Dealership';
     const referenceId =
       b2bProfile?.referenceNumber ||
@@ -503,16 +509,55 @@ export default function B2BWholesalePage() {
         <div className="b2b-pending-wrap">
           {/* Main Hero Status Card */}
           <div className="b2b-pending-hero">
-            <div className="b2b-status-live-badge">
-              <span className="b2b-live-dot" />
-              <span>Verification In Progress · Estimated 24–48 Hours</span>
-            </div>
+            {isB2bInquiry ? (
+              <div className="b2b-status-live-badge" style={{ background: 'rgba(2, 132, 199, 0.1)', borderColor: 'rgba(56, 189, 248, 0.4)', color: '#0284c7' }}>
+                <span className="b2b-live-dot" style={{ background: '#0284c7' }} />
+                <span>Action Required · Commercial Desk Inquired</span>
+              </div>
+            ) : isB2bRejected ? (
+              <div className="b2b-status-live-badge" style={{ background: 'rgba(225, 29, 72, 0.1)', borderColor: 'rgba(253, 164, 175, 0.5)', color: '#e11d48' }}>
+                <span className="b2b-live-dot" style={{ background: '#e11d48' }} />
+                <span>Application Declined · Commercial Desk</span>
+              </div>
+            ) : (
+              <div className="b2b-status-live-badge">
+                <span className="b2b-live-dot" />
+                <span>Verification In Progress · Estimated 24–48 Hours</span>
+              </div>
+            )}
 
-            <h1>Application Submitted for Review</h1>
+            <h1>
+              {isB2bInquiry
+                ? 'Wholesale Application Under Commercial Inquiry'
+                : isB2bRejected
+                  ? 'Wholesale Application Declined'
+                  : 'Application Submitted for Review'}
+            </h1>
             <p className="sub">
-              Thank you for partnering with CarXen. Your wholesale dealership application for{' '}
-              <strong>{activeBusiness}</strong> has been received and prioritized at our factory verification desk.
+              {isB2bInquiry
+                ? `The commercial desk has reviewed your wholesale application for ${activeBusiness} and requested additional details.`
+                : isB2bRejected
+                  ? `Your wholesale application for ${activeBusiness} could not be approved at this time.`
+                  : `Thank you for partnering with CarXen. Your wholesale dealership application for ${activeBusiness} has been received and prioritized at our factory verification desk.`}
             </p>
+
+            {isB2bInquiry && (
+              <div style={{ background: '#f0f9ff', border: '1.5px solid #7dd3fc', borderRadius: 12, padding: '16px 20px', margin: '20px auto 0', maxWidth: 640, textAlign: 'left' }}>
+                <strong style={{ display: 'block', fontSize: 14, color: '#0369a1', marginBottom: 6 }}>Message from CarXen Commercial Review Desk:</strong>
+                <p style={{ margin: 0, fontSize: 13.5, color: '#0c4a6e', lineHeight: 1.5 }}>
+                  &ldquo;{b2bProfile?.inquiryMessage || b2bProfile?.rejectionReason || 'Please provide additional trade documentation or address clarification.'}&rdquo;
+                </p>
+              </div>
+            )}
+
+            {isB2bRejected && (
+              <div style={{ background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: 12, padding: '16px 20px', margin: '20px auto 0', maxWidth: 640, textAlign: 'left' }}>
+                <strong style={{ display: 'block', fontSize: 14, color: '#be123c', marginBottom: 6 }}>Reason Provided by Commercial Desk:</strong>
+                <p style={{ margin: 0, fontSize: 13.5, color: '#881337', lineHeight: 1.5 }}>
+                  &ldquo;{b2bProfile?.rejectionReason || 'Application did not meet wholesale eligibility requirements.'}&rdquo;
+                </p>
+              </div>
+            )}
 
             {/* Application Meta Strip */}
             <div className="b2b-pending-meta-strip">

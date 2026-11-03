@@ -19,6 +19,8 @@ function HeaderContent() {
     car,
     isWholesaleApproved,
     isWholesalePending,
+    isWholesaleInquiry,
+    isWholesaleRejected,
     b2bProfile,
     wholesaleBasketSkuCount,
     setWorkspaceMode,
@@ -49,7 +51,16 @@ function HeaderContent() {
     setCheckingWholesaleStatus(true);
     try {
       await refreshCustomerProfile();
-      showToast('Application status checked: Commercial review is currently in progress.');
+      const st = b2bProfile?.status;
+      if (st === 'APPROVED') {
+        showToast('Congratulations! Your wholesale account is approved & active.');
+      } else if (st === 'INQUIRY') {
+        showToast('Action Required: Commercial desk requested additional information.');
+      } else if (st === 'REJECTED') {
+        showToast('Application status: Declined by commercial underwriting desk.');
+      } else {
+        showToast('Application status: Commercial review is in progress.');
+      }
     } catch {
       showToast('Application is currently under commercial review.');
     } finally {
@@ -271,14 +282,30 @@ function HeaderContent() {
             <span className="wholesale-sidebar-b2b-badge">B2B PORTAL</span>
           </div>
 
-          <div className={`wholesale-sidebar-status ${isWholesaleApproved ? 'status-approved' : 'status-pending'}`}>
-            <span className="wholesale-status-ping" />
-            <span className="wholesale-status-text">
-              {isWholesaleApproved
-                ? 'Verified Wholesale Partner'
-                : (isWholesalePending ? 'Verification Pending' : 'Registration Required')}
-            </span>
-          </div>
+          {(() => {
+            let statusClass = 'status-pending';
+            let statusText = 'Registration Required';
+            if (isWholesaleApproved) {
+              statusClass = 'status-approved';
+              statusText = 'Verified Wholesale Partner';
+            } else if (isWholesaleInquiry) {
+              statusClass = 'status-inquiry';
+              statusText = 'Action Required · Inquiry';
+            } else if (isWholesaleRejected) {
+              statusClass = 'status-rejected';
+              statusText = 'Application Declined';
+            } else if (isWholesalePending) {
+              statusClass = 'status-pending';
+              statusText = 'Verification Pending';
+            }
+
+            return (
+              <div className={`wholesale-sidebar-status ${statusClass}`}>
+                <span className="wholesale-status-ping" />
+                <span className="wholesale-status-text">{statusText}</span>
+              </div>
+            );
+          })()}
 
           {!isWholesaleApproved && (
             <button

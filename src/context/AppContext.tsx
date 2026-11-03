@@ -75,6 +75,7 @@ export interface B2BProfile {
   rejectionReason?: string;
   inquiryMessage?: string;
   appliedAt?: string;
+  reviewedAt?: string;
   referenceNumber?: string;
 }
 
@@ -158,6 +159,7 @@ interface AppContextType {
   isWholesaleApproved: boolean;
   isWholesalePending: boolean;
   isWholesaleInquiry: boolean;
+  isWholesaleRejected: boolean;
   applyForWholesale: (data: any) => Promise<{ success: boolean; error?: string }>;
   updateB2bProfile: (updates: Partial<B2BProfile> & { name?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   refreshCustomerProfile: () => Promise<void>;
@@ -226,6 +228,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
   const isWholesaleInquiry = b2bProfile?.status === 'INQUIRY';
+  const isWholesaleRejected = b2bProfile?.status === 'REJECTED';
 
   const [coupons, setCoupons] = useState<StorefrontCoupon[]>([]);
 
@@ -411,7 +414,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (data.profile.b2bStatus) {
-            setB2bProfile({
+            const nextB2b: B2BProfile = {
               status: data.profile.b2bStatus,
               businessName: data.profile.businessName || undefined,
               tradeName: data.profile.tradeName || undefined,
@@ -427,8 +430,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               rejectionReason: data.profile.b2bRejectionReason || undefined,
               inquiryMessage: data.profile.b2bRejectionReason || undefined,
               appliedAt: data.profile.b2bAppliedAt || undefined,
+              reviewedAt: data.profile.b2bReviewedAt || undefined,
               referenceNumber: data.profile.referenceNumber || undefined,
-            });
+            };
+            setB2bProfile(nextB2b);
+            try {
+              localStorage.setItem('cx_b2b_profile', JSON.stringify(nextB2b));
+            } catch {}
           }
         }
 
@@ -1321,12 +1329,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const wholesaleBasketCount = useMemo(() => {
-    return Object.values(wholesaleBasket).reduce((a, b) => a + b, 0);
-  }, [wholesaleBasket]);
+    return Object.entries(wholesaleBasket).reduce((sum, [idStr, q]) => {
+      if (q <= 0) return sum;
+      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
+        return sum;
+      }
+      return sum + q;
+    }, 0);
+  }, [wholesaleBasket, products]);
 
   const wholesaleBasketSkuCount = useMemo(() => {
-    return Object.values(wholesaleBasket).filter((q) => q > 0).length;
-  }, [wholesaleBasket]);
+    return Object.entries(wholesaleBasket).filter(([idStr, q]) => {
+      if (q <= 0) return false;
+      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
+        return false;
+      }
+      return true;
+    }).length;
+  }, [wholesaleBasket, products]);
+
+  // Prune orphaned items from wholesale basket once catalog is loaded
+  useEffect(() => {
+    if (products.length > 0) {
+      setWholesaleBasket((prev) => {
+        let changed = false;
+        const cleaned: Record<number, number> = {};
+        for (const [idStr, qty] of Object.entries(prev)) {
+          const numId = Number(idStr);
+          if (qty > 0 && products.some((p) => p.id === numId)) {
+            cleaned[numId] = qty;
+          } else {
+            changed = true;
+          }
+        }
+        if (changed) {
+          try {
+            if (Object.keys(cleaned).length === 0) {
+              localStorage.removeItem('cx_wholesale_basket');
+            } else {
+              localStorage.setItem('cx_wholesale_basket', JSON.stringify(cleaned));
+            }
+          } catch {}
+          return cleaned;
+        }
+        return prev;
+      });
+    }
+  }, [products]);
 
   const wholesaleBasketSubtotal = useMemo(() => {
     return Object.entries(wholesaleBasket).reduce((sum, [idStr, q]) => {
@@ -1403,8 +1452,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isCartOpen, isMobileMenuOpen, quickViewProduct]);
 
   const cartCount = useMemo(() => {
-    return Object.values(cart).reduce((a, b) => a + b, 0);
-  }, [cart]);
+    return Object.entries(cart).reduce((sum, [idStr, q]) => {
+      if (q <= 0) return sum;
+      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
+        return sum;
+      }
+      return sum + q;
+    }, 0);
+  }, [cart, products]);
 
   const cartSubtotal = useMemo(() => {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
@@ -1462,6 +1517,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isWholesaleApproved,
         isWholesalePending,
         isWholesaleInquiry,
+        isWholesaleRejected,
         applyForWholesale: async (applicationData: any) => {
           try {
             const headers = await getAuthHeaders();
@@ -1477,7 +1533,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               );
               return { success: false, error: friendlyError };
             }
-            setB2bProfile({
+            const appliedB2b: B2BProfile = {
               status: 'PENDING',
               businessName: applicationData.businessName,
               tradeName: applicationData.tradeName,
@@ -1496,7 +1552,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 (applicationData.gstin
                   ? `CX-B2B-${applicationData.gstin.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase()}`
                   : 'CX-B2B-8841'),
-            });
+            };
+            setB2bProfile(appliedB2b);
+            try {
+              localStorage.setItem('cx_b2b_profile', JSON.stringify(appliedB2b));
+            } catch {}
             showToast('Wholesale application submitted for review');
             return { success: true };
           } catch (err) {

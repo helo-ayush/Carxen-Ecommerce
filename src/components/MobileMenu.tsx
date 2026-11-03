@@ -33,6 +33,8 @@ export function MobileMenu() {
     logout,
     isWholesaleApproved,
     isWholesalePending,
+    isWholesaleInquiry,
+    isWholesaleRejected,
     b2bProfile,
     wholesaleBasketSkuCount,
     refreshCustomerProfile,
