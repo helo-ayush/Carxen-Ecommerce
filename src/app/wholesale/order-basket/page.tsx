@@ -30,7 +30,18 @@ import {
   Calendar,
   RefreshCw,
   X,
+  Edit3,
+  Tag,
+  Ticket,
+  Sparkles,
 } from 'lucide-react';
+import {
+  validateCoupon,
+  getAvailableCouponsForBuyer,
+  getAssignedCouponForBuyer,
+  type StorefrontCoupon,
+  type WholesaleBuyerContext,
+} from '@/lib/storefront/coupons';
 import '../wholesale.css';
 
 // Helper to dynamically load Razorpay checkout script
@@ -73,6 +84,7 @@ export default function WholesaleOrderBasketPage() {
     clearWholesaleBasket,
     saveOrderToHistory,
     showToast,
+    coupons,
   } = useApp();
 
   // Strict B2B verification gate
@@ -134,6 +146,14 @@ export default function WholesaleOrderBasketPage() {
   const [partialShipmentAllowed, setPartialShipmentAllowed] = useState(true);
   const [factoryNotes, setFactoryNotes] = useState('');
 
+  // User & Warehouse details compact mode toggle
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   // Payment method selection: Razorpay or COD (just like B2C)
   const [paymentOption, setPaymentOption] = useState<'razorpay' | 'cod'>('razorpay');
 
@@ -184,8 +204,62 @@ export default function WholesaleOrderBasketPage() {
 
   const allMoqsMet = basketLineItems.every((item) => item.isMoqMet);
   const totalSubtotal = basketLineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const gstAmount = Math.round(totalSubtotal * 0.18);
-  const totalOrderValue = totalSubtotal + gstAmount;
+
+  // Buyer context for wholesale coupon qualification
+  const buyerContext: WholesaleBuyerContext = useMemo(() => ({
+    isWholesaleApproved: true,
+    businessName: businessName || b2bProfile?.businessName || null,
+    tradeName: tradeName || b2bProfile?.tradeName || null,
+    email: email || user?.email || null,
+    userId: user?.id || null,
+    orderCount: (user as any)?.orderCount || 0,
+    isVerifiedBuyer: true,
+  }), [businessName, tradeName, email, user, b2bProfile]);
+
+  // Coupon validation against wholesale cart total
+  const couponValidation = useMemo(() => {
+    if (!appliedCoupon) return null;
+    return validateCoupon(appliedCoupon, totalSubtotal, buyerContext, coupons);
+  }, [appliedCoupon, totalSubtotal, buyerContext, coupons]);
+
+  const couponDiscount = couponValidation?.valid ? couponValidation.discountAmount : 0;
+  const discountedSubtotal = Math.max(0, totalSubtotal - couponDiscount);
+  const gstAmount = Math.round(discountedSubtotal * 0.18);
+  const totalOrderValue = discountedSubtotal + gstAmount;
+
+  // Assigned coupon specifically for this buyer (from Veda promotions)
+  const assignedCoupon: StorefrontCoupon | null = useMemo(() => {
+    const candidate = getAssignedCouponForBuyer(buyerContext, coupons);
+    if (!candidate) return null;
+    return candidate;
+  }, [buyerContext, coupons]);
+
+  const handleApplyCoupon = (codeToApply?: string) => {
+    const code = (codeToApply || couponCode).trim().toUpperCase();
+    if (!code) {
+      setCouponError('Please enter a coupon code.');
+      return;
+    }
+    const result = validateCoupon(code, totalSubtotal, buyerContext, coupons);
+    if (result.valid && result.coupon) {
+      setAppliedCoupon(code);
+      setCouponCode(code);
+      setCouponError(null);
+      showToast(result.message || `Coupon ${code} applied!`);
+    } else {
+      setAppliedCoupon('');
+      const err = result.error || `Coupon "${code}" is invalid or not applicable.`;
+      setCouponError(err);
+      showToast(err);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon('');
+    setCouponCode('');
+    setCouponError(null);
+    showToast('Coupon removed.');
+  };
 
   if (authLoading || !user || !isWholesaleApproved) {
     return null;
@@ -224,6 +298,8 @@ export default function WholesaleOrderBasketPage() {
     requestedDeliveryDate: requestedDeliveryDate || undefined,
     partialShipmentAllowed,
     factoryNotes: factoryNotes.trim() || undefined,
+    couponCode: appliedCoupon || undefined,
+    discountAmount: couponDiscount,
     ...extra,
   });
 
@@ -266,11 +342,19 @@ export default function WholesaleOrderBasketPage() {
             image: it.product.image || it.product.images?.[0],
           })),
           subtotal: totalSubtotal,
-          discountAmount: 0,
+          discountAmount: couponDiscount,
           shippingAmount: 0,
           totalAmount: placedOrder.totalAmount || totalOrderValue,
           currency: 'INR',
-        });
+          poNumber: poNumber.trim() || undefined,
+          notes: [
+            poNumber.trim() ? `PO Reference: ${poNumber.trim()}` : null,
+            requestedDeliveryDate ? `Target Delivery Date: ${requestedDeliveryDate}` : null,
+            partialShipmentAllowed ? 'Partial batch consignment dispatch allowed' : 'Ship complete consignment only',
+            factoryNotes.trim() ? `Consignment Notes: ${factoryNotes.trim()}` : null,
+            appliedCoupon ? `Coupon Applied: ${appliedCoupon}` : null,
+          ].filter(Boolean).join(' | '),
+        } as any);
       }
     } catch (e) {
       console.warn('Could not save wholesale order to client history:', e);
@@ -376,6 +460,11 @@ export default function WholesaleOrderBasketPage() {
           businessName,
           gstin,
           warehouse: `${shippingLine1}, ${shippingCity} - ${shippingPincode}`,
+          poNumber: poNumber || '',
+          targetDeliveryDate: requestedDeliveryDate || '',
+          consignmentNotes: factoryNotes || '',
+          couponCode: appliedCoupon || '',
+          discountAmount: String(couponDiscount),
         },
         theme: {
           color: '#e2231a',
@@ -822,204 +911,356 @@ export default function WholesaleOrderBasketPage() {
               </div>
             </div>
 
-            {/* Commercial Identity & Delivery Dispatch Destination */}
+            {/* Commercial Identity & Delivery Destination (Compact Card with Editable Pen Button) */}
             <div className="ws-basket-card">
               <div className="ws-basket-card-header">
                 <div className="ws-basket-card-title">
                   <Building2 size={18} style={{ color: '#2563eb' }} />
                   <span>Commercial Entity &amp; Warehouse Dispatch Destination</span>
                 </div>
-                <div style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '3px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                  ✓ 100% ITC Eligible GST Tax Invoice
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '3px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                    ✓ 100% ITC Eligible GST Tax Invoice
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetails(!isEditingDetails)}
+                    className="ws-btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '12px', gap: '5px', minHeight: '30px' }}
+                    title={isEditingDetails ? 'Done editing' : 'Edit details'}
+                  >
+                    {isEditingDetails ? (
+                      <>
+                        <Check size={13} />
+                        <span>Done</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 size={13} />
+                        <span>Edit Details</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+              </div>
+
+              <div className="ws-basket-card-body">
+                {/* COMPACT VIEW (Default, non-form summary) */}
+                {!isEditingDetails ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+                    {/* Entity Info Box */}
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                          Legal Entity
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingDetails(true)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
+                          title="Edit"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                        {businessName || 'Business Name Required'}
+                      </div>
+                      {tradeName && (
+                        <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px' }}>
+                          Trade: {tradeName}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '6px' }}>
+                        <span style={{ color: '#64748b' }}>GSTIN: </span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{gstin || 'Not Provided (No ITC claim)'}</span>
+                      </div>
+                    </div>
+
+                    {/* Contact Person Box */}
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                          Authorized Contact
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingDetails(true)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
+                          title="Edit"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                        {representativeName || user?.name || 'Authorized Buyer'}
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '4px' }}>
+                        <span style={{ color: '#64748b' }}>Phone: </span>
+                        <span style={{ fontWeight: 600 }}>{phone || '—'}</span>
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '2px' }}>
+                        <span style={{ color: '#64748b' }}>Email: </span>
+                        <span style={{ fontWeight: 600 }}>{email || user?.email || '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Warehouse Destination Box */}
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                          Warehouse Destination
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingDetails(true)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
+                          title="Change warehouse address"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
+                        {shippingLine1 || 'Warehouse Address Required'}
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '3px' }}>
+                        {shippingCity ? `${shippingCity}, ${shippingState} - ${shippingPincode}` : ''}
+                      </div>
+                      {addresses.length > 1 && (
+                        <div style={{ marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingDetails(true)}
+                            style={{ fontSize: '11px', color: '#0284c7', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Switch Warehouse Destination ({addresses.length} available) &rarr;
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* EDITABLE FORM VIEW (Expands on clicking pen button) */
+                  <div style={{ animation: 'wsFadeIn 0.2s ease' }}>
+                    <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">Legal Business Entity Name *</label>
+                        <input
+                          type="text"
+                          required
+                          className="ws-form-input"
+                          value={businessName}
+                          onChange={(e) => setBusinessName(e.target.value)}
+                        />
+                      </div>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">GSTIN Number (Optional — For ITC)</label>
+                        <input
+                          type="text"
+                          className="ws-form-input"
+                          placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
+                          style={{ fontFamily: 'monospace' }}
+                          value={gstin}
+                          onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ws-form-grid ws-form-grid-3" style={{ marginBottom: '16px' }}>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">Contact Person *</label>
+                        <input
+                          type="text"
+                          required
+                          className="ws-form-input"
+                          value={representativeName}
+                          onChange={(e) => setRepresentativeName(e.target.value)}
+                        />
+                      </div>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">Phone / WhatsApp *</label>
+                        <input
+                          type="tel"
+                          required
+                          className="ws-form-input"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">Business Email *</label>
+                        <input
+                          type="email"
+                          required
+                          className="ws-form-input"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {addresses.length > 0 && (
+                      <div style={{ marginBottom: '18px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
+                            Select Registered Warehouse Destination:
+                          </label>
+                          <Link
+                            href="/wholesale/account"
+                            style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            + Manage Warehouses
+                          </Link>
+                        </div>
+                        <div className="ws-warehouse-grid">
+                          {addresses.map((addr) => {
+                            const isSelected = selectedAddressId === addr.id;
+                            return (
+                              <div
+                                key={addr.id}
+                                className={`ws-warehouse-card ${isSelected ? 'selected' : ''}`}
+                                onClick={() => handleSelectWarehouseAddress(addr.id)}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                                    {addr.label || 'Warehouse'}
+                                  </span>
+                                  {addr.isPrimary && (
+                                    <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                      Primary
+                                    </span>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                                  {addr.addressLine1}, {addr.city} - {addr.postalCode}
+                                </p>
+                                <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>
+                                  Attn: {addr.name} ({addr.phone})
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="ws-form-group">
+                      <label className="ws-form-label">Warehouse Delivery Address *</label>
+                      <input
+                        type="text"
+                        required
+                        className="ws-form-input"
+                        placeholder="Plot / Industrial Area / Landmark"
+                        value={shippingLine1}
+                        onChange={(e) => setShippingLine1(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="ws-form-grid ws-form-grid-3">
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">City *</label>
+                        <input
+                          type="text"
+                          required
+                          className="ws-form-input"
+                          value={shippingCity}
+                          onChange={(e) => setShippingCity(e.target.value)}
+                        />
+                      </div>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">State *</label>
+                        <input
+                          type="text"
+                          required
+                          className="ws-form-input"
+                          value={shippingState}
+                          onChange={(e) => setShippingState(e.target.value)}
+                        />
+                      </div>
+                      <div className="ws-form-group">
+                        <label className="ws-form-label">PIN Code *</label>
+                        <input
+                          type="text"
+                          required
+                          className="ws-form-input"
+                          value={shippingPincode}
+                          onChange={(e) => setShippingPincode(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                      <button
+                        type="button"
+                        className="ws-btn-primary"
+                        onClick={() => setIsEditingDetails(false)}
+                        style={{ minWidth: '100px' }}
+                      >
+                        <Check size={14} />
+                        <span>Save &amp; Collapse</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Delivery Schedule & Consignment Notes (Optional) - Displayed cleanly below */}
+            <div className="ws-basket-card" style={{ marginTop: '16px' }}>
+              <div className="ws-basket-card-header">
+                <div className="ws-basket-card-title">
+                  <Calendar size={18} style={{ color: '#0284c7' }} />
+                  <span>Delivery Schedule &amp; Consignment Notes (Optional)</span>
+                </div>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  Forwarded to factory dispatch &amp; logistics team
+                </span>
               </div>
 
               <div className="ws-basket-card-body">
                 <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
                   <div className="ws-form-group">
-                    <label className="ws-form-label">Legal Business Entity Name *</label>
+                    <label className="ws-form-label">Buyer PO Reference #</label>
                     <input
                       type="text"
-                      required
                       className="ws-form-input"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="e.g. PO-2026-OCT-8841"
+                      value={poNumber}
+                      onChange={(e) => setPoNumber(e.target.value)}
                     />
                   </div>
                   <div className="ws-form-group">
-                    <label className="ws-form-label">GSTIN Number (Optional — For ITC)</label>
+                    <label className="ws-form-label">Target Delivery Date</label>
                     <input
-                      type="text"
+                      type="date"
                       className="ws-form-input"
-                      placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
-                      style={{ fontFamily: 'monospace' }}
-                      value={gstin}
-                      onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                      value={requestedDeliveryDate}
+                      onChange={(e) => setRequestedDeliveryDate(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="ws-form-grid ws-form-grid-3" style={{ marginBottom: '16px' }}>
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">Contact Person *</label>
-                    <input
-                      type="text"
-                      required
-                      className="ws-form-input"
-                      value={representativeName}
-                      onChange={(e) => setRepresentativeName(e.target.value)}
-                    />
-                  </div>
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">Phone / WhatsApp *</label>
-                    <input
-                      type="tel"
-                      required
-                      className="ws-form-input"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">Business Email *</label>
-                    <input
-                      type="email"
-                      required
-                      className="ws-form-input"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {addresses.length > 0 && (
-                  <div style={{ marginBottom: '18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
-                        Select Registered Warehouse Destination:
-                      </label>
-                      <Link
-                        href="/wholesale/account"
-                        style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
-                      >
-                        + Manage Warehouses
-                      </Link>
-                    </div>
-                    <div className="ws-warehouse-grid">
-                      {addresses.map((addr) => {
-                        const isSelected = selectedAddressId === addr.id;
-                        return (
-                          <div
-                            key={addr.id}
-                            className={`ws-warehouse-card ${isSelected ? 'selected' : ''}`}
-                            onClick={() => handleSelectWarehouseAddress(addr.id)}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                                {addr.label || 'Warehouse'}
-                              </span>
-                              {addr.isPrimary && (
-                                <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
-                                  Primary
-                                </span>
-                              )}
-                            </div>
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 6px 0', lineHeight: 1.4 }}>
-                              {addr.addressLine1}, {addr.city} - {addr.postalCode}
-                            </p>
-                            <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>
-                              Attn: {addr.name} ({addr.phone})
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="ws-form-group">
-                  <label className="ws-form-label">Warehouse Delivery Address *</label>
-                  <input
-                    type="text"
-                    required
+                <div className="ws-form-group" style={{ marginBottom: '14px' }}>
+                  <label className="ws-form-label">Consignment Notes / Dispatch Instructions</label>
+                  <textarea
                     className="ws-form-input"
-                    placeholder="Plot / Industrial Area / Landmark"
-                    value={shippingLine1}
-                    onChange={(e) => setShippingLine1(e.target.value)}
+                    style={{ minHeight: '65px', resize: 'vertical', fontSize: '13px', paddingTop: '8px' }}
+                    placeholder="e.g. Gate 2 delivery, call receiving supervisor 1 hour prior to arrival, fork-lift required on-site..."
+                    value={factoryNotes}
+                    onChange={(e) => setFactoryNotes(e.target.value)}
                   />
                 </div>
 
-                <div className="ws-form-grid ws-form-grid-3">
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">City *</label>
-                    <input
-                      type="text"
-                      required
-                      className="ws-form-input"
-                      value={shippingCity}
-                      onChange={(e) => setShippingCity(e.target.value)}
-                    />
-                  </div>
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">State *</label>
-                    <input
-                      type="text"
-                      required
-                      className="ws-form-input"
-                      value={shippingState}
-                      onChange={(e) => setShippingState(e.target.value)}
-                    />
-                  </div>
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">PIN Code *</label>
-                    <input
-                      type="text"
-                      required
-                      className="ws-form-input"
-                      value={shippingPincode}
-                      onChange={(e) => setShippingPincode(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Delivery Reference & Dispatch Notes */}
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', marginTop: '10px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>
-                    Delivery Schedule &amp; Consignment Notes (Optional)
-                  </div>
-                  <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
-                    <div className="ws-form-group">
-                      <label className="ws-form-label">Buyer PO Reference #</label>
-                      <input
-                        type="text"
-                        className="ws-form-input"
-                        placeholder="e.g. PO-2026-OCT-8841"
-                        value={poNumber}
-                        onChange={(e) => setPoNumber(e.target.value)}
-                      />
-                    </div>
-                    <div className="ws-form-group">
-                      <label className="ws-form-label">Target Delivery Date</label>
-                      <input
-                        type="date"
-                        className="ws-form-input"
-                        value={requestedDeliveryDate}
-                        onChange={(e) => setRequestedDeliveryDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      id="partialShip"
-                      checked={partialShipmentAllowed}
-                      onChange={(e) => setPartialShipmentAllowed(e.target.checked)}
-                    />
-                    <label htmlFor="partialShip" style={{ fontSize: '12.5px', color: '#475569', cursor: 'pointer' }}>
-                      Allow partial batch consignment dispatch
-                    </label>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="partialShip"
+                    checked={partialShipmentAllowed}
+                    onChange={(e) => setPartialShipmentAllowed(e.target.checked)}
+                  />
+                  <label htmlFor="partialShip" style={{ fontSize: '12.5px', color: '#475569', cursor: 'pointer' }}>
+                    Allow partial batch consignment dispatch if factory stock is tiered
+                  </label>
                 </div>
               </div>
             </div>
@@ -1041,6 +1282,15 @@ export default function WholesaleOrderBasketPage() {
               <span>Wholesale Base Subtotal</span>
               <strong>{formatINR(totalSubtotal)}</strong>
             </div>
+
+            {/* COUPON DISCOUNT APPLIED */}
+            {couponDiscount > 0 && (
+              <div className="ws-price-row" style={{ color: '#059669' }}>
+                <span>Coupon Discount ({appliedCoupon})</span>
+                <strong>-{formatINR(couponDiscount)}</strong>
+              </div>
+            )}
+
             <div className="ws-price-row">
               <span>GST (18% ITC Eligible)</span>
               <strong>{formatINR(gstAmount)}</strong>
@@ -1048,6 +1298,92 @@ export default function WholesaleOrderBasketPage() {
             <div className="ws-price-row">
               <span>Factory Logistics</span>
               <strong style={{ color: '#059669', fontSize: '12px' }}>FREE (Wholesale Partner)</strong>
+            </div>
+
+            {/* COUPON INPUT & ASSIGNED PROMOTIONS BOX */}
+            <div style={{ margin: '14px 0', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                <Tag size={14} style={{ color: '#e2231a' }} />
+                <span>Apply Wholesale Coupon</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="text"
+                  className="ws-form-input"
+                  style={{ textTransform: 'uppercase', height: '36px', fontSize: '12.5px', padding: '0 10px', fontFamily: 'monospace', fontWeight: 700 }}
+                  placeholder="Enter code"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value);
+                    if (couponError) setCouponError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyCoupon();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="ws-btn-primary"
+                  onClick={() => handleApplyCoupon()}
+                  style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
+                >
+                  Apply
+                </button>
+              </div>
+
+              {couponError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#dc2626', fontSize: '11px', marginTop: '6px', lineHeight: 1.3 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                  <span>{couponError}</span>
+                </div>
+              )}
+
+              {appliedCoupon && couponValidation?.valid && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#065f46', fontWeight: 700 }}>
+                    <CheckCircle2 size={13} style={{ flexShrink: 0 }} />
+                    <span>&ldquo;{appliedCoupon}&rdquo; active ({couponValidation.coupon?.type === 'Percentage' ? `${couponValidation.coupon.value}% off` : `${formatINR(couponDiscount)} off`})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', padding: '2px', display: 'flex', alignItems: 'center' }}
+                    title="Remove coupon"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+
+              {/* Assigned Wholesale Coupon from Veda side */}
+              {assignedCoupon && assignedCoupon.code !== appliedCoupon && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', background: '#eff6ff', border: '1px dashed #93c5fd', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#1d4ed8', letterSpacing: '0.04em' }}>
+                      Assigned Partner Promo
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyCoupon(assignedCoupon.code)}
+                      style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer' }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#1e3a8a', fontWeight: 700 }}>
+                    {assignedCoupon.code} ({assignedCoupon.type === 'Percentage' ? `${assignedCoupon.value}% off` : `${formatINR(assignedCoupon.value)} off`})
+                  </div>
+                  {assignedCoupon.description && (
+                    <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+                      {assignedCoupon.description}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="ws-price-row total">

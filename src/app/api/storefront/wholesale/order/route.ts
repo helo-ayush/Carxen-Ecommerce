@@ -33,6 +33,8 @@ export async function POST(request: Request) {
       requestedDeliveryDate,
       partialShipmentAllowed,
       factoryNotes,
+      couponCode,
+      discountAmount,
       paymentMethod,
       razorpayOrderId,
       razorpayPaymentId,
@@ -108,10 +110,52 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate coupon and apply discounts
+    let couponDiscount = 0;
+    let campaignId: string | null = null;
+    let validCouponCode: string | null = null;
+
+    if (couponCode && typeof couponCode === 'string' && couponCode.trim()) {
+      const codeUpper = couponCode.trim().toUpperCase();
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: campaign } = await supabaseAdmin
+        .from('ecommerce_campaigns')
+        .select('*')
+        .eq('code', codeUpper)
+        .eq('status', 'ACTIVE')
+        .maybeSingle();
+
+      if (campaign) {
+        const now = new Date();
+        const startsOk = !campaign.startsAt || new Date(campaign.startsAt) <= now;
+        const endsOk = !campaign.endsAt || new Date(campaign.endsAt) >= now;
+        const usageOk = !campaign.usageLimit || !campaign.usageCount || Number(campaign.usageCount) < Number(campaign.usageLimit);
+        const minOrderOk = !campaign.minimumOrderAmount || subtotal >= Number(campaign.minimumOrderAmount);
+
+        if (startsOk && endsOk && usageOk && minOrderOk) {
+          validCouponCode = campaign.code;
+          campaignId = campaign.id;
+          const val = Number(campaign.discountValue) || 0;
+          if (campaign.discountType === 'PERCENTAGE' || campaign.discountType === 'Percentage') {
+            couponDiscount = Math.round((subtotal * val) / 100);
+            if (campaign.maxDiscountAmount && couponDiscount > Number(campaign.maxDiscountAmount)) {
+              couponDiscount = Math.round(Number(campaign.maxDiscountAmount));
+            }
+          } else {
+            couponDiscount = Math.min(subtotal, Math.round(val));
+          }
+        }
+      }
+    } else if (typeof discountAmount === 'number' && discountAmount > 0) {
+      couponDiscount = Math.min(subtotal, Math.round(discountAmount));
+      if (couponCode) validCouponCode = String(couponCode).trim().toUpperCase();
+    }
+
+    const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
     // 18% GST for wholesale components
     const gstRate = 0.18;
-    const gstAmount = Math.round(subtotal * gstRate);
-    const totalOrderValue = subtotal + gstAmount;
+    const gstAmount = Math.round(discountedSubtotal * gstRate);
+    const totalOrderValue = discountedSubtotal + gstAmount;
 
     // ACTION: Create Razorpay Order for B2B Checkout
     if (action === 'create-razorpay-order') {
@@ -130,6 +174,8 @@ export async function POST(request: Request) {
           customerEmail: email?.trim() || '',
           customerPhone: phone?.trim() || '',
           gstin: gstin?.trim().toUpperCase() || '',
+          couponCode: validCouponCode || '',
+          discountAmount: String(couponDiscount),
         },
       });
 
@@ -143,6 +189,8 @@ export async function POST(request: Request) {
         keyId,
         isMock: rzpOrder.isMock,
         subtotal,
+        discountAmount: couponDiscount,
+        couponCode: validCouponCode,
         gstAmount,
         totalAmount: totalOrderValue,
       });
@@ -258,6 +306,12 @@ export async function POST(request: Request) {
       isB2BWholesale: true,
       paymentMethod: resolvedPaymentMethod,
       orderMetadata: orderMetadata || null,
+      poNumber: poNumber?.trim() || null,
+      requestedDeliveryDate: requestedDeliveryDate?.trim() || null,
+      partialShipmentAllowed: Boolean(partialShipmentAllowed),
+      consignmentNotes: factoryNotes?.trim() || null,
+      couponCode: validCouponCode || null,
+      couponDiscount,
     };
 
     const shippingSnapshot = {
@@ -271,6 +325,9 @@ export async function POST(request: Request) {
       postalCode: shippingAddress.postalCode.trim(),
       country: 'IN',
       dispatchPreference: partialShipmentAllowed ? 'Partial Dispatch Allowed' : 'Complete Dispatch Only',
+      poNumber: poNumber?.trim() || null,
+      requestedDeliveryDate: requestedDeliveryDate?.trim() || null,
+      consignmentNotes: factoryNotes?.trim() || null,
     };
 
     const billingSnapshot = billingAddress?.line1
@@ -290,9 +347,10 @@ export async function POST(request: Request) {
 
     const formattedNotes = [
       poNumber ? `PO Reference: ${poNumber.trim()}` : null,
-      requestedDeliveryDate ? `Requested Delivery Date: ${requestedDeliveryDate.trim()}` : null,
-      partialShipmentAllowed ? 'Partial batch shipment accepted' : 'Ship complete consignment only',
-      factoryNotes?.trim() ? `Order Notes: ${factoryNotes.trim()}` : null,
+      requestedDeliveryDate ? `Target Delivery Date: ${requestedDeliveryDate.trim()}` : null,
+      partialShipmentAllowed ? 'Partial batch consignment dispatch allowed' : 'Ship complete consignment only',
+      factoryNotes?.trim() ? `Consignment Notes: ${factoryNotes.trim()}` : null,
+      validCouponCode ? `Coupon Applied: ${validCouponCode} (-₹${couponDiscount})` : null,
     ].filter(Boolean).join(' | ');
 
     // Insert authoritative wholesale order in ecommerce_orders
@@ -305,13 +363,15 @@ export async function POST(request: Request) {
         factoryId,
         orderNumber,
         customerId: customer?.id || null,
+        campaignId: campaignId || null,
+        couponCode: validCouponCode || (couponCode ? String(couponCode).trim().toUpperCase() : null),
         channel: 'WHOLESALE_PORTAL',
         status: 'CONFIRMED',
         paymentStatus,
         fulfillmentStatus: 'PENDING',
         currency: 'INR',
         subtotal,
-        discountAmount: 0,
+        discountAmount: couponDiscount,
         taxAmount: gstAmount,
         shippingAmount: 0,
         totalAmount: totalOrderValue,
@@ -355,6 +415,24 @@ export async function POST(request: Request) {
 
     if (itemsInsertErr) {
       console.warn('Could not insert wholesale order line items:', itemsInsertErr);
+    }
+
+    // Increment coupon campaign usage if applicable
+    if (campaignId) {
+      try {
+        const { data: currentCamp } = await supabase
+          .from('ecommerce_campaigns')
+          .select('usageCount')
+          .eq('id', campaignId)
+          .maybeSingle();
+        const nextCount = (Number(currentCamp?.usageCount) || 0) + 1;
+        await supabase
+          .from('ecommerce_campaigns')
+          .update({ usageCount: nextCount, updatedAt: now })
+          .eq('id', campaignId);
+      } catch (campErr) {
+        console.warn('Could not increment campaign usage count:', campErr);
+      }
     }
 
     // If paid via Razorpay, insert payment record

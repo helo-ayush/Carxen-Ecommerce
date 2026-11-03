@@ -14,6 +14,7 @@ interface WholesaleOrderMock {
   orderNumber: string;
   poNumber: string;
   placedAt: string;
+  notes?: string;
   status:
     | 'CONFIRMED_BY_BUYER'
     | 'UNDER_CARXEN_REVIEW'
@@ -163,12 +164,16 @@ export default function WholesaleOrdersPage() {
     .map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,
-      poNumber: `PO-${o.orderNumber.replace(/[^0-9]/g, '').slice(-4) || 'AUTO'}`,
+      poNumber:
+        (o as any).poNumber ||
+        (o as any).notes?.match(/PO Reference:\s*([^|]+)/)?.[1]?.trim() ||
+        `PO-${o.orderNumber.replace(/[^0-9]/g, '').slice(-4) || 'AUTO'}`,
       placedAt: o.placedAt,
       status: (o.status as any) || 'CONFIRMED_BY_BUYER',
       statusLabel: o.status === 'CANCELLED' ? 'Consignment Cancelled' : o.statusMessage || 'Order Confirmed',
       paymentStatus: o.paymentStatus || 'Pending',
       totalAmount: o.totalAmount,
+      notes: (o as any).notes || undefined,
       shippingAddress: `${o.shippingAddress.addressLine1}, ${o.shippingAddress.city} - ${o.shippingAddress.postalCode}`,
       items: o.items.map((it) => ({
         productId: it.productId,
@@ -509,6 +514,13 @@ export default function WholesaleOrdersPage() {
                   <span>Dispatch Point:</span>
                   <strong>{ord.shippingAddress}</strong>
                 </div>
+
+                {ord.notes && (
+                  <div style={{ fontSize: '12px', color: '#64748b', margin: '8px 0', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontWeight: 700, color: '#334155' }}>Logistics &amp; PO Notes: </span>
+                    <span>{ord.notes}</span>
+                  </div>
+                )}
 
                 <div className="ws-order-footer-settlement-row">
                   <span className="ws-order-settlement-tag">
