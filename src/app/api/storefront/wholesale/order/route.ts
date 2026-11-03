@@ -213,13 +213,13 @@ export async function POST(request: Request) {
 
       // Anti-replay protection: check if payment ID was already used
       const supabaseAdmin = getSupabaseAdmin();
-      const { data: existingPaymentOrder } = await supabaseAdmin
-        .from('ecommerce_orders')
-        .select('id, orderNumber')
-        .contains('metadata', { razorpay_payment_id: razorpayPaymentId })
+      const { data: existingPayment } = await supabaseAdmin
+        .from('ecommerce_payments')
+        .select('id, orderId')
+        .eq('providerPaymentId', razorpayPaymentId)
         .maybeSingle();
 
-      if (existingPaymentOrder) {
+      if (existingPayment) {
         console.error('Duplicate B2B payment reuse attempt:', razorpayPaymentId);
         return NextResponse.json(
           { error: 'This payment transaction has already been recorded for an existing order.' },
@@ -234,6 +234,17 @@ export async function POST(request: Request) {
     const orderId = `ord_${crypto.randomUUID().replace(/-/g, '')}`;
     const now = new Date().toISOString();
 
+    const orderMetadata = isRazorpay
+      ? {
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
+          razorpay_signature: razorpaySignature || null,
+          paid_amount_in_paise: Math.round(totalOrderValue * 100),
+          paid_at: now,
+          payment_method: verifiedPayment?.method || 'razorpay',
+        }
+      : null;
+
     const customerSnapshot = {
       businessName: businessName.trim(),
       tradeName: tradeName?.trim() || null,
@@ -246,6 +257,7 @@ export async function POST(request: Request) {
       b2bStatus: customer?.b2bStatus || 'APPROVED',
       isB2BWholesale: true,
       paymentMethod: resolvedPaymentMethod,
+      orderMetadata: orderMetadata || null,
     };
 
     const shippingSnapshot = {
@@ -283,17 +295,6 @@ export async function POST(request: Request) {
       factoryNotes?.trim() ? `Order Notes: ${factoryNotes.trim()}` : null,
     ].filter(Boolean).join(' | ');
 
-    const orderMetadata = isRazorpay
-      ? {
-          razorpay_order_id: razorpayOrderId,
-          razorpay_payment_id: razorpayPaymentId,
-          razorpay_signature: razorpaySignature || null,
-          paid_amount_in_paise: Math.round(totalOrderValue * 100),
-          paid_at: now,
-          payment_method: verifiedPayment?.method || 'razorpay',
-        }
-      : null;
-
     // Insert authoritative wholesale order in ecommerce_orders
     const { storeId, factoryId } = await resolveStoreMeta();
     const { error: orderInsertErr } = await supabase
@@ -318,7 +319,6 @@ export async function POST(request: Request) {
         shippingAddressSnapshot: shippingSnapshot,
         billingAddressSnapshot: billingSnapshot,
         notes: formattedNotes || 'Wholesale Order placed via /wholesale portal.',
-        metadata: orderMetadata,
         placedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -365,16 +365,20 @@ export async function POST(request: Request) {
           orderId,
           storeId,
           factoryId,
-          paymentMethod: 'ONLINE',
           provider: 'razorpay',
+          providerPaymentId: razorpayPaymentId,
+          method: verifiedPayment?.method || 'ONLINE',
           status: 'CAPTURED',
           amount: totalOrderValue,
           currency: 'INR',
-          transactionId: razorpayPaymentId,
-          rawResponse: {
-            razorpayOrderId,
-            razorpayPaymentId,
+          metadata: {
+            razorpay_order_id: razorpayOrderId,
+            razorpay_payment_id: razorpayPaymentId,
+            razorpay_signature: razorpaySignature || null,
+            paid_amount_in_paise: Math.round(totalOrderValue * 100),
+            paid_at: now,
           },
+          paidAt: now,
           createdAt: now,
           updatedAt: now,
         });

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import {
   verifyRazorpaySignature,
   fetchAndVerifyRazorpayPayment,
@@ -152,13 +152,13 @@ export async function POST(request: Request) {
 
     // Step 6: Anti-replay protection — check if payment ID was already used
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: existingPaymentOrder } = await supabaseAdmin
-      .from('ecommerce_orders')
-      .select('id, orderNumber')
-      .contains('metadata', { razorpay_payment_id })
+    const { data: existingPayment } = await supabaseAdmin
+      .from('ecommerce_payments')
+      .select('id, orderId')
+      .eq('providerPaymentId', razorpay_payment_id)
       .maybeSingle();
 
-    if (existingPaymentOrder) {
+    if (existingPayment) {
       console.error('Duplicate payment reuse attempt:', razorpay_payment_id);
       return NextResponse.json(
         { error: 'This payment transaction has already been recorded for an existing order.' },
@@ -195,14 +195,6 @@ export async function POST(request: Request) {
       const orderUpdate: Record<string, any> = {
         paymentStatus: 'PAID',
         status: 'CONFIRMED',
-        metadata: {
-          razorpay_order_id,
-          razorpay_payment_id,
-          payment_method: verifiedPayment?.method || 'razorpay',
-          paid_amount_in_paise: totals.amountInPaise,
-          paid_at: now,
-          is_mock: Boolean(verifiedPayment?.isMock),
-        },
         updatedAt: now,
       };
 
@@ -211,6 +203,35 @@ export async function POST(request: Request) {
       }
 
       await supabaseAdmin.from('ecommerce_orders').update(orderUpdate).eq('id', orderRow.id);
+
+      // Record payment transaction
+      try {
+        await supabaseAdmin.from('ecommerce_payments').insert({
+          id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+          orderId: orderRow.id,
+          storeId: orderRow.storeId,
+          factoryId: orderRow.factoryId,
+          provider: 'razorpay',
+          providerPaymentId: razorpay_payment_id,
+          method: verifiedPayment?.method || 'razorpay',
+          status: 'CAPTURED',
+          amount: totals.amountInPaise / 100,
+          currency: 'INR',
+          metadata: {
+            razorpay_order_id,
+            razorpay_payment_id,
+            payment_method: verifiedPayment?.method || 'razorpay',
+            paid_amount_in_paise: totals.amountInPaise,
+            paid_at: now,
+            is_mock: Boolean(verifiedPayment?.isMock),
+          },
+          paidAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch (payErr) {
+        console.warn('Could not record payment row in ecommerce_payments:', payErr);
+      }
 
       // Create shipment tracking record
       await supabaseAdmin.from('ecommerce_shipments').insert({
