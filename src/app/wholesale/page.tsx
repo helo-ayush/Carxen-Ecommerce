@@ -159,12 +159,13 @@ export default function WholesaleDashboardPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>GSTIN Number *</label>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    GSTIN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional — for ITC)</span>
+                  </label>
                   <input
                     type="text"
-                    required
                     style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px', fontFamily: 'monospace' }}
-                    placeholder="22AAAAA0000A1Z5"
+                    placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
                     value={formData.gstin}
                     onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
                   />
@@ -313,8 +314,8 @@ export default function WholesaleDashboardPage() {
   // 3. Application Gate: Verification In Progress
   if (isWholesalePending) {
     const applicantName = b2bProfile?.businessName || user?.name || 'Apex Automotive';
-    const applicantGstin = b2bProfile?.gstin || '22AAAAA0000A1Z5';
-    const refCode = b2bProfile?.referenceNumber || `CX-B2B-${(applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) || '8841').toUpperCase()}`;
+    const applicantGstin = b2bProfile?.gstin || '';
+    const refCode = b2bProfile?.referenceNumber || `CX-B2B-${(applicantGstin ? applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) : (user?.id ? user.id.replace(/[^A-Za-z0-9]/g, '').slice(-4) : '8841')).toUpperCase()}`;
 
     return (
       <div className="ws-page-container">
@@ -381,8 +382,8 @@ export default function WholesaleDashboardPage() {
                   <span className="ws-step-status-tag underway">02 · In Review</span>
                 </div>
                 <div className="ws-review-step-content">
-                  <h4>GSTIN & Identity Check</h4>
-                  <p>Verifying tax compliance, ITC eligibility & business jurisdiction.</p>
+                  <h4>{applicantGstin ? 'GSTIN & Identity Check' : 'Business Identity Check'}</h4>
+                  <p>{applicantGstin ? 'Verifying tax compliance, ITC eligibility & business jurisdiction.' : 'Verifying trade identity & business jurisdiction.'}</p>
                 </div>
               </div>
 
@@ -441,11 +442,17 @@ export default function WholesaleDashboardPage() {
                   <div className="ws-data-tile">
                     <span className="ws-data-tile-label">GSTIN Identification</span>
                     <div className="ws-data-tile-flex">
-                      <code>{applicantGstin}</code>
-                      <span className="ws-gstin-valid-badge">
-                        <Check size={11} strokeWidth={3} />
-                        Format Verified
-                      </span>
+                      {applicantGstin ? (
+                        <>
+                          <code>{applicantGstin}</code>
+                          <span className="ws-gstin-valid-badge">
+                            <Check size={11} strokeWidth={3} />
+                            Format Verified
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '12.5px', color: '#64748b' }}>Unregistered / Sole Proprietor</span>
+                      )}
                     </div>
                   </div>
 
@@ -456,7 +463,7 @@ export default function WholesaleDashboardPage() {
 
                   <div className="ws-data-tile">
                     <span className="ws-data-tile-label">Assigned Desk</span>
-                    <span className="ws-data-tile-value">Commercial Ops — Gurugram Hub</span>
+                    <span className="ws-data-tile-value">Commercial Ops — Kashmere Gate Hub, Delhi</span>
                   </div>
 
                   <div className="ws-data-tile">
@@ -663,7 +670,7 @@ export default function WholesaleDashboardPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>GSTIN (ITC):</span>
-                <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{b2bProfile?.gstin || '22AAAAA0000A1Z5'}</strong>
+                <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{b2bProfile?.gstin || 'Unregistered / Not Provided'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Dispatch Window:</span>

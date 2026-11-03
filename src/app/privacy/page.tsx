@@ -491,7 +491,7 @@ export default function PrivacyPolicyPage() {
                       Email: <a href="mailto:privacy@carxen.com" style={{ fontWeight: 600 }}>privacy@carxen.com</a><br />
                       Support: <a href="mailto:support@carxen.com" style={{ fontWeight: 600 }}>support@carxen.com</a><br />
                       Entity: CarXen Automotive Engineered Products<br />
-                      Operating Address: E-Commerce Division, Automotive Hub, India
+                      Operating Address: 939/2, Tilak Gali, Kashmere Gate, Delhi - 110006
                     </p>
                   </div>
                   <a

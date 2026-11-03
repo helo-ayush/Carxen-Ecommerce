@@ -209,8 +209,8 @@ function AccountContent() {
     addressLine1: '',
     addressLine2: '',
     landmark: '',
-    city: 'Pune',
-    state: 'Maharashtra',
+    city: 'Delhi',
+    state: 'Delhi',
     postalCode: '',
     isPrimary: false,
   });
@@ -666,8 +666,8 @@ function AccountContent() {
       <div class="logo-text">CARXEN<span class="logo-accent">.</span></div>
       <div class="tagline">Engineered for Every Drive · Premium Automotive Accessories</div>
       <div style="font-size: 12px; color: #5d5d64; margin-top: 6px;">
-        GSTIN: 27AABCC8920D1ZE<br>
-        Baner Highway Link Road, Pune, Maharashtra 411045
+        GSTIN: 07AABCC8920D1ZE<br>
+        939/2, Tilak Gali, Kashmere Gate, Delhi - 110006
       </div>
     </div>
     <div>
@@ -2405,7 +2405,7 @@ function AccountContent() {
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="+91 98201 44829"
+                  placeholder="+91 99719 07190"
                   required
                 />
               </div>
@@ -2850,8 +2850,8 @@ function AccountContent() {
               <div>
                 <img src="/logo.png" alt="CARXEN" style={{ height: '34px', width: 'auto', display: 'block', marginBottom: '6px' }} />
                 <div style={{ fontSize: '11px', color: '#71717a', lineHeight: '1.4' }}>
-                  GSTIN: 27AABCC8920D1ZE<br />
-                  Baner, Pune, MH 411045
+                  GSTIN: 07AABCC8920D1ZE<br />
+                  939/2, Tilak Gali, Kashmere Gate, Delhi - 110006
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>

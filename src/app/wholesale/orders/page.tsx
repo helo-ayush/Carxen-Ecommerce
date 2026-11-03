@@ -48,7 +48,7 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
     statusLabel: 'Under CarXen Review',
     paymentStatus: 'PAID (Razorpay Online)',
     totalAmount: 141600,
-    shippingAddress: 'Plot 42, Udyog Vihar Phase 4, Gurugram, Haryana - 122015',
+    shippingAddress: '939/2, Tilak Gali, Kashmere Gate, Delhi - 110006',
     items: [
       {
         productId: 1,
@@ -77,7 +77,7 @@ const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
     statusLabel: 'Delivered & ITC Settled',
     paymentStatus: 'PAID (Razorpay UPI)',
     totalAmount: 218400,
-    shippingAddress: 'Plot 42, Udyog Vihar Phase 4, Gurugram, Haryana - 122015',
+    shippingAddress: '939/2, Tilak Gali, Kashmere Gate, Delhi - 110006',
     items: [
       {
         productId: 2,

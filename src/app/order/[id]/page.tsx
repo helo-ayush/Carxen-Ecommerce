@@ -135,9 +135,9 @@ export default function OrderTrackingPage() {
     localOrder?.shippingAddress?.name || serverOrder?.customer?.name || 'Customer';
 
   const address = localOrder?.shippingAddress || {
-    addressLine1: serverOrder?.shippingAddress?.addressLine1 || 'Baner Road',
-    city: serverOrder?.shippingAddress?.city || 'Pune',
-    postalCode: serverOrder?.shippingAddress?.postalCode || '411045',
+    addressLine1: serverOrder?.shippingAddress?.addressLine1 || 'Kashmere Gate',
+    city: serverOrder?.shippingAddress?.city || 'Delhi',
+    postalCode: serverOrder?.shippingAddress?.postalCode || '110006',
     phone: serverOrder?.customer?.phone || '',
   };
 

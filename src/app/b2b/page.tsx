@@ -872,7 +872,7 @@ export default function B2BWholesalePage() {
                   />
                 </div>
                 <div className="b2b-field">
-                  <label>GSTIN (15 Digits)</label>
+                  <label>GSTIN (Optional — 15 Digits)</label>
                   <input
                     type="text"
                     maxLength={15}
@@ -1245,7 +1245,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Pune"
+                    placeholder="e.g. Delhi"
                   />
                 </div>
 
@@ -1255,7 +1255,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. Maharashtra"
+                    placeholder="e.g. Delhi"
                   />
                 </div>
 

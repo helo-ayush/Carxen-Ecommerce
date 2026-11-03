@@ -840,11 +840,11 @@ export default function WholesaleOrderBasketPage() {
                     />
                   </div>
                   <div className="ws-form-group">
-                    <label className="ws-form-label">GSTIN Number (for GST Input Tax Credit) *</label>
+                    <label className="ws-form-label">GSTIN Number (Optional — For ITC)</label>
                     <input
                       type="text"
-                      required
                       className="ws-form-input"
+                      placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
                       style={{ fontFamily: 'monospace' }}
                       value={gstin}
                       onChange={(e) => setGstin(e.target.value.toUpperCase())}

@@ -404,7 +404,7 @@ export default function WholesaleAccountPage() {
 
                     <div className="ws-form-group">
                       <label className="ws-form-label">
-                        <span>GSTIN (For 100% Input Tax Credit)</span>
+                        <span>GSTIN (Optional — For Input Tax Credit)</span>
                       </label>
                       <input
                         type="text"
@@ -518,7 +518,7 @@ export default function WholesaleAccountPage() {
                         type="text"
                         required
                         className="ws-form-control"
-                        placeholder="e.g. Gurugram"
+                        placeholder="e.g. Delhi"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       />
@@ -638,7 +638,7 @@ export default function WholesaleAccountPage() {
                     <div className="ws-meta-item">
                       <span className="ws-meta-label">GSTIN (Input Tax Credit)</span>
                       <div className="ws-meta-value mono">
-                        {b2bProfile?.gstin || '22AAAAA0000A1Z5'}
+                        {b2bProfile?.gstin || 'Not Provided / Sole Proprietor'}
                       </div>
                     </div>
                     <div className="ws-meta-item">
@@ -1077,7 +1077,7 @@ export default function WholesaleAccountPage() {
                       type="text"
                       required
                       className="ws-form-control"
-                      placeholder="e.g. Gurugram"
+                      placeholder="e.g. Delhi"
                       value={addrForm.city}
                       onChange={(e) => setAddrForm({ ...addrForm, city: e.target.value })}
                     />
@@ -1092,7 +1092,7 @@ export default function WholesaleAccountPage() {
                       type="text"
                       required
                       className="ws-form-control"
-                      placeholder="e.g. Haryana"
+                      placeholder="e.g. Delhi"
                       value={addrForm.state}
                       onChange={(e) => setAddrForm({ ...addrForm, state: e.target.value })}
                     />
