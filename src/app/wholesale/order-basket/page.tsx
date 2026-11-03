@@ -23,6 +23,7 @@ import {
   Lock,
   ShieldCheck,
   Building2,
+  MapPin,
   Truck,
   Package,
   ShoppingBag,
@@ -114,6 +115,21 @@ export default function WholesaleOrderBasketPage() {
   const [shippingPincode, setShippingPincode] = useState(b2bProfile?.pincode || '');
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
 
+  // Keep entity identity synchronized with verified business account
+  useEffect(() => {
+    if (b2bProfile) {
+      if (b2bProfile.businessName) setBusinessName(b2bProfile.businessName);
+      if (b2bProfile.tradeName) setTradeName(b2bProfile.tradeName);
+      if (b2bProfile.gstin) setGstin(b2bProfile.gstin);
+      if (b2bProfile.pan) setPan(b2bProfile.pan);
+    }
+    if (user) {
+      if (user.email) setEmail(user.email);
+      if (user.phone && !phone) setPhone(user.phone);
+      if (user.name && !representativeName) setRepresentativeName(user.name);
+    }
+  }, [b2bProfile, user]);
+
   useEffect(() => {
     if (addresses.length > 0) {
       const primary = addresses.find((a) => a.isPrimary) || addresses[0];
@@ -146,8 +162,8 @@ export default function WholesaleOrderBasketPage() {
   const [partialShipmentAllowed, setPartialShipmentAllowed] = useState(true);
   const [factoryNotes, setFactoryNotes] = useState('');
 
-  // User & Warehouse details compact mode toggle
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  // Warehouse delivery address edit mode toggle
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -911,7 +927,7 @@ export default function WholesaleOrderBasketPage() {
               </div>
             </div>
 
-            {/* Commercial Identity & Delivery Destination (Compact Card with Editable Pen Button) */}
+            {/* Commercial Identity & Delivery Destination (Names managed in Business Account, Only Addresses Editable) */}
             <div className="ws-basket-card">
               <div className="ws-basket-card-header">
                 <div className="ws-basket-card-title">
@@ -924,12 +940,12 @@ export default function WholesaleOrderBasketPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setIsEditingDetails(!isEditingDetails)}
+                    onClick={() => setIsEditingAddress(!isEditingAddress)}
                     className="ws-btn-secondary"
                     style={{ padding: '4px 10px', fontSize: '12px', gap: '5px', minHeight: '30px' }}
-                    title={isEditingDetails ? 'Done editing' : 'Edit details'}
+                    title={isEditingAddress ? 'Done editing address' : 'Change delivery address'}
                   >
-                    {isEditingDetails ? (
+                    {isEditingAddress ? (
                       <>
                         <Check size={13} />
                         <span>Done</span>
@@ -937,7 +953,7 @@ export default function WholesaleOrderBasketPage() {
                     ) : (
                       <>
                         <Edit3 size={13} />
-                        <span>Edit Details</span>
+                        <span>Change Address</span>
                       </>
                     )}
                   </button>
@@ -945,169 +961,128 @@ export default function WholesaleOrderBasketPage() {
               </div>
 
               <div className="ws-basket-card-body">
-                {/* COMPACT VIEW (Default, non-form summary) */}
-                {!isEditingDetails ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
-                    {/* Entity Info Box */}
-                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
-                          Legal Entity
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingDetails(true)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
-                          title="Edit"
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                      </div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
-                        {businessName || 'Business Name Required'}
-                      </div>
-                      {tradeName && (
-                        <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px' }}>
-                          Trade: {tradeName}
-                        </div>
-                      )}
-                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '6px' }}>
-                        <span style={{ color: '#64748b' }}>GSTIN: </span>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{gstin || 'Not Provided (No ITC claim)'}</span>
-                      </div>
+                {/* 3 SUMMARY CARDS: Names and identity are clean read-only; only address has the editable pen */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px', marginBottom: isEditingAddress ? '16px' : '0' }}>
+                  {/* Entity Info Box (Managed in Business Account) */}
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                        Legal Entity
+                      </span>
+                      <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                        Verified Account
+                      </span>
                     </div>
-
-                    {/* Contact Person Box */}
-                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
-                          Authorized Contact
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingDetails(true)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
-                          title="Edit"
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                      </div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
-                        {representativeName || user?.name || 'Authorized Buyer'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '4px' }}>
-                        <span style={{ color: '#64748b' }}>Phone: </span>
-                        <span style={{ fontWeight: 600 }}>{phone || '—'}</span>
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '2px' }}>
-                        <span style={{ color: '#64748b' }}>Email: </span>
-                        <span style={{ fontWeight: 600 }}>{email || user?.email || '—'}</span>
-                      </div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                      {businessName || 'Business Name Required'}
                     </div>
-
-                    {/* Warehouse Destination Box */}
-                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
-                          Warehouse Destination
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingDetails(true)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}
-                          title="Change warehouse address"
-                        >
-                          <Edit3 size={12} />
-                        </button>
+                    {tradeName && (
+                      <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px' }}>
+                        Trade: {tradeName}
                       </div>
-                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
-                        {shippingLine1 || 'Warehouse Address Required'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '3px' }}>
-                        {shippingCity ? `${shippingCity}, ${shippingState} - ${shippingPincode}` : ''}
-                      </div>
-                      {addresses.length > 1 && (
-                        <div style={{ marginTop: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingDetails(true)}
-                            style={{ fontSize: '11px', color: '#0284c7', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Switch Warehouse Destination ({addresses.length} available) &rarr;
-                          </button>
-                        </div>
-                      )}
+                    )}
+                    <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '6px' }}>
+                      <span style={{ color: '#64748b' }}>GSTIN: </span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{gstin || 'Not Provided (No ITC claim)'}</span>
                     </div>
                   </div>
-                ) : (
-                  /* EDITABLE FORM VIEW (Expands on clicking pen button) */
-                  <div style={{ animation: 'wsFadeIn 0.2s ease' }}>
-                    <div className="ws-form-grid ws-form-grid-2" style={{ marginBottom: '14px' }}>
-                      <div className="ws-form-group">
-                        <label className="ws-form-label">Legal Business Entity Name *</label>
-                        <input
-                          type="text"
-                          required
-                          className="ws-form-input"
-                          value={businessName}
-                          onChange={(e) => setBusinessName(e.target.value)}
-                        />
-                      </div>
-                      <div className="ws-form-group">
-                        <label className="ws-form-label">GSTIN Number (Optional — For ITC)</label>
-                        <input
-                          type="text"
-                          className="ws-form-input"
-                          placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
-                          style={{ fontFamily: 'monospace' }}
-                          value={gstin}
-                          onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                        />
-                      </div>
-                    </div>
 
-                    <div className="ws-form-grid ws-form-grid-3" style={{ marginBottom: '16px' }}>
-                      <div className="ws-form-group">
-                        <label className="ws-form-label">Contact Person *</label>
-                        <input
-                          type="text"
-                          required
-                          className="ws-form-input"
-                          value={representativeName}
-                          onChange={(e) => setRepresentativeName(e.target.value)}
-                        />
+                  {/* Contact Person Box (Managed in Business Account) */}
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                        Authorized Contact
+                      </span>
+                      <span style={{ fontSize: '10px', background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                        Primary Contact
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                      {representativeName || user?.name || 'Authorized Buyer'}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Phone: </span>
+                      <span style={{ fontWeight: 600 }}>{phone || '—'}</span>
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '2px' }}>
+                      <span style={{ color: '#64748b' }}>Email: </span>
+                      <span style={{ fontWeight: 600 }}>{email || user?.email || '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Warehouse Destination Box (Editable with pen icon) */}
+                  <div style={{ 
+                    background: isEditingAddress ? '#f0f9ff' : '#f8fafc', 
+                    padding: '12px 14px', 
+                    borderRadius: '10px', 
+                    border: isEditingAddress ? '1.5px solid #0284c7' : '1px solid #e2e8f0',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: isEditingAddress ? '#0369a1' : '#64748b', letterSpacing: '0.04em' }}>
+                        Warehouse Destination
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingAddress(!isEditingAddress)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '2px' }}
+                        title={isEditingAddress ? 'Close address editor' : 'Edit / switch destination address'}
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
+                      {shippingLine1 || 'Warehouse Address Required'}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '3px' }}>
+                      {shippingCity ? `${shippingCity}, ${shippingState} - ${shippingPincode}` : ''}
+                    </div>
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingAddress(true)}
+                        style={{ fontSize: '11px', color: '#0284c7', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        {addresses.length > 1 ? `Switch Warehouse (${addresses.length} registered) →` : 'Edit Dispatch Address →'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* EDITABLE ADDRESS FORM: Only warehouse delivery addresses are editable here */}
+                {isEditingAddress && (
+                  <div style={{ 
+                    animation: 'wsFadeIn 0.2s ease', 
+                    background: '#f8fafc', 
+                    borderRadius: '10px', 
+                    padding: '16px', 
+                    border: '1.5px solid #0284c7', 
+                    marginTop: '12px' 
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={16} style={{ color: '#0284c7' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                          Select or Edit Warehouse Delivery Address
+                        </span>
                       </div>
-                      <div className="ws-form-group">
-                        <label className="ws-form-label">Phone / WhatsApp *</label>
-                        <input
-                          type="tel"
-                          required
-                          className="ws-form-input"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                        />
-                      </div>
-                      <div className="ws-form-group">
-                        <label className="ws-form-label">Business Email *</label>
-                        <input
-                          type="email"
-                          required
-                          className="ws-form-input"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                        />
-                      </div>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>
+                        Business profile &amp; GSTIN are managed in{' '}
+                        <Link href="/wholesale/account" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
+                          Business Account &rarr;
+                        </Link>
+                      </span>
                     </div>
 
                     {addresses.length > 0 && (
-                      <div style={{ marginBottom: '18px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
                             Select Registered Warehouse Destination:
                           </label>
                           <Link
                             href="/wholesale/account"
-                            style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+                            style={{ fontSize: '11.5px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
                           >
                             + Manage Warehouses
                           </Link>
@@ -1144,13 +1119,13 @@ export default function WholesaleOrderBasketPage() {
                       </div>
                     )}
 
-                    <div className="ws-form-group">
+                    <div className="ws-form-group" style={{ marginBottom: '12px' }}>
                       <label className="ws-form-label">Warehouse Delivery Address *</label>
                       <input
                         type="text"
                         required
                         className="ws-form-input"
-                        placeholder="Plot / Industrial Area / Landmark"
+                        placeholder="Plot / Industrial Area / Landmark / SMQ"
                         value={shippingLine1}
                         onChange={(e) => setShippingLine1(e.target.value)}
                       />
@@ -1189,15 +1164,15 @@ export default function WholesaleOrderBasketPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                       <button
                         type="button"
                         className="ws-btn-primary"
-                        onClick={() => setIsEditingDetails(false)}
-                        style={{ minWidth: '100px' }}
+                        onClick={() => setIsEditingAddress(false)}
+                        style={{ minWidth: '110px' }}
                       >
                         <Check size={14} />
-                        <span>Save &amp; Collapse</span>
+                        <span>Save Address</span>
                       </button>
                     </div>
                   </div>
