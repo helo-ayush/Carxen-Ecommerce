@@ -79,7 +79,7 @@ export default function WholesaleDashboardPage() {
         city: b2bProfile.city || prev.city,
         state: b2bProfile.state || prev.state,
         pincode: b2bProfile.pincode || prev.pincode,
-        expectedMonthlyVolume: b2bProfile.expectedMonthlyVolume || prev.expectedMonthlyVolume,
+        expectedMonthlyVolume: b2bProfile.expectedMonthlyVolume ? b2bProfile.expectedMonthlyVolume.replace(/\s*\(Tier\s*\d+\)/gi, '').trim() : prev.expectedMonthlyVolume,
       }));
     }
   }, [b2bProfile]);

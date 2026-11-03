@@ -1329,9 +1329,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const wholesaleBasketCount = useMemo(() => {
+    if (products.length === 0) return 0;
     return Object.entries(wholesaleBasket).reduce((sum, [idStr, q]) => {
       if (q <= 0) return sum;
-      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
+      if (!products.some((p) => p.id === Number(idStr))) {
         return sum;
       }
       return sum + q;
@@ -1339,12 +1340,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [wholesaleBasket, products]);
 
   const wholesaleBasketSkuCount = useMemo(() => {
+    if (products.length === 0) return 0;
     return Object.entries(wholesaleBasket).filter(([idStr, q]) => {
       if (q <= 0) return false;
-      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
-        return false;
-      }
-      return true;
+      return products.some((p) => p.id === Number(idStr));
     }).length;
   }, [wholesaleBasket, products]);
 

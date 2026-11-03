@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       city: (customer as any).city || null,
       state: (customer as any).state || null,
       pincode: (customer as any).pincode || null,
-      expectedMonthlyVolume: (customer as any).expectedMonthlyVolume || null,
+      expectedMonthlyVolume: (customer as any).expectedMonthlyVolume ? (customer as any).expectedMonthlyVolume.replace(/\s*\(Tier\s*\d+\)/gi, '').trim() : null,
       wholesaleTier: (customer as any).wholesaleTier || 'tier1',
       b2bAppliedAt: (customer as any).b2bAppliedAt || null,
       b2bReviewedAt: (customer as any).b2bReviewedAt || null,
@@ -170,7 +170,9 @@ export async function PUT(request: Request) {
     if (city !== undefined) customerUpdateData.city = city?.trim() || null;
     if (state !== undefined) customerUpdateData.state = state?.trim() || null;
     if (pincode !== undefined) customerUpdateData.pincode = pincode?.trim() || null;
-    if (expectedMonthlyVolume !== undefined) customerUpdateData.expectedMonthlyVolume = expectedMonthlyVolume?.trim() || null;
+    if (expectedMonthlyVolume !== undefined) {
+      customerUpdateData.expectedMonthlyVolume = expectedMonthlyVolume?.trim().replace(/\s*\(Tier\s*\d+\)/gi, '').trim() || null;
+    }
 
     const { data: updatedCustomer, error: updateErr } = await supabase
       .from('ecommerce_customers')
