@@ -7,11 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import type { CustomerAddress } from '@/types/customer';
 import {
-  PhoneCall,
-  Mail,
   MapPin,
-  CheckCircle2,
-  ShieldCheck,
   Building2,
   ArrowRight,
   Edit3,
@@ -73,6 +69,10 @@ export default function WholesaleAccountPage() {
   // Warehouse Address Modal State
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
+
+  // Delete Address Confirmation Modal State
+  const [deleteTargetAddress, setDeleteTargetAddress] = useState<CustomerAddress | null>(null);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
   const [addrForm, setAddrForm] = useState({
     label: 'Central Workshop & Warehouse',
     name: '',
@@ -262,14 +262,20 @@ export default function WholesaleAccountPage() {
     setShowAddressModal(false);
   };
 
-  // Delete Warehouse Address
-  const handleDeleteAddress = (id: string, label: string) => {
-    if (addresses.length <= 1) {
-      showToast('At least one warehouse dispatch address must be registered');
-      return;
+  // Delete Warehouse Address Confirmation Handler
+  const handleConfirmDeleteAddress = async () => {
+    if (!deleteTargetAddress) return;
+    setIsDeletingAddress(true);
+    try {
+      await deleteAddress(deleteTargetAddress.id);
+      showToast(`Removed warehouse "${deleteTargetAddress.label || 'Warehouse'}"`);
+    } catch (err) {
+      console.error('Failed to delete address:', err);
+      showToast('Error removing warehouse location.');
+    } finally {
+      setIsDeletingAddress(false);
+      setDeleteTargetAddress(null);
     }
-    deleteAddress(id);
-    showToast(`Removed warehouse "${label}"`);
   };
 
   // Set Address as Primary
@@ -341,9 +347,7 @@ export default function WholesaleAccountPage() {
         </div>
       </div>
 
-      <div className="ws-basket-layout">
-        {/* Left Column: Business Details & Multi-Warehouse List OR Edit Form */}
-        <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
           {isEditing ? (
             /* Editable Business Profile Form */
             <form onSubmit={handleSaveProfile} className="ws-edit-form-card">
@@ -795,16 +799,14 @@ export default function WholesaleAccountPage() {
                             >
                               <Edit3 size={14} />
                             </button>
-                            {addresses.length > 1 && (
-                              <button
-                                type="button"
-                                className="ws-icon-btn danger"
-                                onClick={() => handleDeleteAddress(addr.id, addr.label || 'Warehouse')}
-                                title="Remove warehouse location"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="ws-icon-btn danger"
+                              onClick={() => setDeleteTargetAddress(addr)}
+                              title="Delete warehouse location"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -814,96 +816,101 @@ export default function WholesaleAccountPage() {
               </div>
             </>
           )}
-        </div>
+      </div>
 
-        {/* Right Column: Commercial Tier & Assigned Account Manager */}
-        <div>
-          {/* Active Wholesale Commercial Status */}
-          <div className="ws-card">
-            <div className="ws-card-header">
-              <h3>
-                <WholesaleIcon name="tier" size={18} strokeWidth={2} />
-                <span>Commercial Account Status</span>
-              </h3>
-            </div>
-            <div className="ws-card-body">
-              <div className="ws-tier-badge-card">
-                <div className="ws-tier-badge-level">
-                  CarXen Verified B2B Partner
-                </div>
-                <div className="ws-tier-badge-title">
-                  Verified Wholesale Partner
-                </div>
-                <div className="ws-tier-badge-desc">
-                  Direct manufacturer pricing with GST tax invoicing. Bulk wholesale rates are automatically applied to your orders.
-                </div>
-              </div>
-
+      {/* Delete Address Confirmation Pop-up */}
+      {deleteTargetAddress && (
+        <div className="ws-modal-overlay" style={{ zIndex: 10000 }}>
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #fee2e2',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
               <div
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  fontSize: '13px',
-                  color: 'var(--ws-text-muted)',
-                  lineHeight: 1.45,
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <WholesaleIcon name="check" size={15} strokeWidth={2.5} className="text-emerald-600" />
-                  <span>Direct factory production batch allocation</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <WholesaleIcon name="shield" size={15} strokeWidth={2} className="text-emerald-600" />
-                  <span>Multi-location split logistics & consolidated invoicing</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <WholesaleIcon name="invoice" size={15} strokeWidth={2} className="text-emerald-600" />
-                  <span>Consolidated monthly GST tax invoices with ITC</span>
-                </div>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                  Delete Warehouse Location?
+                </h3>
+                <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                  Are you sure you want to delete <strong>&ldquo;{deleteTargetAddress.label || 'Warehouse'}&rdquo;</strong>?
+                  {deleteTargetAddress.isPrimary && (
+                    <span style={{ display: 'block', marginTop: '6px', color: '#dc2626', fontWeight: 600 }}>
+                      Note: This is currently designated as your Primary Factory Dispatch Point.
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Dedicated CarXen Commercial Manager */}
-          <div className="ws-card">
-            <div className="ws-card-header">
-              <h3>
-                <WholesaleIcon name="account" size={18} strokeWidth={2} />
-                <span>Assigned CarXen Commercial Desk</span>
-              </h3>
-            </div>
-            <div className="ws-card-body">
-              <div className="ws-manager-profile">
-                <div className="ws-manager-avatar">RK</div>
-                <div className="ws-manager-info">
-                  <h4>Rajesh Kumar</h4>
-                  <p>Head of Commercial Procurement, CarXen Automotive</p>
+            <div
+              style={{
+                background: '#f8fafc',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                fontSize: '12.5px',
+                color: '#475569',
+                border: '1px solid #e2e8f0',
+                lineHeight: 1.45,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>
+                {deleteTargetAddress.addressLine1}
+                {deleteTargetAddress.addressLine2 ? `, ${deleteTargetAddress.addressLine2}` : ''}
+              </div>
+              <div>
+                {deleteTargetAddress.city}, {deleteTargetAddress.state} - {deleteTargetAddress.postalCode}
+              </div>
+              {deleteTargetAddress.name && (
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Contact: {deleteTargetAddress.name} ({deleteTargetAddress.phone})
                 </div>
-              </div>
+              )}
+            </div>
 
-              <div className="ws-manager-actions">
-                <button
-                  type="button"
-                  onClick={() => openSupportModal({
-                    category: 'Custom Showroom / Dealership Allocation',
-                    initialMessage: 'Commercial query regarding assigned account manager and procurement dossier.',
-                  })}
-                  className="ws-manager-link"
-                  style={{ border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
-                >
-                  <WholesaleIcon name="invoice" size={16} strokeWidth={2} />
-                  <span>Submit Commercial Query</span>
-                </button>
-                <a href="mailto:b2b@carxen.in" className="ws-manager-link">
-                  <Mail size={16} />
-                  <span>b2b@carxen.in (PO Desk)</span>
-                </a>
-              </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="ws-btn-secondary"
+                onClick={() => setDeleteTargetAddress(null)}
+                disabled={isDeletingAddress}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ws-btn-primary"
+                onClick={handleConfirmDeleteAddress}
+                disabled={isDeletingAddress}
+                style={{ backgroundColor: '#dc2626', borderColor: '#b91c1c' }}
+              >
+                {isDeletingAddress ? 'Deleting…' : 'Delete Location'}
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Add / Edit Warehouse Location Modal */}
       {showAddressModal && (
