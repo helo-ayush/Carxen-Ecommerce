@@ -7,17 +7,17 @@ import { useApp } from '@/context/AppContext';
 import { formatINR, Product } from '@/data/products';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import {
-  Upload,
+  HelpCircle,
+  BookOpen,
+  Sparkles,
   ArrowRight,
-  FileSpreadsheet,
   X,
-  Search,
   Plus,
+  Search,
   Edit3,
   Trash2,
   Copy,
   RotateCcw,
-  SlidersHorizontal,
   BookmarkPlus,
   Layers,
   ShoppingBag,
@@ -30,7 +30,7 @@ interface SavedProcurementList {
   id: string;
   title: string;
   description: string;
-  tag: string;
+  tag?: string;
   estimatedUnits: number;
   estimatedValue: number;
   items: {
@@ -110,20 +110,13 @@ export default function WholesaleQuotesPage() {
   const [assortments, setAssortments] = useState<SavedProcurementList[]>(PRESET_PROCUREMENT_LISTS);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Search & Filter & Sort state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTag, setSelectedTag] = useState('All');
-  const [sortBy, setSortBy] = useState<'recommended' | 'value-desc' | 'value-asc' | 'units-desc' | 'units-asc' | 'title-asc' | 'title-desc'>('recommended');
-
-  // CSV Modal
-  const [csvText, setCsvText] = useState('');
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  // How to Use Modal
+  const [showHowToModal, setShowHowToModal] = useState(false);
 
   // Assortment Edit/Create Modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState('');
-  const [modalTag, setModalTag] = useState('Custom Stock');
   const [modalDesc, setModalDesc] = useState('');
   const [modalItems, setModalItems] = useState<{ productId: number; name: string; sku: string; quantity: number }[]>([]);
   const [selectedAddProductId, setSelectedAddProductId] = useState<number | ''>('');
@@ -191,7 +184,6 @@ export default function WholesaleQuotesPage() {
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setModalTitle('');
-    setModalTag('Custom Stock');
     setModalDesc('');
     setModalItems([]);
     setSelectedAddProductId('');
@@ -226,7 +218,6 @@ export default function WholesaleQuotesPage() {
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
     setEditingId(null);
     setModalTitle(`Replenishment Order (${dateStr})`);
-    setModalTag('Custom Order Pack');
     setModalDesc('Auto-generated assortment template saved directly from current Wholesale Order Basket.');
     setModalItems(basketItems);
     setSelectedAddProductId('');
@@ -241,7 +232,6 @@ export default function WholesaleQuotesPage() {
   const handleOpenEditModal = (list: SavedProcurementList) => {
     setEditingId(list.id);
     setModalTitle(list.title);
-    setModalTag(list.tag);
     setModalDesc(list.description);
     setModalItems([...list.items]);
     setSelectedAddProductId('');
@@ -258,7 +248,6 @@ export default function WholesaleQuotesPage() {
       ...list,
       id: `list-copy-${Date.now()}`,
       title: `${list.title} (Copy)`,
-      tag: list.tag === 'Recommended Stock' ? 'Custom Stock' : list.tag,
     };
     const nextList = [copy, ...assortments];
     persistAssortments(nextList);
@@ -365,7 +354,6 @@ export default function WholesaleQuotesPage() {
           return {
             ...item,
             title: modalTitle.trim(),
-            tag: modalTag.trim() || 'Custom Pack',
             description: modalDesc.trim() || 'Custom dealership assortment template.',
             estimatedUnits: units,
             estimatedValue: value,
@@ -381,7 +369,6 @@ export default function WholesaleQuotesPage() {
       const newAssortment: SavedProcurementList = {
         id: `list-custom-${Date.now()}`,
         title: modalTitle.trim(),
-        tag: modalTag.trim() || 'Custom Pack',
         description: modalDesc.trim() || 'Custom procurement template saved to your enterprise workspace.',
         estimatedUnits: units,
         estimatedValue: value,
@@ -403,79 +390,7 @@ export default function WholesaleQuotesPage() {
     router.push('/wholesale/order-basket');
   };
 
-  // CSV parse
-  const handleParseCsvAndAdd = () => {
-    if (!csvText.trim()) return;
-    const lines = csvText.trim().split('\n');
-    let added = 0;
-    lines.forEach((line) => {
-      const parts = line.split(',').map((s) => s.trim());
-      if (parts.length >= 2) {
-        const pid = parseInt(parts[0], 10);
-        const qty = parseInt(parts[1], 10);
-        if (!isNaN(pid) && !isNaN(qty) && qty > 0) {
-          addToWholesaleBasket(pid, qty);
-          added++;
-        }
-      }
-    });
-    setShowUploadModal(false);
-    setCsvText('');
-    showToast(`Successfully processed CSV and added ${added} SKUs to Order Basket`);
-    router.push('/wholesale/order-basket');
-  };
 
-  // Filter and Sort Assortments
-  const availableTags = useMemo(() => {
-    const set = new Set<string>();
-    assortments.forEach((a) => {
-      if (a.tag) set.add(a.tag);
-    });
-    return ['All', ...Array.from(set)];
-  }, [assortments]);
-
-  const filteredAndSortedAssortments = useMemo(() => {
-    let result = [...assortments];
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q) ||
-          a.tag.toLowerCase().includes(q) ||
-          a.items.some((i) => i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q))
-      );
-    }
-
-    // Tag filter
-    if (selectedTag !== 'All') {
-      result = result.filter((a) => a.tag === selectedTag);
-    }
-
-    // Sort order
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'value-desc':
-          return b.estimatedValue - a.estimatedValue;
-        case 'value-asc':
-          return a.estimatedValue - b.estimatedValue;
-        case 'units-desc':
-          return b.estimatedUnits - a.estimatedUnits;
-        case 'units-asc':
-          return a.estimatedUnits - b.estimatedUnits;
-        case 'title-asc':
-          return a.title.localeCompare(b.title);
-        case 'title-desc':
-          return b.title.localeCompare(a.title);
-        default:
-          return 0; // recommended preset sequence
-      }
-    });
-
-    return result;
-  }, [assortments, searchQuery, selectedTag, sortBy]);
 
   // Modal live totals calculation
   const modalLiveTotals = useMemo(() => {
@@ -496,8 +411,8 @@ export default function WholesaleQuotesPage() {
             <span>Saved Procurement Assortments & Proforma Templates</span>
           </h1>
           <p>
-            Customizable reorder assortments, dealership stocking packs, and batch SKU upload.{' '}
-            <strong>Sort by value or volume, edit line items, and load directly into your PO basket.</strong>
+            Customizable reorder assortments and dealership stocking packs.{' '}
+            <strong>Edit line items, adjust quantities, and load directly into your wholesale PO basket.</strong>
           </p>
         </div>
         <div className="ws-header-actions">
@@ -526,11 +441,12 @@ export default function WholesaleQuotesPage() {
 
           <button
             type="button"
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => setShowHowToModal(true)}
             className="ws-btn-secondary"
+            style={{ gap: '6px' }}
           >
-            <Upload size={15} />
-            <span>Upload SKU Sheet (CSV)</span>
+            <HelpCircle size={15} />
+            <span>How to Use Assortments</span>
           </button>
 
           <Link href="/wholesale/order-basket" className="ws-btn-secondary">
@@ -540,114 +456,24 @@ export default function WholesaleQuotesPage() {
         </div>
       </div>
 
-      {/* Toolbar: Sort Assortment, Search & Tag Filters */}
-      <div className="ws-assortment-toolbar">
-        <div className="ws-assortment-toolbar-left">
-          {/* Search Input */}
-          <div className="ws-assortment-search">
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--ws-text-muted)',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              className="ws-search-input"
-              style={{ paddingLeft: '36px' }}
-              placeholder="Search assortments by title, tag, or SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="ws-search-clear"
-                onClick={() => setSearchQuery('')}
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-
-          {/* Sort Assortment Dropdown */}
-          <div className="ws-sort-control">
-            <SlidersHorizontal size={15} />
-            <span>Sort Assortments:</span>
-            <select
-              className="ws-sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-            >
-              <option value="recommended">Recommended Order</option>
-              <option value="value-desc">Highest Estimated Value (₹ High → Low)</option>
-              <option value="value-asc">Lowest Estimated Value (₹ Low → High)</option>
-              <option value="units-desc">Most Total Units (High → Low)</option>
-              <option value="units-asc">Least Total Units (Low → High)</option>
-              <option value="title-asc">Title: A to Z</option>
-              <option value="title-desc">Title: Z to A</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={handleResetDefaults}
-            className="ws-btn-secondary"
-            style={{ padding: '6px 10px', fontSize: '11.5px', minHeight: '34px', gap: '5px' }}
-            title="Reset preset assortments to default"
-          >
-            <RotateCcw size={13} />
-            <span>Restore Presets</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Tag Filter Chips */}
-      {availableTags.length > 2 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--ws-text-muted)' }}>
-            Filter By Tag:
-          </span>
-          {availableTags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className={`ws-category-chip ${selectedTag === tag ? 'active' : ''}`}
-              onClick={() => setSelectedTag(tag)}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Grid of Saved Lists */}
-      {filteredAndSortedAssortments.length === 0 ? (
+      {/* Grid of Saved Assortments - Showing All by Default */}
+      {assortments.length === 0 ? (
         <div className="ws-empty-state-card">
           <div className="ws-empty-icon-wrap">
             <Layers size={28} />
           </div>
-          <h3>No Assortments Found</h3>
+          <h3>No Assortments Saved</h3>
           <p>
-            No procurement lists matched your current search &ldquo;{searchQuery}&rdquo;. Clear filters or create a new custom procurement pack.
+            You currently have no saved assortment templates. Restore default dealership presets or create a custom procurement pack.
           </p>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               type="button"
               className="ws-btn-secondary"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedTag('All');
-              }}
+              onClick={handleResetDefaults}
             >
-              Clear Filters
+              <RotateCcw size={14} />
+              <span>Restore Presets</span>
             </button>
             <button
               type="button"
@@ -655,17 +481,19 @@ export default function WholesaleQuotesPage() {
               onClick={handleOpenCreateModal}
             >
               <Plus size={15} />
-              <span>Create New Assortment</span>
+              <span>Create Custom Assortment</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="ws-pack-grid">
-          {filteredAndSortedAssortments.map((list) => (
+        <div className="ws-pack-grid" style={{ marginTop: '12px' }}>
+          {assortments.map((list) => (
             <div key={list.id} className="ws-pack-card">
               <div>
                 <div className="ws-pack-header">
-                  <span className="ws-pack-tag">{list.tag}</span>
+                  <span className="ws-pack-count">
+                    {list.items.length} {list.items.length === 1 ? 'SKU' : 'SKUs'} · {list.estimatedUnits} Units
+                  </span>
                   <div className="ws-pack-actions">
                     <button
                       type="button"
@@ -789,35 +617,20 @@ export default function WholesaleQuotesPage() {
 
             <form onSubmit={handleSaveModal} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               <div className="ws-modal-body">
-                {/* Title & Tag */}
-                <div className="ws-form-grid-2">
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">
-                      <span>Assortment Pack Title</span>
-                      <span className="ws-form-label-req">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="ws-form-control"
-                      placeholder="e.g. Monthly Showroom Top-Movers"
-                      value={modalTitle}
-                      onChange={(e) => setModalTitle(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="ws-form-group">
-                    <label className="ws-form-label">
-                      <span>Category Tag</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="ws-form-control"
-                      placeholder="e.g. Recommended Stock, SUV Pack"
-                      value={modalTag}
-                      onChange={(e) => setModalTag(e.target.value)}
-                    />
-                  </div>
+                {/* Title */}
+                <div className="ws-form-group" style={{ marginBottom: '16px' }}>
+                  <label className="ws-form-label">
+                    <span>Assortment Pack Title</span>
+                    <span className="ws-form-label-req">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="ws-form-control"
+                    placeholder="e.g. Monthly Showroom Top-Movers"
+                    value={modalTitle}
+                    onChange={(e) => setModalTitle(e.target.value)}
+                  />
                 </div>
 
                 {/* Description */}
@@ -1088,83 +901,236 @@ export default function WholesaleQuotesPage() {
         </div>
       )}
 
-      {/* CSV Upload Modal */}
-      {showUploadModal && (
+      {/* How to Use Assortments Modal */}
+      {showHowToModal && (
         <div className="ws-modal-overlay">
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '540px',
+              borderRadius: '20px',
+              maxWidth: '660px',
               width: '100%',
-              padding: '28px',
+              padding: '28px 32px',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
               border: '1px solid #e2e8f0',
+              maxHeight: '90vh',
+              overflowY: 'auto',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: '#ecfdf5',
-                    color: '#059669',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: '#f0fdf4',
+                    color: '#16a34a',
+                    border: '1px solid #bbf7d0',
                     display: 'grid',
                     placeItems: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <FileSpreadsheet size={20} />
+                  <BookOpen size={22} />
                 </div>
-                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                  Batch SKU Quick-Import
-                </h3>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                    How to Use Procurement Assortments
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                    Fast-track your dealership restocking and repeat purchase orders.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setShowUploadModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                onClick={() => setShowHowToModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
+                aria-label="Close modal"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', lineHeight: 1.5 }}>
-              Paste your procurement rows below in <code>ProductId, Quantity</code> format:
-            </p>
-
-            <textarea
-              className="ws-search-input"
-              style={{
-                width: '100%',
-                height: '130px',
-                fontFamily: 'ui-monospace, monospace',
-                fontSize: '13px',
-                padding: '12px',
-                marginBottom: '18px',
-                resize: 'none',
-              }}
-              placeholder={`1, 15\n2, 25\n3, 10\n4, 20`}
-              value={csvText}
-              onChange={(e) => setCsvText(e.target.value)}
-            />
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="ws-btn-secondary"
-                onClick={() => setShowUploadModal(false)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '22px' }}>
+              {/* Step 1 */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '14px',
+                  padding: '14px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
               >
-                Cancel
-              </button>
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  1
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                    1-Click Load into Order Basket
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>
+                    Click <strong>&ldquo;Load into Basket &rarr;&rdquo;</strong> on any assortment card to instantly transfer all product SKUs and pre-configured quantities into your Wholesale Order Basket.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '14px',
+                  padding: '14px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  2
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                    Save Frequent Orders as Templates
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>
+                    Whenever you build an order basket, click <strong>&ldquo;Save Basket as Assortment&rdquo;</strong> at the top to save that exact SKU combination as a permanent template for future reorders.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '14px',
+                  padding: '14px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  3
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                    Edit, Duplicate & Customize Anytime
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>
+                    Use the <strong>pencil (edit)</strong> icon to adjust quantities or add/remove catalog items. Use <strong>duplicate</strong> to clone a template for different branch locations or client requirements.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '14px',
+                  padding: '14px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  4
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                    Instant Volume Tier Pricing & Checkout
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>
+                    In your Wholesale Order Basket, line items automatically compute tiered bulk discounts and GST invoicing so you can checkout or submit an official proforma purchase order immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '10px',
+                marginBottom: '20px',
+                fontSize: '12.5px',
+                color: '#15803d',
+              }}
+            >
+              <Sparkles size={18} style={{ flexShrink: 0 }} />
+              <span>
+                <strong>Tip:</strong> You can create as many custom assortments as you need for seasonal spikes, dealership showroom displays, or body shop restocks.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 type="button"
                 className="ws-btn-primary"
-                onClick={handleParseCsvAndAdd}
-                disabled={!csvText.trim()}
+                onClick={() => setShowHowToModal(false)}
+                style={{ minWidth: '130px' }}
               >
-                Import into Order Basket
+                Got It, Let&apos;s Start
               </button>
             </div>
           </div>
