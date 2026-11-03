@@ -138,10 +138,10 @@ export default function WholesaleAccountPage() {
       name: formData.contactPerson.trim(),
       phone: formData.phone.trim(),
       businessType: formData.businessType,
-      businessAddress: formData.businessAddress.trim(),
-      city: formData.city.trim(),
-      state: formData.state.trim(),
-      pincode: formData.pincode.trim(),
+      businessAddress: b2bProfile?.businessAddress || '',
+      city: b2bProfile?.city || '',
+      state: b2bProfile?.state || '',
+      pincode: b2bProfile?.pincode || '',
     });
     setIsSaving(false);
     setIsEditing(false);
@@ -493,73 +493,7 @@ export default function WholesaleAccountPage() {
                   </div>
                 </div>
 
-                {/* Section 3: Central Warehouse Dispatch Address */}
-                <div style={{ paddingTop: '16px', borderTop: '1px solid var(--ws-border-light)' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#475569', marginBottom: '14px' }}>
-                    3. Central Workshop & Warehouse Dispatch Address
-                  </h4>
-                  <div className="ws-form-grid-2">
-                    <div className="ws-form-group full-width">
-                      <label className="ws-form-label">
-                        <span>Registered Street Address / Plot / Unit</span>
-                        <span className="ws-form-label-req">*</span>
-                      </label>
-                      <textarea
-                        required
-                        className="ws-form-control"
-                        placeholder="Plot number, industrial area, road name"
-                        value={formData.businessAddress}
-                        onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
-                      />
-                    </div>
 
-                    <div className="ws-form-group">
-                      <label className="ws-form-label">
-                        <span>City / District</span>
-                        <span className="ws-form-label-req">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        className="ws-form-control"
-                        placeholder="e.g. Delhi"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="ws-form-group">
-                      <label className="ws-form-label">
-                        <span>State</span>
-                        <span className="ws-form-label-req">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        className="ws-form-control"
-                        placeholder="e.g. Haryana"
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="ws-form-group">
-                      <label className="ws-form-label">
-                        <span>Postal PIN Code</span>
-                        <span className="ws-form-label-req">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        className="ws-form-control mono"
-                        placeholder="122015"
-                        value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div className="ws-form-actions-bar">
@@ -589,9 +523,8 @@ export default function WholesaleAccountPage() {
               </div>
             </form>
           ) : (
-            <>
-              {/* Business Entity Card */}
-              <div className="ws-card">
+            /* Business Entity Card */
+            <div className="ws-card">
                 <div className="ws-card-header">
                   <h2>
                     <WholesaleIcon name="invoice" size={18} strokeWidth={2} />
@@ -674,9 +607,10 @@ export default function WholesaleAccountPage() {
                   </div>
                 </div>
               </div>
+          )}
 
-              {/* Registered Warehouse / Delivery Locations (Multi-Address Support) */}
-              <div className="ws-card">
+          {/* Registered Warehouse / Delivery Locations (Multi-Address Support) */}
+          <div className="ws-card">
                 <div className="ws-card-header">
                   <div>
                     <h2 style={{ marginBottom: '2px' }}>
@@ -814,8 +748,6 @@ export default function WholesaleAccountPage() {
                   )}
                 </div>
               </div>
-            </>
-          )}
       </div>
 
       {/* Delete Address Confirmation Pop-up */}
