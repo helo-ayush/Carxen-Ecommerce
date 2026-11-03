@@ -21,7 +21,8 @@ import {
   MessageSquare,
   XCircle,
   RotateCcw,
-  Edit3
+  Edit3,
+  HelpCircle
 } from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -146,6 +147,23 @@ export default function WholesaleDashboardPage() {
             </button>
           </div>
         </div>
+
+        {isEditingApplication && (
+          <div className="ws-editing-alert-banner">
+            <div>
+              <strong>Updating Wholesale Application ({b2bProfile?.referenceNumber || 'Revision'})</strong>
+              <p>Make necessary revisions to your trade name, GSTIN, business type, or address and submit to update your desk review.</p>
+            </div>
+            <button
+              type="button"
+              className="ws-btn-secondary"
+              onClick={() => setIsEditingApplication(false)}
+              style={{ fontSize: '12px', padding: '6px 14px', whiteSpace: 'nowrap', cursor: 'pointer' }}
+            >
+              Cancel Revision
+            </button>
+          </div>
+        )}
 
         {errorMessage && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', color: '#991b1b', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -345,6 +363,8 @@ export default function WholesaleDashboardPage() {
     const applicantName = b2bProfile?.businessName || user?.name || 'Apex Automotive';
     const applicantGstin = b2bProfile?.gstin || '';
     const refCode = b2bProfile?.referenceNumber || `CX-B2B-${(applicantGstin ? applicantGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4) : (user?.id ? user.id.replace(/[^A-Za-z0-9]/g, '').slice(-4) : '8841')).toUpperCase()}`;
+    const inquiryText = b2bProfile?.inquiryMessage || b2bProfile?.rejectionReason || 'Please provide additional trade documentation or confirm your commercial workshop / showroom address to finalize account approval.';
+    const declineReason = b2bProfile?.rejectionReason || 'Application did not meet wholesale partner eligibility requirements or trade details could not be validated.';
 
     return (
       <div className="ws-page-container">
@@ -352,23 +372,142 @@ export default function WholesaleDashboardPage() {
           {/* Top Header Card with Reference Badge */}
           <div className="ws-review-header-card">
             <div className="ws-review-header-left">
-              <div className="ws-review-status-pill">
-                <span className="ws-review-pulse-dot" />
-                <span>Verification In Progress · Commercial Desk Active</span>
-              </div>
-              <h1>Wholesale Partner Application Under Active Review</h1>
+              {isUnderInquiry ? (
+                <div className="ws-review-status-pill inquiry">
+                  <span className="ws-pulse-dot-inquiry" />
+                  <span>Action Required · Commercial Desk Inquired</span>
+                </div>
+              ) : isDeclined ? (
+                <div className="ws-review-status-pill rejected">
+                  <span className="ws-pulse-dot-rejected" />
+                  <span>Application Declined · Revision or Appeal Required</span>
+                </div>
+              ) : (
+                <div className="ws-review-status-pill">
+                  <span className="ws-review-pulse-dot" />
+                  <span>Verification In Progress · Commercial Desk Active</span>
+                </div>
+              )}
+
+              <h1>
+                {isUnderInquiry
+                  ? 'Wholesale Application Under Commercial Inquiry'
+                  : isDeclined
+                    ? 'Wholesale Application Declined by Commercial Desk'
+                    : 'Wholesale Partner Application Under Active Review'}
+              </h1>
               <p>
-                Your CarXen commercial partnership application for <strong>{applicantName}</strong> has been logged in our enterprise registry and assigned to our underwriting desk.
+                {isUnderInquiry
+                  ? `The CarXen commercial underwriting desk has reviewed the application for ${applicantName} and requested additional details before commercial privileges can be activated.`
+                  : isDeclined
+                    ? `Your commercial partnership application for ${applicantName} could not be approved with the submitted details. You may revise and re-apply or submit an appeal.`
+                    : `Your CarXen commercial partnership application for ${applicantName} has been logged in our enterprise registry and assigned to our underwriting desk.`}
               </p>
             </div>
             <div className="ws-review-header-right">
               <div className="ws-ref-badge-card">
                 <span className="ws-ref-label">Enterprise Reference</span>
                 <span className="ws-ref-code">{refCode}</span>
-                <span className="ws-ref-sla">Priority SLA: &lt; 4 Hours</span>
+                <span className="ws-ref-sla">
+                  {isUnderInquiry
+                    ? 'Action Needed: Respond'
+                    : isDeclined
+                      ? 'Decision: Declined'
+                      : 'Priority SLA: < 4 Hours'}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Attention-Grabbing Hero Alert for Inquiry */}
+          {isUnderInquiry && (
+            <div className="ws-inquiry-highlight-card">
+              <div className="ws-inquiry-header">
+                <div className="ws-inquiry-icon-wrap">
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <h4>Action Required: Clarification Requested by Underwriting Desk</h4>
+                  <span className="ws-inquiry-meta">Reference: {refCode} · Awaiting Applicant Response</span>
+                </div>
+              </div>
+
+              <div className="ws-inquiry-body">
+                <p>&ldquo;{inquiryText}&rdquo;</p>
+              </div>
+
+              <div className="ws-inquiry-actions">
+                <button
+                  type="button"
+                  className="ws-btn-primary ws-btn-brand"
+                  onClick={() => setIsEditingApplication(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <Edit3 size={15} />
+                  <span>Update &amp; Resubmit Details</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="ws-btn-secondary"
+                  onClick={() => openSupportModal({
+                    category: 'Wholesale Application Inquiry Response',
+                    businessName: applicantName,
+                    initialMessage: `Response regarding Inquiry on Application ${refCode} (${applicantName}): `,
+                  })}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <MessageSquare size={15} />
+                  <span>Reply via Commercial Support Desk</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Attention-Grabbing Hero Alert for Declined */}
+          {isDeclined && (
+            <div className="ws-rejected-highlight-card">
+              <div className="ws-rejected-header">
+                <div className="ws-rejected-icon-wrap">
+                  <XCircle size={20} />
+                </div>
+                <div>
+                  <h4>Wholesale Application Declined</h4>
+                  <span className="ws-rejected-meta">Reference: {refCode} · Underwriting Decision</span>
+                </div>
+              </div>
+
+              <div className="ws-rejected-body">
+                <p>&ldquo;{declineReason}&rdquo;</p>
+              </div>
+
+              <div className="ws-rejected-actions">
+                <button
+                  type="button"
+                  className="ws-btn-primary ws-btn-brand"
+                  onClick={() => setIsEditingApplication(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <RotateCcw size={15} />
+                  <span>Revise Application &amp; Re-apply</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="ws-btn-secondary"
+                  onClick={() => openSupportModal({
+                    category: 'Wholesale Application Appeal',
+                    businessName: applicantName,
+                    initialMessage: `Requesting review / appeal for declined Application ${refCode} (${applicantName}). Reason given: "${declineReason}".`,
+                  })}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <HelpCircle size={15} />
+                  <span>Appeal Decision / Contact Commercial Desk</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 4-Step Verification Tracker */}
           <div className="ws-review-tracker-card">
@@ -402,19 +541,51 @@ export default function WholesaleDashboardPage() {
                 </div>
               </div>
 
-              {/* Step 2: Active */}
-              <div className="ws-review-step active">
-                <div className="ws-step-top">
-                  <div className="ws-review-step-icon">
-                    <span className="ws-step-inner-ping" />
+              {/* Step 2: Dynamic State */}
+              {isUnderInquiry ? (
+                <div className="ws-review-step active" style={{ borderColor: '#7dd3fc', background: '#f0f9ff' }}>
+                  <div className="ws-step-top">
+                    <div className="ws-review-step-icon" style={{ background: '#0284c7', color: '#fff' }}>
+                      <MessageSquare size={16} />
+                    </div>
+                    <span className="ws-step-status-tag" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                      02 · Clarification Needed
+                    </span>
                   </div>
-                  <span className="ws-step-status-tag underway">02 · In Review</span>
+                  <div className="ws-review-step-content">
+                    <h4>Commercial Inquiry</h4>
+                    <p>Desk requested additional documentation or clarification before approval.</p>
+                  </div>
                 </div>
-                <div className="ws-review-step-content">
-                  <h4>{applicantGstin ? 'GSTIN & Identity Check' : 'Business Identity Check'}</h4>
-                  <p>{applicantGstin ? 'Verifying tax compliance, ITC eligibility & business jurisdiction.' : 'Verifying trade identity & business jurisdiction.'}</p>
+              ) : isDeclined ? (
+                <div className="ws-review-step active" style={{ borderColor: '#fecdd3', background: '#fff1f2' }}>
+                  <div className="ws-step-top">
+                    <div className="ws-review-step-icon" style={{ background: '#e11d48', color: '#fff' }}>
+                      <XCircle size={16} />
+                    </div>
+                    <span className="ws-step-status-tag" style={{ background: 'rgba(225, 29, 72, 0.12)', color: '#e11d48', borderColor: 'rgba(253, 164, 175, 0.5)' }}>
+                      02 · Declined
+                    </span>
+                  </div>
+                  <div className="ws-review-step-content">
+                    <h4>Application Declined</h4>
+                    <p>Underwriting criteria not met. Revise your application or file an appeal.</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="ws-review-step active">
+                  <div className="ws-step-top">
+                    <div className="ws-review-step-icon">
+                      <span className="ws-step-inner-ping" />
+                    </div>
+                    <span className="ws-step-status-tag underway">02 · In Review</span>
+                  </div>
+                  <div className="ws-review-step-content">
+                    <h4>{applicantGstin ? 'GSTIN & Identity Check' : 'Business Identity Check'}</h4>
+                    <p>{applicantGstin ? 'Verifying tax compliance, ITC eligibility & business jurisdiction.' : 'Verifying trade identity & business jurisdiction.'}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Step 3: Next */}
               <div className="ws-review-step pending">
@@ -502,7 +673,15 @@ export default function WholesaleDashboardPage() {
 
                   <div className="ws-data-tile">
                     <span className="ws-data-tile-label">Wholesale Access</span>
-                    <span className="ws-data-tile-value">Full Catalogue Access</span>
+                    <span className="ws-data-tile-value">
+                      {isUnderInquiry ? (
+                        <span style={{ color: '#0284c7', fontWeight: 600 }}>Clarification Required</span>
+                      ) : isDeclined ? (
+                        <span style={{ color: '#e11d48', fontWeight: 600 }}>Declined (Revision Allowed)</span>
+                      ) : (
+                        'Full Catalogue Access (Pending)'
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>

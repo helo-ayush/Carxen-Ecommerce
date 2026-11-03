@@ -74,6 +74,7 @@ export async function GET(request: Request) {
       b2bAppliedAt: (customer as any).b2bAppliedAt || null,
       b2bReviewedAt: (customer as any).b2bReviewedAt || null,
       b2bRejectionReason: (customer as any).b2bRejectionReason || null,
+      b2bInquiryMessage: (customer as any).b2bStatus === 'INQUIRY' ? (customer as any).b2bRejectionReason : null,
       referenceNumber:
         meta.referenceNumber ||
         ((customer as any).gstin

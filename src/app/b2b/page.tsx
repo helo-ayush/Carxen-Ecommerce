@@ -28,6 +28,8 @@ import {
   PhoneCall,
   MessageSquare,
   FileCheck,
+  Edit3,
+  HelpCircle,
 } from 'lucide-react';
 import './b2b.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -598,16 +600,40 @@ export default function B2BWholesalePage() {
                 </div>
               </div>
 
-              <div className="b2b-pending-step-card active">
-                <div className="b2b-pending-step-num">2</div>
-                <div className="b2b-pending-step-content">
-                  <div className="b2b-step-header-row">
-                    <strong>2. CarXen Verification Review</strong>
-                    <span className="b2b-step-status-chip active">In Review</span>
+              {isB2bInquiry ? (
+                <div className="b2b-pending-step-card active" style={{ borderColor: '#7dd3fc', background: '#f0f9ff' }}>
+                  <div className="b2b-pending-step-num" style={{ background: '#0284c7', color: '#fff' }}>2</div>
+                  <div className="b2b-pending-step-content">
+                    <div className="b2b-step-header-row">
+                      <strong style={{ color: '#0369a1' }}>2. Commercial Inquiry</strong>
+                      <span className="b2b-step-status-chip" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}>Action Required</span>
+                    </div>
+                    <span style={{ color: '#0c4a6e' }}>Desk requested clarification. Reply or update application.</span>
                   </div>
-                  <span>GSTIN & commercial account verification (24–48h)</span>
                 </div>
-              </div>
+              ) : isB2bRejected ? (
+                <div className="b2b-pending-step-card active" style={{ borderColor: '#fecdd3', background: '#fff1f2' }}>
+                  <div className="b2b-pending-step-num" style={{ background: '#e11d48', color: '#fff' }}>2</div>
+                  <div className="b2b-pending-step-content">
+                    <div className="b2b-step-header-row">
+                      <strong style={{ color: '#be123c' }}>2. Application Declined</strong>
+                      <span className="b2b-step-status-chip" style={{ background: 'rgba(225, 29, 72, 0.15)', color: '#e11d48' }}>Declined</span>
+                    </div>
+                    <span style={{ color: '#881337' }}>Underwriting criteria not met. Revise details or appeal.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="b2b-pending-step-card active">
+                  <div className="b2b-pending-step-num">2</div>
+                  <div className="b2b-pending-step-content">
+                    <div className="b2b-step-header-row">
+                      <strong>2. CarXen Verification Review</strong>
+                      <span className="b2b-step-status-chip active">In Review</span>
+                    </div>
+                    <span>GSTIN & commercial account verification (24–48h)</span>
+                  </div>
+                </div>
+              )}
 
               <div className="b2b-pending-step-card">
                 <div className="b2b-pending-step-num">3</div>
@@ -623,6 +649,60 @@ export default function B2BWholesalePage() {
 
             {/* Primary Action Buttons */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {isB2bInquiry && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="b2b-btn primary"
+                    style={{ minWidth: 180 }}
+                  >
+                    <Edit3 size={15} />
+                    <span>Update &amp; Resubmit Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openSupportModal({
+                      category: 'Wholesale Application Inquiry Response',
+                      businessName: activeBusiness,
+                      initialMessage: `Response regarding Inquiry on Application ${referenceId} (${activeBusiness}): `,
+                    })}
+                    className="b2b-btn secondary"
+                    style={{ minWidth: 180 }}
+                  >
+                    <MessageSquare size={15} />
+                    <span>Reply to Commercial Desk</span>
+                  </button>
+                </>
+              )}
+
+              {isB2bRejected && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="b2b-btn primary"
+                    style={{ minWidth: 180 }}
+                  >
+                    <RefreshCw size={15} />
+                    <span>Revise &amp; Re-apply</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openSupportModal({
+                      category: 'Wholesale Application Appeal',
+                      businessName: activeBusiness,
+                      initialMessage: `Requesting review / appeal for declined Application ${referenceId} (${activeBusiness}). Reason given: "${b2bProfile?.rejectionReason || 'Eligibility criteria'}".`,
+                    })}
+                    className="b2b-btn secondary"
+                    style={{ minWidth: 180 }}
+                  >
+                    <HelpCircle size={15} />
+                    <span>Appeal Decision</span>
+                  </button>
+                </>
+              )}
+
               <button
                 type="button"
                 onClick={handleCheckLiveStatus}

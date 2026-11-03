@@ -428,7 +428,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               expectedMonthlyVolume: data.profile.expectedMonthlyVolume || undefined,
               wholesaleTier: data.profile.wholesaleTier || 'tier1',
               rejectionReason: data.profile.b2bRejectionReason || undefined,
-              inquiryMessage: data.profile.b2bRejectionReason || undefined,
+              inquiryMessage: data.profile.b2bInquiryMessage || data.profile.b2bRejectionReason || undefined,
               appliedAt: data.profile.b2bAppliedAt || undefined,
               reviewedAt: data.profile.b2bReviewedAt || undefined,
               referenceNumber: data.profile.referenceNumber || undefined,
