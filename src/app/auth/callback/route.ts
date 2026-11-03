@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
-import { STORE_ID, FACTORY_ID } from '@/lib/server/customer';
+import { resolveStoreMeta } from '@/lib/server/customer';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,11 +125,12 @@ export async function GET(request: Request) {
         })
         .eq('id', customer.id);
     } else {
+      const { storeId, factoryId } = await resolveStoreMeta();
       const newCustId = `cust_${crypto.randomUUID().replace(/-/g, '')}`;
       await admin.from('ecommerce_customers').insert({
         id: newCustId,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         authUserId: authUser.id,
         name: fullName,
         email: cleanEmail,

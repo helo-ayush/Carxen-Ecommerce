@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
-import { getAuthenticatedCustomer, STORE_ID, FACTORY_ID } from '@/lib/server/customer';
+import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
@@ -295,12 +295,13 @@ export async function POST(request: Request) {
       : null;
 
     // Insert authoritative wholesale order in ecommerce_orders
+    const { storeId, factoryId } = await resolveStoreMeta();
     const { error: orderInsertErr } = await supabase
       .from('ecommerce_orders')
       .insert({
         id: orderId,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         orderNumber,
         customerId: customer?.id || null,
         channel: 'WHOLESALE_PORTAL',
@@ -335,8 +336,8 @@ export async function POST(request: Request) {
     const orderItemsRows = validatedItems.map((it) => ({
       id: `item_${crypto.randomUUID().replace(/-/g, '')}`,
       orderId,
-      storeId: STORE_ID,
-      factoryId: FACTORY_ID,
+      storeId,
+      factoryId,
       productPublicId: it.productId,
       nameSnapshot: it.productName,
       skuSnapshot: it.sku,
@@ -362,8 +363,8 @@ export async function POST(request: Request) {
         await supabase.from('ecommerce_payments').insert({
           id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
           orderId,
-          storeId: STORE_ID,
-          factoryId: FACTORY_ID,
+          storeId,
+          factoryId,
           paymentMethod: 'ONLINE',
           provider: 'razorpay',
           status: 'CAPTURED',
@@ -387,8 +388,8 @@ export async function POST(request: Request) {
       await supabase.from('ecommerce_shipments').insert({
         id: `ship_${crypto.randomUUID().replace(/-/g, '')}`,
         orderId,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         shipmentNumber: `SHP-${orderNumber}`,
         status: 'CONFIRMED',
         carrier: 'CarXen Factory Dedicated Line',

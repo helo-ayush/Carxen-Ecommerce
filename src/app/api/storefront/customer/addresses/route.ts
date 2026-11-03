@@ -3,8 +3,7 @@ import {
   getAuthenticatedCustomer,
   loadCustomerAddresses,
   mapAddressDbToDto,
-  STORE_ID,
-  FACTORY_ID,
+  resolveStoreMeta,
 } from '@/lib/server/customer';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
@@ -75,13 +74,14 @@ export async function POST(request: Request) {
         .eq('customerId', customer.id);
     }
 
+    const { storeId, factoryId } = await resolveStoreMeta();
     const newId = `addr_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
     const { data: inserted, error: insertErr } = await supabase
       .from('ecommerce_addresses')
       .insert({
         id: newId,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         customerId: customer.id,
         label: (label || 'Home').trim(),
         addressType: 'SHIPPING',

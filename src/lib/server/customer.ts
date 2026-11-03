@@ -2,8 +2,41 @@ import { getSupabaseAdmin } from './supabase-admin';
 import { getOrderStatusMessage, normalizeOrderStatus } from '@/lib/order-stages';
 import type { CustomerAddress, CustomerOrderHistoryRecord, OrderProgressStatus } from '@/types/customer';
 
-export const STORE_ID = 'store_carxen';
+// Primary store and factory resolved dynamically by slug
+export const DEFAULT_STORE_SLUG = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
+export const STORE_ID = 'cmvcigiiu0000l208locjorcn';
 export const FACTORY_ID = 'fac_demo';
+
+let cachedStoreMeta: { storeId: string; factoryId: string } | null = null;
+
+export async function resolveStoreMeta(): Promise<{ storeId: string; factoryId: string }> {
+  if (cachedStoreMeta) return cachedStoreMeta;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const slug = (process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG || 'carxen').trim();
+    const { data: store } = await supabase
+      .from('ecommerce_stores')
+      .select('id, factoryId')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (store?.id) {
+      cachedStoreMeta = {
+        storeId: store.id,
+        factoryId: store.factoryId || FACTORY_ID,
+      };
+      return cachedStoreMeta;
+    }
+  } catch (err) {
+    console.warn('Could not resolve store meta by slug:', err);
+  }
+
+  return {
+    storeId: STORE_ID,
+    factoryId: FACTORY_ID,
+  };
+}
 
 function buildCarrierTrackingUrl(carrier: string, trackingNumber: string): string | undefined {
   if (!trackingNumber) return undefined;
@@ -111,11 +144,12 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 
     if (!customer) {
       // Auto-provision customer
+      const { storeId, factoryId } = await resolveStoreMeta();
       const now = new Date().toISOString();
       const newCust = {
         id: `cust_${crypto.randomUUID().replace(/-/g, '')}`,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         authUserId: authUser.id,
         name:
           authUser.user_metadata?.full_name ||
@@ -169,13 +203,14 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
     let { data: customer } = await query.maybeSingle();
 
     if (!customer && demoUserEmail) {
+      const { storeId, factoryId } = await resolveStoreMeta();
       const now = new Date().toISOString();
       const { data: created } = await supabase
         .from('ecommerce_customers')
         .insert({
           id: demoUserId || `cust_demo_${crypto.randomUUID().slice(0, 8)}`,
-          storeId: STORE_ID,
-          factoryId: FACTORY_ID,
+          storeId,
+          factoryId,
           name: demoUserEmail.split('@')[0] || 'Driver',
           email: demoUserEmail,
           phone: '+91 98201 44829',
@@ -239,12 +274,13 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
     .maybeSingle();
 
   if (customerRow && (customerRow.email === 'aarav.speed@carxen.io' || customerId.includes('demo'))) {
+    const { storeId, factoryId } = await resolveStoreMeta();
     const now = new Date().toISOString();
     const demoAddresses = [
       {
         id: `addr_demo_home_${customerId.slice(-6)}`,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         customerId: customerId,
         label: 'Home',
         addressType: 'SHIPPING',
@@ -263,8 +299,8 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
       },
       {
         id: `addr_demo_office_${customerId.slice(-6)}`,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         customerId: customerId,
         label: 'Office / Studio',
         addressType: 'SHIPPING',
@@ -283,8 +319,8 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
       },
       {
         id: `addr_demo_garage_${customerId.slice(-6)}`,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         customerId: customerId,
         label: 'Garage & Workshop',
         addressType: 'SHIPPING',

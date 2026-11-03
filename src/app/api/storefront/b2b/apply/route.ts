@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
-import { getAuthenticatedCustomer, STORE_ID, FACTORY_ID } from '@/lib/server/customer';
+import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
 export const dynamic = 'force-dynamic';
@@ -223,13 +223,14 @@ export async function POST(request: Request) {
     }
 
     // Create new customer with PENDING B2B status
+    const { storeId, factoryId } = await resolveStoreMeta();
     const newId = `cust_${crypto.randomUUID().replace(/-/g, '')}`;
     const { error: insertError } = await supabase
       .from('ecommerce_customers')
       .insert({
         id: newId,
-        storeId: STORE_ID,
-        factoryId: FACTORY_ID,
+        storeId,
+        factoryId,
         authUserId: authUser?.id || null,
         status: 'ACTIVE',
         metadata: {
