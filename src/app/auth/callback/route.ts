@@ -145,10 +145,25 @@ export async function GET(request: Request) {
         updatedAt: now,
       });
     }
+    // Set 30-day persistent session cookie so Google users stay logged in across reloads
+    response.cookies.set('cx_session', authUser.id, {
+      httpOnly: false,
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
+      sameSite: 'lax',
+    });
   } catch (dbErr) {
     console.error('[OAuth Callback] Customer auto-provision error:', dbErr);
     // Non-blocking: continue sign in even if secondary profile sync encounters an issue
   }
+
+  // Ensure persistent session cookie is always set even if DB sync threw
+  response.cookies.set('cx_session', authUser.id, {
+    httpOnly: false,
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60,
+    sameSite: 'lax',
+  });
 
   return response;
 }
