@@ -373,21 +373,6 @@ function HeaderContent() {
             })}
           </div>
 
-          <div className="wholesale-nav-group">
-            <div className="wholesale-sidebar-label">Support</div>
-            <button
-              type="button"
-              onClick={() => openSupportModal({
-                category: 'General Commercial Support',
-                initialMessage: 'Customer support inquiry regarding wholesale operations.',
-              })}
-              className="wholesale-sidebar-link"
-              title="Open Customer Support modal"
-            >
-              <WholesaleIcon name="phone" size={18} />
-              <span>Customer Support</span>
-            </button>
-          </div>
 
           <div className="wholesale-sidebar-spacer" />
 
@@ -398,7 +383,7 @@ function HeaderContent() {
               <span>Customer Support Desk</span>
             </div>
             <p className="ws-sidebar-desk-desc">
-              Direct factory desk for order queries, bulk pricing &amp; allocations
+              Direct support desk for order queries, bulk pricing &amp; allocations
             </p>
             <button
               type="button"
