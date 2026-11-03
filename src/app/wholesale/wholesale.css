@@ -5080,6 +5080,24 @@ body:has(.wholesale-sidebar) .ws-page-container {
   font-weight: 700;
 }
 
+.ws-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #475569;
+  margin-left: 6px;
+  line-height: 1.4;
+}
+
+.ws-pdp-tab-btn.active .ws-tab-badge {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .ws-pdp-tab-panel {
   padding: 28px;
 }
