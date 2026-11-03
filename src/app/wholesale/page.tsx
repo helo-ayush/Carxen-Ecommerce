@@ -52,7 +52,7 @@ export default function WholesaleDashboardPage() {
     city: b2bProfile?.city || '',
     state: b2bProfile?.state || '',
     pincode: b2bProfile?.pincode || '',
-    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume || '₹50k–₹2L (Tier 1)',
+    expectedMonthlyVolume: b2bProfile?.expectedMonthlyVolume ? b2bProfile.expectedMonthlyVolume.replace(/\s*\(Tier\s*\d+\)/gi, '').trim() : '₹50k–₹2L',
     notes: '',
   });
 

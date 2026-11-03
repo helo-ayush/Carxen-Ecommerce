@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       city: city?.trim() || null,
       state: state?.trim() || null,
       pincode: pincode?.trim() || null,
-      expectedMonthlyVolume: expectedMonthlyVolume?.trim() || '₹50k–₹2L',
+      expectedMonthlyVolume: (expectedMonthlyVolume?.trim() || '₹50k–₹2L').replace(/\s*\(Tier\s*\d+\)/gi, '').trim(),
       wholesaleTier: 'tier1',
       b2bAppliedAt: now,
       b2bRejectionReason: null,
