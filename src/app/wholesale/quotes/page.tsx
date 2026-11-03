@@ -41,57 +41,7 @@ interface SavedProcurementList {
   }[];
 }
 
-const PRESET_PROCUREMENT_LISTS: SavedProcurementList[] = [
-  {
-    id: 'list-fast-movers',
-    title: 'Monthly Fast-Moving Showroom Assortment',
-    description: 'Top-selling 7D custom floor mats and steering wraps across India’s best-selling car models.',
-    tag: 'Recommended Stock',
-    estimatedUnits: 45,
-    estimatedValue: 185000,
-    items: [
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-HYU-CRT', quantity: 15 },
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-MAR-SWF', quantity: 15 },
-      { productId: 2, name: 'Carbon-Core Performance Steering Wheel Wrap', sku: 'CX-SW-UNI-SP', quantity: 15 },
-    ],
-  },
-  {
-    id: 'list-hyundai-pack',
-    title: 'Hyundai Dealership Replenishment Pack',
-    description: 'Dedicated procurement pack tailored for Hyundai Creta, Venue, Verna, and Alcazar accessories.',
-    tag: 'Brand Pack',
-    estimatedUnits: 30,
-    estimatedValue: 142000,
-    items: [
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-HYU-CRT', quantity: 15 },
-      { productId: 3, name: 'Apex Carbon-Grain Custom Leatherette Seat Covers', sku: 'CX-SC-HYU-CRT', quantity: 15 },
-    ],
-  },
-  {
-    id: 'list-suv-mahindra',
-    title: 'Mahindra Scorpio-N & XUV700 Heavy-Duty Pack',
-    description: 'All-weather, heavy-duty 7D mats and reinforced memory foam cushions for rugged full-size SUVs.',
-    tag: 'SUV Specialists',
-    estimatedUnits: 35,
-    estimatedValue: 168000,
-    items: [
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-MAH-SCP', quantity: 20 },
-      { productId: 4, name: 'CarXen CloudRest Memory Foam Executive Seat Cushion', sku: 'CX-CF-UNI-ER', quantity: 15 },
-    ],
-  },
-  {
-    id: 'list-monsoon',
-    title: 'Monsoon All-Weather Protection Stock',
-    description: 'Water-impermeable 7D deep-dish mats designed for rain, mud, and intense seasonal customer demand.',
-    tag: 'Seasonal Rush',
-    estimatedUnits: 50,
-    estimatedValue: 245000,
-    items: [
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-HYU-CRT', quantity: 25 },
-      { productId: 1, name: 'CarXen Obsidian Signature 7D Floor Mats', sku: 'CX-7D-MAR-SWF', quantity: 25 },
-    ],
-  },
-];
+const DUMMY_PRESET_IDS = new Set(['list-fast-movers', 'list-hyundai-pack', 'list-suv-mahindra', 'list-monsoon']);
 
 export default function WholesaleQuotesPage() {
   const router = useRouter();
@@ -106,9 +56,14 @@ export default function WholesaleQuotesPage() {
     showToast,
   } = useApp();
 
-  // Assortments state loaded from localStorage with preset fallback
-  const [assortments, setAssortments] = useState<SavedProcurementList[]>(PRESET_PROCUREMENT_LISTS);
+  // Assortments state - strictly user-created, loaded from database
+  const [assortments, setAssortments] = useState<SavedProcurementList[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadingAssortments, setLoadingAssortments] = useState(true);
+
+  // Delete Confirmation Modal State
+  const [deleteTarget, setDeleteTarget] = useState<SavedProcurementList | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // How to Use Modal
   const [showHowToModal, setShowHowToModal] = useState(false);
@@ -125,29 +80,60 @@ export default function WholesaleQuotesPage() {
   const [showCatalogBrowser, setShowCatalogBrowser] = useState<boolean>(false);
   const [catalogSearch, setCatalogSearch] = useState<string>('');
 
-  // Load from local storage
+  // Load user assortments from database (and sync local storage cache)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('cx_saved_assortments');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setAssortments(parsed);
+    let isMounted = true;
+    async function fetchUserAssortments() {
+      try {
+        // First check local storage cache for instant render, filtering out any legacy dummy presets
+        const saved = localStorage.getItem('cx_saved_assortments');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const userOnly = parsed.filter((a) => !DUMMY_PRESET_IDS.has(a.id) && Boolean(a.title));
+            if (isMounted) setAssortments(userOnly);
+          }
+        }
+
+        // Fetch authoritative user-created assortments from DB
+        const res = await fetch('/api/storefront/wholesale/assortments');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.assortments) && isMounted) {
+            setAssortments(data.assortments);
+            localStorage.setItem('cx_saved_assortments', JSON.stringify(data.assortments));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load saved assortments from DB', e);
+      } finally {
+        if (isMounted) {
+          setIsLoaded(true);
+          setLoadingAssortments(false);
         }
       }
-    } catch (e) {
-      console.warn('Failed to load saved assortments', e);
     }
-    setIsLoaded(true);
+
+    fetchUserAssortments();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Save to local storage helper
-  const persistAssortments = (newList: SavedProcurementList[]) => {
-    setAssortments(newList);
+  // Persist user assortments to database and local storage
+  const persistAssortments = async (newList: SavedProcurementList[]) => {
+    const userOnly = newList.filter((a) => !DUMMY_PRESET_IDS.has(a.id) && Boolean(a.title));
+    setAssortments(userOnly);
     try {
-      localStorage.setItem('cx_saved_assortments', JSON.stringify(newList));
+      localStorage.setItem('cx_saved_assortments', JSON.stringify(userOnly));
+      // Save to database with user
+      await fetch('/api/storefront/wholesale/assortments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assortments: userOnly }),
+      });
     } catch (e) {
-      console.warn('Failed to persist assortments', e);
+      console.warn('Failed to persist assortments to DB', e);
     }
   };
 
@@ -254,21 +240,31 @@ export default function WholesaleQuotesPage() {
     showToast(`Duplicated "${list.title}" into custom assortments`);
   };
 
-  // Delete assortment
-  const handleDelete = (id: string, title: string) => {
-    if (assortments.length <= 1) {
-      showToast('At least one procurement assortment must be kept');
-      return;
-    }
-    const nextList = assortments.filter((x) => x.id !== id);
-    persistAssortments(nextList);
-    showToast(`Removed "${title}" from saved assortments`);
-  };
+  // Delete assortment confirmation execution
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    const targetId = deleteTarget.id;
+    const targetTitle = deleteTarget.title;
 
-  // Reset to default factory presets
-  const handleResetDefaults = () => {
-    persistAssortments(PRESET_PROCUREMENT_LISTS);
-    showToast('Restored default showroom and dealership assortment packs');
+    try {
+      const nextList = assortments.filter((x) => x.id !== targetId);
+      setAssortments(nextList);
+      localStorage.setItem('cx_saved_assortments', JSON.stringify(nextList));
+
+      // Delete from DB with user
+      await fetch(`/api/storefront/wholesale/assortments?id=${encodeURIComponent(targetId)}`, {
+        method: 'DELETE',
+      });
+
+      showToast(`Assortment "${targetTitle}" deleted`);
+    } catch (err) {
+      console.error('Failed to delete assortment:', err);
+      showToast('Failed to delete assortment from database.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   // Add SKU item in modal (supports direct add from dropdown OR catalog list)
@@ -456,25 +452,27 @@ export default function WholesaleQuotesPage() {
         </div>
       </div>
 
-      {/* Grid of Saved Assortments - Showing All by Default */}
+      {/* Grid of Saved Assortments - Strictly User-Created */}
       {assortments.length === 0 ? (
         <div className="ws-empty-state-card">
           <div className="ws-empty-icon-wrap">
             <Layers size={28} />
           </div>
-          <h3>No Assortments Saved</h3>
+          <h3>No Saved Assortments Yet</h3>
           <p>
-            You currently have no saved assortment templates. Restore default dealership presets or create a custom procurement pack.
+            You have not created any custom assortment templates yet. Save products from your active Wholesale Basket or create a custom SKU pack to reorder faster.
           </p>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              type="button"
-              className="ws-btn-secondary"
-              onClick={handleResetDefaults}
-            >
-              <RotateCcw size={14} />
-              <span>Restore Presets</span>
-            </button>
+            {wholesaleBasketSkuCount > 0 && (
+              <button
+                type="button"
+                className="ws-btn-secondary"
+                onClick={handleSaveBasketAsAssortment}
+              >
+                <BookmarkPlus size={15} />
+                <span>Save Active Basket ({wholesaleBasketSkuCount} SKUs)</span>
+              </button>
+            )}
             <button
               type="button"
               className="ws-btn-primary"
@@ -514,7 +512,7 @@ export default function WholesaleQuotesPage() {
                     <button
                       type="button"
                       className="ws-icon-btn danger"
-                      onClick={() => handleDelete(list.id, list.title)}
+                      onClick={() => setDeleteTarget(list)}
                       title="Delete assortment"
                     >
                       <Trash2 size={14} />
@@ -1131,6 +1129,85 @@ export default function WholesaleQuotesPage() {
                 style={{ minWidth: '130px' }}
               >
                 Got It, Let&apos;s Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="ws-modal-overlay" style={{ zIndex: 10000 }}>
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #fee2e2',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                  Delete Assortment Template?
+                </h3>
+                <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                  Are you sure you want to permanently delete <strong>&ldquo;{deleteTarget.title}&rdquo;</strong>? This template will be permanently removed from your enterprise account in the database.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                fontSize: '12.5px',
+                color: '#475569',
+                display: 'flex',
+                justifyContent: 'space-between',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <span>Contents:</span>
+              <strong>{deleteTarget.items.length} SKUs ({deleteTarget.estimatedUnits} Total Units)</strong>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="ws-btn-secondary"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ws-btn-primary"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                style={{ backgroundColor: '#dc2626', borderColor: '#b91c1c' }}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete Assortment'}
               </button>
             </div>
           </div>
