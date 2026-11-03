@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
         company?: unknown;
         companyName?: unknown;
         businessName?: unknown;
+        channel?: unknown;
+        isWholesale?: unknown;
         bot_check?: unknown;
       }
     | null;
@@ -44,8 +46,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Describe your query in 10–2000 characters.' }, { status: 400 });
   }
 
-  const message = company
-    ? `[Wholesale / Business: ${company}]\n\n${rawMessage}`
+  const isWholesale = Boolean(
+    payload.isWholesale ||
+    String(payload.channel ?? '').toLowerCase() === 'wholesale' ||
+    company ||
+    rawMessage.includes('[Topic:')
+  );
+  const companyTag = company || (isWholesale ? 'Wholesale Partner' : '');
+  const message = companyTag && !rawMessage.startsWith('[Wholesale')
+    ? `[Wholesale / Business: ${companyTag}]\n\n${rawMessage}`
     : rawMessage;
 
   const supabase = getSupabaseAdmin();

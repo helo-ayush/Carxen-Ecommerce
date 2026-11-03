@@ -129,8 +129,10 @@ export function B2BSupportModal() {
         body: JSON.stringify({
           name: cleanName,
           email: cleanEmail,
-          company: company.trim(),
+          company: company.trim() || 'Wholesale Partner',
           message: formattedMessage,
+          channel: 'wholesale',
+          isWholesale: true,
           bot_check: botCheck,
         }),
       });
