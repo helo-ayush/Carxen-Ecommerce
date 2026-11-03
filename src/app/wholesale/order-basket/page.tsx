@@ -40,7 +40,9 @@ import {
   validateCoupon,
   getAvailableCouponsForBuyer,
   getAssignedCouponForBuyer,
+  getQuickClickCoupons,
   type StorefrontCoupon,
+  type QuickClickCoupon,
   type WholesaleBuyerContext,
 } from '@/lib/storefront/coupons';
 import '../wholesale.css';
@@ -249,6 +251,11 @@ export default function WholesaleOrderBasketPage() {
     if (!candidate) return null;
     return candidate;
   }, [buyerContext, coupons]);
+
+  // Quick-click coupons (Only 2 types: Created for me, or For all customers. Max 3, sorted by discount offer)
+  const quickClickCoupons = useMemo(() => {
+    return getQuickClickCoupons(totalSubtotal, buyerContext, coupons);
+  }, [totalSubtotal, buyerContext, coupons]);
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -1334,29 +1341,112 @@ export default function WholesaleOrderBasketPage() {
                 </div>
               )}
 
-              {/* Assigned Wholesale Coupon from Veda side */}
-              {assignedCoupon && assignedCoupon.code !== appliedCoupon && (
-                <div style={{ marginTop: '8px', padding: '8px 10px', background: '#eff6ff', border: '1px dashed #93c5fd', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#1d4ed8', letterSpacing: '0.04em' }}>
-                      Assigned Partner Promo
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyCoupon(assignedCoupon.code)}
-                      style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer' }}
-                    >
-                      Apply
-                    </button>
+              {/* Quick-Click Coupons: Only 2 types allowed (Created for me, or For all customers. Max 3, sorted by discount offer) */}
+              {quickClickCoupons.length > 0 && (
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={11} style={{ color: '#f59e0b' }} />
+                    <span>Quick Apply Offers:</span>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#1e3a8a', fontWeight: 700 }}>
-                    {assignedCoupon.code} ({assignedCoupon.type === 'Percentage' ? `${assignedCoupon.value}% off` : `${formatINR(assignedCoupon.value)} off`})
-                  </div>
-                  {assignedCoupon.description && (
-                    <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
-                      {assignedCoupon.description}
-                    </div>
-                  )}
+
+                  {quickClickCoupons.map((token) => {
+                    const isApplied = appliedCoupon === token.code;
+                    return (
+                      <div
+                        key={token.code}
+                        onClick={() => {
+                          if (!isApplied) handleApplyCoupon(token.code);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          background: isApplied ? '#ecfdf5' : token.isPersonal ? '#fffbeb' : '#f8fafc',
+                          border: isApplied
+                            ? '1.5px solid #10b981'
+                            : token.isPersonal
+                            ? '1.5px dashed #f59e0b'
+                            : '1px dashed #cbd5e1',
+                          cursor: isApplied ? 'default' : 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontFamily: 'monospace',
+                              fontWeight: 800,
+                              fontSize: '11.5px',
+                              color: isApplied ? '#065f46' : token.isPersonal ? '#92400e' : '#0f172a',
+                              background: isApplied ? '#d1fae5' : token.isPersonal ? '#fef3c7' : '#e2e8f0',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {token.code}
+                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#0f172a' }}>
+                                {token.type === 'Percentage' ? `${token.value}% OFF` : `${formatINR(token.value)} OFF`}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '9px',
+                                  fontWeight: 700,
+                                  padding: '1px 4px',
+                                  borderRadius: '3px',
+                                  textTransform: 'uppercase',
+                                  background: token.isPersonal ? '#fef3c7' : '#f1f5f9',
+                                  color: token.isPersonal ? '#b45309' : '#64748b',
+                                }}
+                              >
+                                {token.isPersonal ? 'Exclusively for you' : 'For all buyers'}
+                              </span>
+                            </div>
+                            {token.minimumOrder && token.minimumOrder > 0 ? (
+                              <span style={{ fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
+                                Min order {formatINR(token.minimumOrder)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div>
+                          {isApplied ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10.5px', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>
+                              <CheckCircle2 size={11} /> Applied
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApplyCoupon(token.code);
+                              }}
+                              style={{
+                                background: token.isPersonal ? '#f59e0b' : '#0f172a',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '3px 8px',
+                                fontSize: '10.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              Apply
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

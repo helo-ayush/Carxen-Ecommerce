@@ -23,8 +23,10 @@ import {
   validateCoupon,
   getAvailableCouponsForBuyer,
   getAssignedCouponForBuyer,
+  getQuickClickCoupons,
   type WholesaleBuyerContext,
   type StorefrontCoupon,
+  type QuickClickCoupon,
 } from '@/lib/storefront/coupons';
 
 import {
@@ -282,12 +284,13 @@ export default function CheckoutPage() {
       isWholesaleApproved,
       businessName: b2bProfile?.businessName,
       tradeName: b2bProfile?.tradeName,
+      name: userName || user?.name,
       email: user?.email,
       userId: user?.id,
       orderCount: verifiedOrderCount,
       isVerifiedBuyer: verifiedStatus,
     }),
-    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, user?.email, user?.id, verifiedOrderCount, verifiedStatus]
+    [isWholesaleApproved, b2bProfile?.businessName, b2bProfile?.tradeName, userName, user?.name, user?.email, user?.id, verifiedOrderCount, verifiedStatus]
   );
 
   const couponValidation = useMemo(() => {
@@ -315,6 +318,11 @@ export default function CheckoutPage() {
     if (!validation.valid) return null;
     return candidate;
   }, [buyerContext, coupons, cartSubtotal]);
+
+  // Quick-click coupons (Only 2 types: Created for me, or For all customers. Max 3, sorted by discount offer)
+  const quickClickCoupons = useMemo(() => {
+    return getQuickClickCoupons(cartSubtotal, buyerContext, coupons);
+  }, [cartSubtotal, buyerContext, coupons]);
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -1771,38 +1779,126 @@ export default function CheckoutPage() {
                         </div>
                       ) : null}
 
-{/* Only Show Assigned Coupon by Owner (if available for this customer and not already applied) */}
-                      {assignedCoupon && assignedCoupon.code !== appliedCoupon ? (
-                        <div className="inf-ck-promo-suggestions">
-                          <div className="inf-ck-wholesale-promo-banner">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {assignedCoupon.audience === 'Verified customers (3+ orders)' ? (
-                                <CheckCircle2 size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
-                              ) : (
-                                <Building2 size={15} style={{ color: '#d97706', flexShrink: 0 }} />
-                              )}
-                              <div>
-                                <span style={{ fontWeight: 700, color: assignedCoupon.audience === 'Verified customers (3+ orders)' ? '#1e40af' : '#92400e' }}>
-                                  {assignedCoupon.audience === 'Verified customers (3+ orders)'
-                                    ? 'Verified Buyer Exclusive:'
-                                    : `Exclusive for ${b2bProfile?.businessName || 'Your Business'}:`}
-                                </span>{' '}
-                                <span style={{ color: assignedCoupon.audience === 'Verified customers (3+ orders)' ? '#1e3a8a' : '#78350f' }}>
-                                  Use <strong>{assignedCoupon.code}</strong> ({assignedCoupon.type === 'Percentage' ? `${assignedCoupon.value}% off` : formatINR(assignedCoupon.value) + ' off'})
-                                  {assignedCoupon.minimumOrder ? ` (min ${formatINR(assignedCoupon.minimumOrder)})` : ''}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              className="inf-ck-wholesale-promo-btn"
-                              onClick={() => handleApplyCoupon(assignedCoupon.code)}
-                            >
-                              Apply
-                            </button>
+{/* Quick-Click Coupons: Only 2 types allowed (Created for me, or For all customers. Max 3, sorted by discount offer) */}
+                      {quickClickCoupons.length > 0 && (
+                        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Sparkles size={12} style={{ color: '#f59e0b' }} />
+                            <span>Quick Apply Coupons:</span>
                           </div>
+
+                          {quickClickCoupons.map((token) => {
+                            const isApplied = appliedCoupon === token.code;
+                            return (
+                              <div
+                                key={token.code}
+                                onClick={() => {
+                                  if (!isApplied) handleApplyCoupon(token.code);
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                  padding: '8px 12px',
+                                  borderRadius: 8,
+                                  background: isApplied ? '#ecfdf5' : token.isPersonal ? '#fffbeb' : '#f8fafc',
+                                  border: isApplied
+                                    ? '1.5px solid #10b981'
+                                    : token.isPersonal
+                                    ? '1.5px dashed #f59e0b'
+                                    : '1px dashed #cbd5e1',
+                                  cursor: isApplied ? 'default' : 'pointer',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                  <span
+                                    style={{
+                                      fontFamily: 'monospace',
+                                      fontWeight: 800,
+                                      fontSize: 12,
+                                      color: isApplied ? '#065f46' : token.isPersonal ? '#92400e' : '#0f172a',
+                                      background: isApplied ? '#d1fae5' : token.isPersonal ? '#fef3c7' : '#e2e8f0',
+                                      padding: '2px 7px',
+                                      borderRadius: 4,
+                                      letterSpacing: '0.04em',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {token.code}
+                                  </span>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
+                                        {token.type === 'Percentage' ? `${token.value}% OFF` : `${formatINR(token.value)} OFF`}
+                                      </span>
+                                      <span
+                                        style={{
+                                          fontSize: 9.5,
+                                          fontWeight: 700,
+                                          padding: '1px 5px',
+                                          borderRadius: 3,
+                                          textTransform: 'uppercase',
+                                          background: token.isPersonal ? '#fef3c7' : '#f1f5f9',
+                                          color: token.isPersonal ? '#b45309' : '#64748b',
+                                        }}
+                                      >
+                                        {token.isPersonal ? 'Exclusively for you' : 'For all customers'}
+                                      </span>
+                                    </div>
+                                    {token.minimumOrder && token.minimumOrder > 0 ? (
+                                      <span style={{ fontSize: 10.5, color: '#64748b', marginTop: 1 }}>
+                                        Min order {formatINR(token.minimumOrder)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {isApplied ? (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 3,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#059669',
+                                        background: '#ecfdf5',
+                                        padding: '3px 8px',
+                                        borderRadius: 5,
+                                      }}
+                                    >
+                                      <CheckCircle2 size={12} /> Applied
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApplyCoupon(token.code);
+                                      }}
+                                      className={token.isPersonal ? "inf-ck-wholesale-promo-btn" : "inf-ck-promo-btn"}
+                                      style={{
+                                        padding: '4px 10px',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      Apply
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ) : null}
+                      )}
                     </div>
 
                     {/* Card 3: Summary */}

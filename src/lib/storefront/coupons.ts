@@ -24,10 +24,16 @@ export type WholesaleBuyerContext = {
   isWholesaleApproved?: boolean;
   businessName?: string | null;
   tradeName?: string | null;
+  name?: string | null;
   email?: string | null;
   userId?: string | null;
   orderCount?: number;
   isVerifiedBuyer?: boolean;
+};
+
+export type QuickClickCoupon = StorefrontCoupon & {
+  isPersonal: boolean;
+  offerScore: number;
 };
 
 export type CouponValidationResult = {
@@ -113,18 +119,22 @@ export function isWholesaleBuyerMatch(
   const buyerEmail = normalize(buyerContext.email);
   const buyerBiz = normalize(buyerContext.businessName);
   const buyerTrade = normalize(buyerContext.tradeName);
+  const buyerName = normalize(buyerContext.name);
 
   // 1. Email exact match
   if (targetEmail && buyerEmail && targetEmail === buyerEmail) {
     return true;
   }
 
-  // 2. Business / Trade name match
+  // 2. Business / Trade / Contact name match
   if (targetName) {
     if (buyerBiz && (buyerBiz === targetName || buyerBiz.includes(targetName) || targetName.includes(buyerBiz))) {
       return true;
     }
     if (buyerTrade && (buyerTrade === targetName || buyerTrade.includes(targetName) || targetName.includes(buyerTrade))) {
+      return true;
+    }
+    if (buyerName && (buyerName === targetName || buyerName.includes(targetName) || targetName.includes(buyerName))) {
       return true;
     }
   }
@@ -365,4 +375,94 @@ export function getAssignedCouponForBuyer(
   }
 
   return null;
+}
+
+/**
+ * Get quick-click coupons for the checkout page according to strict rules:
+ * 1. Only 2 types of coupons are allowed:
+ *    - Personal ("Only for me"): targeted specifically to this customer/wholesale buyer.
+ *    - Universal ("For all customers"): open to all customers (or all wholesale if B2B context).
+ *    All other categories are excluded.
+ * 2. Prioritize "Only for me" tokens (sorted by highest offer first, up to 3).
+ * 3. If fewer than 3 "for me" tokens exist, fill remaining slots up to 3 with "For all customers" tokens (also sorted by highest offer first).
+ * 4. Maximum 3 tokens total.
+ * 5. Returns empty array if no matching tokens exist (renders blank).
+ */
+export function getQuickClickCoupons(
+  cartTotal: number,
+  buyerContext?: WholesaleBuyerContext,
+  customCoupons?: StorefrontCoupon[]
+): QuickClickCoupon[] {
+  const all = getAllCoupons(customCoupons);
+
+  const calculateOfferScore = (c: StorefrontCoupon): number => {
+    if (c.type === 'Percentage') {
+      const base = cartTotal > 0 ? cartTotal : 1000;
+      return (base * c.value) / 100;
+    }
+    return c.value;
+  };
+
+  const forMeTokens: QuickClickCoupon[] = [];
+  const forAllTokens: QuickClickCoupon[] = [];
+
+  for (const coupon of all) {
+    if (coupon.status !== 'Active') continue;
+
+    const isTargeted = Boolean(
+      coupon.targetWholesaleBuyerEmail ||
+      coupon.targetWholesaleBuyerName ||
+      coupon.targetWholesaleBuyerId
+    );
+
+    if (isTargeted) {
+      // Type 1: Only for me (Personal / Targeted)
+      if (buyerContext && isWholesaleBuyerMatch(coupon, buyerContext)) {
+        forMeTokens.push({
+          ...coupon,
+          isPersonal: true,
+          offerScore: calculateOfferScore(coupon),
+        });
+      }
+      // If targeted to another individual, do NOT show to this user!
+      continue;
+    }
+
+    // Type 2: For all customers (or for all wholesale buyers if wholesale context)
+    if (coupon.audience === 'All customers') {
+      forAllTokens.push({
+        ...coupon,
+        isPersonal: false,
+        offerScore: calculateOfferScore(coupon),
+      });
+      continue;
+    }
+
+    if (buyerContext?.isWholesaleApproved && (coupon.audience === 'Wholesale buyers' || coupon.audience === 'Dealer accounts')) {
+      forAllTokens.push({
+        ...coupon,
+        isPersonal: false,
+        offerScore: calculateOfferScore(coupon),
+      });
+      continue;
+    }
+
+    // All other audience categories (e.g. "New customers", "Verified customers (3+ orders)", etc.)
+    // are strictly excluded per instructions: "And for rest of the category dont show here."
+  }
+
+  // Sort "for me" tokens descending by offer score, then by value
+  forMeTokens.sort((a, b) => b.offerScore - a.offerScore || b.value - a.value);
+
+  // Sort "for all" tokens descending by offer score, then by value
+  forAllTokens.sort((a, b) => b.offerScore - a.offerScore || b.value - a.value);
+
+  // Show up to 3 "for me" tokens
+  const selectedForMe = forMeTokens.slice(0, 3);
+  const remainingSlots = 3 - selectedForMe.length;
+
+  // Fill remaining slots up to 3 with "for all" tokens
+  const selectedForAll = remainingSlots > 0 ? forAllTokens.slice(0, remainingSlots) : [];
+
+  return [...selectedForMe, ...selectedForAll];
 }
