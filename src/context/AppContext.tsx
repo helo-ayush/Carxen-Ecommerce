@@ -234,7 +234,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCoupons = useCallback(async () => {
     try {
-      const res = await fetch('/api/storefront/coupons');
+      const res = await fetch('/api/storefront/coupons', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.coupons)) {

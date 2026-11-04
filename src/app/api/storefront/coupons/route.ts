@@ -22,8 +22,7 @@ export async function GET() {
     const { data: campaigns, error: campaignError } = await supabase
       .from('ecommerce_campaigns')
       .select('*')
-      .eq('storeId', store.id)
-      .eq('status', 'ACTIVE');
+      .eq('storeId', store.id);
 
     if (campaignError || !campaigns) {
       return NextResponse.json({ coupons: [] });
@@ -31,6 +30,8 @@ export async function GET() {
 
     const now = new Date();
     const validCampaigns = campaigns.filter((c: any) => {
+      const status = String(c.status || '').toUpperCase();
+      if (status !== 'ACTIVE') return false;
       if (c.startsAt && new Date(c.startsAt) > now) return false;
       if (c.endsAt && new Date(c.endsAt) < now) return false;
       if (c.usageLimit && c.usageCount && Number(c.usageCount) >= Number(c.usageLimit)) return false;

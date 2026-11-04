@@ -95,12 +95,13 @@ export async function calculateAuthoritativeCartTotals(
       const { data: campaigns } = await supabase
         .from('ecommerce_campaigns')
         .select('*')
-        .eq('storeId', store.id)
-        .eq('status', 'ACTIVE');
+        .eq('storeId', store.id);
 
       if (campaigns) {
         const now = new Date();
         const validCampaigns = campaigns.filter((camp: any) => {
+          const status = String(camp.status || '').toUpperCase();
+          if (status !== 'ACTIVE') return false;
           if (camp.startsAt && new Date(camp.startsAt) > now) return false;
           if (camp.endsAt && new Date(camp.endsAt) < now) return false;
           if (camp.usageLimit && camp.usageCount && Number(camp.usageCount) >= Number(camp.usageLimit)) return false;
