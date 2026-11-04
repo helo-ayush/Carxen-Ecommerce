@@ -373,7 +373,7 @@ export default function HomePage() {
     showToast(`Fitment confirmed — ${count} matches found`);
   };
 
-  // Reviews carousel — only real, published reviews from verified buyers.
+  // Reviews carousel — exclusively displays custom reviews configured from the Storefront section
   type HomeReview = {
     id: string;
     text: string;
@@ -383,44 +383,8 @@ export default function HomePage() {
     bg: string;
     rating: number;
   };
-  const [activeReviewsList, setActiveReviewsList] = useState<HomeReview[]>([]);
   const [activeReview, setActiveReview] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/storefront/reviews?latest=6', { cache: 'no-store' })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload || !Array.isArray(payload.reviews)) return;
-        const palette = ['#e2231a', '#1b1b1e', '#5d5d64', '#b91a12', '#2a2d34'];
-        setActiveReviewsList(
-          payload.reviews.map((review: any, index: number) => {
-            const name = String(review.customerName || 'Verified Buyer');
-            return {
-              id: String(review.id),
-              text: String(review.body || review.title || ''),
-              author: name,
-              sub: review.productName ? String(review.productName) : 'Verified purchase',
-              avatar: name
-                .split(/\s+/)
-                .map((part: string) => part[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase(),
-              bg: palette[index % palette.length],
-              rating: Number(review.rating) || 0,
-            };
-          }),
-        );
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Published storefront reviews take priority; owner-authored highlights are
-  // used only while there are no verified reviews yet.
   const configuredReviews = useMemo<HomeReview[]>(() => {
     const items = Array.isArray(reviewsConfig?.items) ? reviewsConfig.items : [];
     const palette = ['#e2231a', '#1b1b1e', '#5d5d64', '#b91a12', '#2a2d34'];
@@ -437,13 +401,9 @@ export default function HomePage() {
       }));
   }, [reviewsConfig]);
 
+  // Exclusively show reviews from the storefront section (or curated landing reviews as fallback)
   const displayedReviews =
-    activeReviewsList.length > 0
-      ? activeReviewsList
-      : configuredReviews.length > 0
-      ? configuredReviews
-      : LANDING_REVIEWS;
-  const usingFeaturedReviews = activeReviewsList.length === 0;
+    configuredReviews.length > 0 ? configuredReviews : LANDING_REVIEWS;
 
   useEffect(() => {
     if (displayedReviews.length <= 1) {
@@ -1246,20 +1206,14 @@ export default function HomePage() {
               <span className="rule" />
               <span className="note">
                 {displayedReviews.length > 0
-                  ? usingFeaturedReviews
-                    ? `${displayedReviews.length} customer review${displayedReviews.length === 1 ? '' : 's'}`
-                    : `${displayedReviews.length} verified review${displayedReviews.length === 1 ? '' : 's'}`
+                  ? `${displayedReviews.length} verified review${displayedReviews.length === 1 ? '' : 's'}`
                   : 'Verified reviews'}
               </span>
             </div>
             <div className="rev-g">
               <div className="rv-l in">
                 <Badge variant="subtleRed" style={{ marginBottom: '14px' }}>
-                  {displayedReviews.length === 0
-                    ? 'Driver reviews'
-                    : usingFeaturedReviews
-                    ? 'Customer reviews'
-                    : 'Verified Drivers'}
+                  Verified Drivers
                 </Badge>
                 <span className="rev-q">“</span>
                 <h2 className="disp" style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.75rem)' }}>
