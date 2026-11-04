@@ -175,6 +175,7 @@ interface AppContextType {
   updateWholesaleBasketQty: (productId: number, qty: number) => void;
   removeFromWholesaleBasket: (productId: number) => void;
   clearWholesaleBasket: () => void;
+  getAuthHeaders: () => Promise<Record<string, string>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -338,8 +339,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
     try {
       const { data } = await supabase.auth.getSession();
       if (data.session?.access_token) {
@@ -358,8 +362,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (user?.id) headers['x-demo-user-id'] = user.id;
     if (user?.email) headers['x-demo-user-email'] = user.email;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (!headers['x-demo-user-id'] && parsed?.id) headers['x-demo-user-id'] = parsed.id;
+          if (!headers['x-demo-user-email'] && parsed?.email) headers['x-demo-user-email'] = parsed.email;
+        }
+      } catch {}
+    }
+
     return headers;
-  };
+  }, [user?.id, user?.email]);
 
   const fetchCustomerBackendProfile = async (sessionToken?: string, u?: any) => {
     try {
@@ -593,6 +609,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Persist preferences
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      if (user) localStorage.setItem('cx_user_profile', JSON.stringify(user));
+      else localStorage.removeItem('cx_user_profile');
+    } catch (e) {}
+  }, [user, isLoaded]);
+
   useEffect(() => {
     if (!isLoaded) return;
     try {
@@ -1684,6 +1708,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateWholesaleBasketQty,
         removeFromWholesaleBasket,
         clearWholesaleBasket,
+        getAuthHeaders,
       }}
     >
       {children}

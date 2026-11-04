@@ -108,11 +108,26 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
     ? authHeader.slice(7).trim()
     : null;
 
-  if (!token) {
-    const cookieHeader = request.headers.get('cookie') || '';
+  const cookieHeader = request.headers.get('cookie') || '';
+  if (!token && cookieHeader) {
     const match = cookieHeader.match(/cx_session=([^;]+)/);
     if (match) {
       token = decodeURIComponent(match[1].trim());
+    }
+  }
+
+  if (!token && cookieHeader) {
+    const sbMatch = cookieHeader.match(/sb-[a-z0-9_-]+-auth-token=([^;]+)/i);
+    if (sbMatch) {
+      try {
+        const raw = decodeURIComponent(sbMatch[1]);
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed[0]) {
+          token = parsed[0];
+        } else if (parsed?.access_token) {
+          token = parsed.access_token;
+        }
+      } catch {}
     }
   }
 
@@ -129,15 +144,20 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
     }
   }
 
-  const demoUserId = request.headers.get('x-demo-user-id');
-  const demoUserEmail = request.headers.get('x-demo-user-email');
+  const demoUserId = request.headers.get('x-demo-user-id')?.trim();
+  const demoUserEmail = request.headers.get('x-demo-user-email')?.trim();
 
   if (authUser) {
     // Find customer by authUserId or email
+    const authOrFilters: string[] = [`authUserId.eq.${authUser.id}`];
+    if (authUser.email && authUser.email.trim()) {
+      authOrFilters.push(`email.ilike.${authUser.email.trim()}`);
+    }
+
     let { data: customer } = await supabase
       .from('ecommerce_customers')
       .select('*')
-      .or(`authUserId.eq.${authUser.id},email.eq.${authUser.email}`)
+      .or(authOrFilters.join(','))
       .order('createdAt', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -156,7 +176,7 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
           authUser.user_metadata?.name ||
           authUser.email?.split('@')[0] ||
           'Driver',
-        email: authUser.email,
+        email: authUser.email ? authUser.email.toLowerCase().trim() : null,
         phone: authUser.user_metadata?.phone || null,
         status: 'ACTIVE',
         metadata: {
@@ -179,6 +199,13 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 
       if (createErr) {
         console.error('Failed to provision customer row:', createErr);
+        const { data: retry } = await supabase
+          .from('ecommerce_customers')
+          .select('*')
+          .or(authOrFilters.join(','))
+          .limit(1)
+          .maybeSingle();
+        customer = retry;
       } else {
         customer = created;
       }
@@ -191,28 +218,42 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
       customer.authUserId = authUser.id;
     }
 
-    return { user: authUser, customer };
+    return { user: authUser, customer: customer || null };
   }
 
-  // Fallback for demo mode user if specified
+  // Fallback for user identified by header (e.g. demo mode or client state)
   if (demoUserEmail || demoUserId) {
-    const query = demoUserEmail
-      ? supabase.from('ecommerce_customers').select('*').eq('email', demoUserEmail)
-      : supabase.from('ecommerce_customers').select('*').eq('id', demoUserId);
+    const filters: string[] = [];
+    if (demoUserId) {
+      filters.push(`id.eq.${demoUserId}`, `authUserId.eq.${demoUserId}`);
+    }
+    if (demoUserEmail) {
+      filters.push(`email.ilike.${demoUserEmail}`);
+    }
 
-    let { data: customer } = await query.maybeSingle();
+    let { data: customer } = filters.length > 0
+      ? await supabase
+          .from('ecommerce_customers')
+          .select('*')
+          .or(filters.join(','))
+          .order('createdAt', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
 
-    if (!customer && demoUserEmail) {
+    if (!customer && (demoUserEmail || demoUserId)) {
       const { storeId, factoryId } = await resolveStoreMeta();
+      const cleanEmail = demoUserEmail ? demoUserEmail.toLowerCase() : null;
       const now = new Date().toISOString();
-      const { data: created } = await supabase
+      const idToUse = demoUserId || `cust_demo_${crypto.randomUUID().slice(0, 8)}`;
+      const { data: created, error: insertErr } = await supabase
         .from('ecommerce_customers')
         .insert({
-          id: demoUserId || `cust_demo_${crypto.randomUUID().slice(0, 8)}`,
+          id: idToUse,
           storeId,
           factoryId,
-          name: demoUserEmail.split('@')[0] || 'Driver',
-          email: demoUserEmail,
+          name: cleanEmail ? cleanEmail.split('@')[0] : 'Driver',
+          email: cleanEmail,
           phone: '+91 98201 44829',
           status: 'ACTIVE',
           metadata: {
@@ -226,7 +267,18 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
         .select()
         .single();
 
-      customer = created;
+      if (insertErr) {
+        console.error('Failed to provision customer fallback row:', insertErr);
+        const { data: retry } = await supabase
+          .from('ecommerce_customers')
+          .select('*')
+          .or(filters.join(','))
+          .limit(1)
+          .maybeSingle();
+        customer = retry;
+      } else {
+        customer = created;
+      }
     }
 
     return { user: null, customer: customer || null };
@@ -354,19 +406,23 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
 
 export async function loadCustomerOrders(
   customerId: string,
-  customerEmail?: string | null
+  customerEmail?: string | null,
+  authUserId?: string | null
 ): Promise<CustomerOrderHistoryRecord[]> {
   const supabase = getSupabaseAdmin();
 
-  let filter = `customerId.eq.${customerId}`;
+  const filters: string[] = [`customerId.eq.${customerId}`];
+  if (authUserId && authUserId.trim()) {
+    filters.push(`customerId.eq.${authUserId.trim()}`);
+  }
   if (customerEmail && customerEmail.trim()) {
-    filter += `,customerSnapshot->>email.ilike.${customerEmail.trim()}`;
+    filters.push(`customerSnapshot->>email.ilike.${customerEmail.trim()}`);
   }
 
   const { data: orders, error: ordersErr } = await supabase
     .from('ecommerce_orders')
     .select('*')
-    .or(filter)
+    .or(filters.join(','))
     .order('placedAt', { ascending: false })
     .order('createdAt', { ascending: false });
 

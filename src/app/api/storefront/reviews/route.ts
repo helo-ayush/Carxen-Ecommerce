@@ -179,10 +179,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Also check if current viewer is an author to include their pending review
-  let viewerCustomerId: string | null = null;
+  let viewerCustomerIds: string[] = [];
   try {
     const auth = await getAuthenticatedCustomer(request);
-    if (auth.customer) viewerCustomerId = auth.customer.id;
+    if (auth.customer) {
+      viewerCustomerIds.push(auth.customer.id);
+      if (auth.customer.authUserId) viewerCustomerIds.push(auth.customer.authUserId);
+    }
   } catch {}
 
   let reviewQuery = supabase
@@ -193,8 +196,9 @@ export async function GET(request: NextRequest) {
     .limit(200);
 
   // If viewer is authenticated, return published reviews OR their own review
-  if (viewerCustomerId) {
-    reviewQuery = reviewQuery.or(`status.eq.PUBLISHED,customerId.eq.${viewerCustomerId}`);
+  if (viewerCustomerIds.length > 0) {
+    const orCond = viewerCustomerIds.map((cid) => `customerId.eq.${cid}`).join(',');
+    reviewQuery = reviewQuery.or(`status.eq.PUBLISHED,${orCond}`);
   } else {
     reviewQuery = reviewQuery.eq('status', 'PUBLISHED').not('publishedAt', 'is', null);
   }
@@ -215,7 +219,7 @@ export async function GET(request: NextRequest) {
     verifiedPurchase: Boolean(row.verifiedPurchase),
     createdAt: row.createdAt,
     customerName: customerName(row),
-    isAuthor: Boolean(viewerCustomerId && row.customerId === viewerCustomerId),
+    isAuthor: Boolean(viewerCustomerIds.length > 0 && row.customerId && viewerCustomerIds.includes(row.customerId)),
     adminReply: row.adminReply || null,
     adminRepliedAt: row.adminRepliedAt || null,
   }));
@@ -266,16 +270,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'This product is not available for reviews.' }, { status: 400 });
   }
 
-  // Check verified purchase across customer ID and email
-  let orderFilter = `customerId.eq.${customer.id}`;
+  // Check verified purchase across customer ID, authUserId, and email
+  const orderFilters: string[] = [`customerId.eq.${customer.id}`];
+  if (customer.authUserId) {
+    orderFilters.push(`customerId.eq.${customer.authUserId}`);
+  }
   if (customer.email && customer.email.trim()) {
-    orderFilter += `,customerSnapshot->>email.ilike.${customer.email.trim()}`;
+    orderFilters.push(`customerSnapshot->>email.ilike.${customer.email.trim()}`);
   }
 
   const { data: orders } = await supabase
     .from('ecommerce_orders')
     .select('id, status')
-    .or(orderFilter)
+    .or(orderFilters.join(','))
     .limit(500);
 
   const orderIds = (orders || [])
@@ -310,11 +317,15 @@ export async function POST(request: NextRequest) {
   const publishedAt = new Date().toISOString();
 
   // Check if an existing review already exists for this product by this customer
+  const reviewFilter = customer.authUserId
+    ? `customerId.eq.${customer.id},customerId.eq.${customer.authUserId}`
+    : `customerId.eq.${customer.id}`;
+
   const { data: existing } = await supabase
     .from('ecommerce_reviews')
     .select('id')
     .eq('productId', product.id)
-    .eq('customerId', customer.id)
+    .or(reviewFilter)
     .maybeSingle();
 
   if (existing?.id) {

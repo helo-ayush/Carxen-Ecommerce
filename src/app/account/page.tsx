@@ -438,8 +438,10 @@ function AccountContent() {
         } catch {}
       }
     }
+    if (user?.id && !headers['x-demo-user-id']) headers['x-demo-user-id'] = user.id;
+    if (user?.email && !headers['x-demo-user-email']) headers['x-demo-user-email'] = user.email;
     return headers;
-  }, []);
+  }, [user?.id, user?.email]);
 
   // Sync customer product reviews from backend API with localStorage fallback
   const loadCustomerReviews = React.useCallback(async () => {
@@ -472,6 +474,7 @@ function AccountContent() {
     try {
       const res = await fetch('/api/storefront/reviews?myReviews=true', {
         headers: getAccountHeaders(),
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -540,6 +543,7 @@ function AccountContent() {
       const response = await fetch('/api/storefront/reviews', {
         method: 'POST',
         headers: getAccountHeaders(),
+        credentials: 'include',
         body: JSON.stringify({
           productId: prodId,
           rating: reviewRating,
@@ -604,6 +608,7 @@ function AccountContent() {
       await fetch(`/api/storefront/reviews?productId=${productId}`, {
         method: 'DELETE',
         headers: getAccountHeaders(),
+        credentials: 'include',
       });
 
       try {

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     const addresses = await loadCustomerAddresses(customer.id);
-    const orders = await loadCustomerOrders(customer.id, customer.email);
+    const orders = await loadCustomerOrders(customer.id, customer.email, customer.authUserId);
 
     const meta = (customer.metadata || {}) as Record<string, any>;
 

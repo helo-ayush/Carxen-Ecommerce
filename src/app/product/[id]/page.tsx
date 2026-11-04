@@ -231,6 +231,7 @@ function ProductDetailContent({ product }: { product: Product }) {
     showToast,
     products,
     orders,
+    getAuthHeaders,
   } = useApp();
 
   const activeCar = useMemo(() => {
@@ -423,37 +424,34 @@ function ProductDetailContent({ product }: { product: Product }) {
     let cancelled = false;
     setReviewsLoading(true);
 
-    const headers: Record<string, string> = {};
-    if (typeof window !== 'undefined') {
-      const directToken = localStorage.getItem('cx_auth_token');
-      if (directToken) headers['Authorization'] = `Bearer ${directToken}`;
-      const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
-          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
-        } catch {}
-      }
-    }
+    const loadReviews = async () => {
+      try {
+        const authHeaders = await getAuthHeaders();
+        const headers: Record<string, string> = { ...authHeaders };
+        if (user?.id && !headers['x-demo-user-id']) headers['x-demo-user-id'] = user.id;
+        if (user?.email && !headers['x-demo-user-email']) headers['x-demo-user-email'] = user.email;
 
-    fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
-      headers,
-      cache: 'no-store',
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
+        const response = await fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
+          headers,
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
         if (cancelled || !payload) return;
         if (Array.isArray(payload.reviews)) setReviews(payload.reviews);
-      })
-      .catch(() => {})
-      .finally(() => {
+      } catch {
+        // ignore
+      } finally {
         if (!cancelled) setReviewsLoading(false);
-      });
+      }
+    };
+
+    void loadReviews();
     return () => {
       cancelled = true;
     };
-  }, [product.id]);
+  }, [product.id, user?.id, getAuthHeaders]);
 
   // Review filter pills state (default to 'all' so users see all verified reviews and pagination)
   const [activeReviewFilter, setActiveReviewFilter] = useState<string>('all');
@@ -525,32 +523,19 @@ function ProductDetailContent({ product }: { product: Product }) {
 
     setSubmittingReview(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const headers: Record<string, string> = {
+        ...authHeaders,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       };
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.access_token) {
-          headers.Authorization = `Bearer ${data.session.access_token}`;
-        }
-      } catch {}
-      if (typeof window !== 'undefined') {
-        const directToken = localStorage.getItem('cx_auth_token');
-        if (directToken && !headers.Authorization) {
-          headers.Authorization = `Bearer ${directToken}`;
-        }
-        const cachedUser = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
-        if (cachedUser) {
-          const parsed = JSON.parse(cachedUser);
-          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
-          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
-        }
-      }
+      if (user?.id && !headers['x-demo-user-id']) headers['x-demo-user-id'] = user.id;
+      if (user?.email && !headers['x-demo-user-email']) headers['x-demo-user-email'] = user.email;
 
       const response = await fetch('/api/storefront/reviews', {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify({
           productId: product.id,
           rating: reviewRating,
@@ -585,6 +570,7 @@ function ProductDetailContent({ product }: { product: Product }) {
       try {
         const syncRes = await fetch(`/api/storefront/reviews?productId=${encodeURIComponent(String(product.id))}`, {
           headers,
+          credentials: 'include',
           cache: 'no-store',
         });
         if (syncRes.ok) {
