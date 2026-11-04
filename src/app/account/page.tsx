@@ -118,6 +118,7 @@ function AccountContent() {
     setPrimaryAddress,
     orders,
     cancelOrder,
+    openSupportModal,
     savedPayments,
     addSavedPayment,
     deleteSavedPayment,
@@ -1702,29 +1703,33 @@ function AccountContent() {
 
                               if (!isDelivered && !isWithin6h) {
                                 return (
-                                  <a
-                                    href={`mailto:support@carxen.com?subject=${encodeURIComponent(`Cancellation Request for Order #${order.orderNumber}`)}&body=${encodeURIComponent(`Hi CarXen Support,\n\nI would like to request cancellation for Order #${order.orderNumber}.\n\nThank you,\n${user?.name || ''}`)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      height: '32px',
-                                      fontSize: '11.5px',
-                                      fontWeight: 600,
-                                      padding: '0 10px',
-                                      color: '#4b5563',
-                                      background: '#f9fafb',
-                                      border: '1px solid #e5e7eb',
-                                      borderRadius: '8px',
-                                      textDecoration: 'none',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                    }}
-                                    title="6-hour relief period has ended. Contact customer support to request cancellation."
-                                  >
-                                    <HelpCircle size={13} />
-                                    <span>Contact Support to Cancel</span>
-                                  </a>
+                                  <button
+                                     type="button"
+                                     onClick={() => {
+                                       openSupportModal({
+                                         category: 'Order Cancellation Request',
+                                         initialMessage: `I would like to request cancellation for Order #${order.orderNumber} (Placed on ${order.placedAt ? new Date(order.placedAt).toLocaleDateString() : 'N/A'}, Total: ₹${order.totalAmount || 0}). The 6-hour relief window has elapsed. Please assist with cancellation in VEDA.`,
+                                       });
+                                     }}
+                                     style={{
+                                       height: '32px',
+                                       fontSize: '11.5px',
+                                       fontWeight: 600,
+                                       padding: '0 10px',
+                                       color: '#4b5563',
+                                       background: '#f9fafb',
+                                       border: '1px solid #e5e7eb',
+                                       borderRadius: '8px',
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       gap: '5px',
+                                       cursor: 'pointer',
+                                     }}
+                                     title="6-hour relief period has ended. Submit cancellation request directly to VEDA support."
+                                   >
+                                     <HelpCircle size={13} />
+                                     <span>Contact Support to Cancel</span>
+                                   </button>
                                 );
                               }
 

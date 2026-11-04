@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
-import { RotateCcw, MapPin, Check, Plus, XCircle, AlertTriangle, HelpCircle } from 'lucide-react';
+import { RotateCcw, MapPin, Check, Plus, XCircle, AlertTriangle, HelpCircle, PackageOpen } from 'lucide-react';
 import '../wholesale.css';
 
 interface WholesaleOrderMock {
@@ -39,75 +39,6 @@ interface WholesaleOrderMock {
   shippingAddress: string;
 }
 
-const DEFAULT_WHOLESALE_ORDERS: WholesaleOrderMock[] = [
-  {
-    id: 'b2b-ord-1',
-    orderNumber: 'CX-B2B-10482',
-    poNumber: 'PO-2026-OCT-8841',
-    placedAt: '2026-10-23T14:30:00Z',
-    status: 'UNDER_CARXEN_REVIEW',
-    statusLabel: 'Under CarXen Review',
-    paymentStatus: 'PAID (Razorpay Online)',
-    totalAmount: 141600,
-    shippingAddress: '939/2, Tilak Gali, Kashmere Gate, Delhi - 110006',
-    items: [
-      {
-        productId: 1,
-        name: 'CarXen Obsidian Signature 7D Floor Mats',
-        sku: 'CX-7D-HYU-CRT',
-        quantity: 15,
-        unitPrice: 5949,
-        totalPrice: 89235,
-      },
-      {
-        productId: 3,
-        name: 'Apex Carbon-Grain Custom Leatherette Seat Covers',
-        sku: 'CX-SC-MAH-SCP',
-        quantity: 10,
-        unitPrice: 5236,
-        totalPrice: 52365,
-      },
-    ],
-  },
-  {
-    id: 'b2b-ord-2',
-    orderNumber: 'CX-B2B-09820',
-    poNumber: 'PO-2026-SEP-5412',
-    placedAt: '2026-09-28T11:15:00Z',
-    status: 'DELIVERED',
-    statusLabel: 'Delivered & ITC Settled',
-    paymentStatus: 'PAID (Razorpay UPI)',
-    totalAmount: 218400,
-    shippingAddress: '939/2, Tilak Gali, Kashmere Gate, Delhi - 110006',
-    items: [
-      {
-        productId: 2,
-        name: 'Carbon-Core Performance Steering Wheel Wrap',
-        sku: 'CX-SW-UNI-SP',
-        quantity: 40,
-        unitPrice: 1290,
-        totalPrice: 51600,
-      },
-      {
-        productId: 4,
-        name: 'CarXen CloudRest Memory Foam Executive Seat Cushion',
-        sku: 'CX-CF-UNI-ER',
-        quantity: 50,
-        unitPrice: 1690,
-        totalPrice: 84500,
-      },
-      {
-        productId: 1,
-        name: 'CarXen Obsidian Signature 7D Floor Mats',
-        sku: 'CX-7D-MAR-SWF',
-        quantity: 14,
-        unitPrice: 5878,
-        totalPrice: 82300,
-      },
-    ],
-  },
-];
-
 const STAGES = [
   { id: 'CONFIRMED_BY_BUYER', label: '1. PO Placed', shortLabel: '1. Placed', order: 1 },
   { id: 'UNDER_CARXEN_REVIEW', label: '2. CarXen Review', shortLabel: '2. Review', order: 2 },
@@ -139,7 +70,17 @@ function getStageLevel(status: WholesaleOrderMock['status']) {
 
 export default function WholesaleOrdersPage() {
   const router = useRouter();
-  const { user, isWholesaleApproved, authLoading, addToWholesaleBasket, showToast, orders, cancelOrder } = useApp();
+  const {
+    user,
+    isWholesaleApproved,
+    authLoading,
+    addToWholesaleBasket,
+    showToast,
+    orders,
+    cancelOrder,
+    openSupportModal,
+    b2bProfile,
+  } = useApp();
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
   const [cancelModalOrder, setCancelModalOrder] = useState<WholesaleOrderMock | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -185,10 +126,7 @@ export default function WholesaleOrdersPage() {
       })),
     }));
 
-  const allOrders: WholesaleOrderMock[] = [
-    ...wholesaleHistoryOrders,
-    ...DEFAULT_WHOLESALE_ORDERS.filter((d) => !wholesaleHistoryOrders.some((w) => w.orderNumber === d.orderNumber)),
-  ];
+  const allOrders: WholesaleOrderMock[] = wholesaleHistoryOrders;
 
   const filteredOrders = allOrders.filter((ord) => {
     if (activeTab === 'active') return ord.status !== 'DELIVERED' && ord.status !== 'CANCELLED';
@@ -361,7 +299,58 @@ export default function WholesaleOrdersPage() {
 
       {/* Orders List */}
       <div>
-        {filteredOrders.map((ord) => {
+        {filteredOrders.length === 0 ? (
+          <div
+            className="ws-order-card"
+            style={{
+              textAlign: 'center',
+              padding: '64px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 16,
+                color: '#64748b',
+              }}
+            >
+              <PackageOpen size={32} strokeWidth={1.75} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+              {activeTab === 'all'
+                ? 'No Wholesale Orders Found'
+                : activeTab === 'active'
+                ? 'No Orders Active in Pipeline'
+                : 'No Delivered Orders on Record'}
+            </h3>
+            <p style={{ fontSize: '14px', color: '#64748b', maxWidth: '460px', margin: '0 auto 24px', lineHeight: 1.6 }}>
+              {activeTab === 'all'
+                ? 'Commercial procurement orders placed via the catalogue or quick order matrix will appear here with live factory production milestones.'
+                : 'You do not have any orders currently matching this status filter.'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/wholesale/catalog" className="ws-btn-primary">
+                <WholesaleIcon name="catalogue" size={15} />
+                <span>Browse Wholesale Catalogue</span>
+              </Link>
+              <Link href="/wholesale/quick-order" className="ws-btn-ghost">
+                <WholesaleIcon name="quick-order" size={15} />
+                <span>Quick Order Matrix</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          filteredOrders.map((ord) => {
           const currentLevel = getStageLevel(ord.status);
 
           return (
@@ -422,27 +411,35 @@ export default function WholesaleOrdersPage() {
 
                       if (ord.status !== 'DELIVERED') {
                         return (
-                          <a
-                            href={`mailto:b2b-support@carxen.com?subject=Cancellation%20Request%20for%20Consignment%20${encodeURIComponent(
-                              ord.orderNumber
-                            )}&body=Dear%20Support%20Team%2C%0A%0AI%20would%20like%20to%20request%20cancellation%20for%20consignment%20order%20${encodeURIComponent(
-                              ord.orderNumber
-                            )}.%0A%0AThank%20you.`}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openSupportModal({
+                                category: 'Order Cancellation Request',
+                                businessName: b2bProfile?.businessName || b2bProfile?.tradeName || '',
+                                initialMessage: `I would like to request urgent cancellation for Consignment Order ${ord.orderNumber} (PO Reference: ${ord.poNumber || 'N/A'}, Total: ${formatINR(ord.totalAmount || 0)}). Please halt production scheduling and factory dispatch in VEDA.`,
+                              });
+                            }}
                             className="ws-btn-secondary"
                             style={{
                               fontSize: '12.5px',
                               padding: '6px 12px',
                               minHeight: '32px',
                               color: '#475569',
-                              textDecoration: 'none',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '8px',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '6px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
                             }}
+                            title="Transmit cancellation request directly to VEDA Factory Desk"
                           >
                             <HelpCircle size={13} />
                             <span>Contact Support to Cancel</span>
-                          </a>
+                          </button>
                         );
                       }
 
@@ -533,7 +530,8 @@ export default function WholesaleOrdersPage() {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
       {/* Cancellation Confirmation Modal */}
       {cancelModalOrder && (

@@ -16,6 +16,7 @@ import {
 import './b2b-support-modal.css';
 
 const CATEGORIES = [
+  'Order Cancellation Request',
   'Wholesale Verification & Fast-Track Approval',
   'Bulk Procurement & Factory Batch Quotation',
   'Custom Showroom / Dealership Allocation',
@@ -177,7 +178,7 @@ export function B2BSupportModal() {
                   Commercial Customer Support
                 </h3>
                 <span className="b2b-modal-sync-badge">
-                  CARXEN Priority Desk
+                  VEDA Factory Operations Desk
                 </span>
               </div>
               <p className="b2b-modal-subtitle">
@@ -297,6 +298,9 @@ export function B2BSupportModal() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="b2b-select"
                   >
+                    {!CATEGORIES.includes(category as any) && (
+                      <option value={category}>{category}</option>
+                    )}
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}

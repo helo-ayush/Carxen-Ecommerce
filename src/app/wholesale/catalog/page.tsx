@@ -9,30 +9,14 @@ import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
+import { readFitment } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
 import { CatalogState } from '@/components/CatalogState';
 import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter } from 'lucide-react';
 import '../wholesale.css';
 
-const VEHICLE_BRANDS = [
-  'All Brands',
-  'Hyundai',
-  'Maruti Suzuki',
-  'Mahindra',
-  'Tata',
-  'Kia',
-  'Toyota',
-];
-
-const POPULAR_MODELS: Record<string, string[]> = {
-  Hyundai: ['Creta', 'Venue', 'Verna', 'i20', 'Alcazar'],
-  'Maruti Suzuki': ['Swift', 'Baleno', 'Brezza', 'Grand Vitara', 'Dzire'],
-  Mahindra: ['Scorpio-N', 'XUV700', 'Thar', 'XUV300', 'Bolero'],
-  Tata: ['Nexon', 'Harrier', 'Safari', 'Punch', 'Altroz'],
-  Kia: ['Seltos', 'Sonet', 'Carens'],
-  Toyota: ['Innova Hycross', 'Fortuner', 'Urban Cruiser Hyryder'],
-};
+// Vehicle Brands and Models are dynamically aggregated from VEDA catalog products below.
 
 export default function WholesaleCatalogPage() {
   const router = useRouter();
@@ -65,17 +49,71 @@ export default function WholesaleCatalogPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // Categories aggregated dynamically from VEDA products, deduplicated by display label
   const categories = useMemo(() => {
-    const map = new Map<string, string>();
+    const labelToIds = new Map<string, string[]>();
     for (const product of products) {
-      map.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+      const label = product.categoryLabel?.trim() || categoryLabel(product.c);
+      const existing = labelToIds.get(label) || [];
+      if (!existing.includes(product.c)) existing.push(product.c);
+      labelToIds.set(label, existing);
     }
+
+    const uniqueCategories = [...labelToIds.entries()].map(([label, ids]) => ({
+      id: ids[0],
+      allIds: ids,
+      label,
+    }));
+
+    uniqueCategories.sort((a, b) => compareCategories({ key: a.id, label: a.label }, { key: b.id, label: b.label }));
+
     return [
-      { id: 'all', label: 'All Categories' },
-      ...[...map.entries()]
-        .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
-        .map(([id, label]) => ({ id, label })),
+      { id: 'all', allIds: ['all'], label: 'All Categories' },
+      ...uniqueCategories,
     ];
+  }, [products]);
+
+  // Vehicle Brands & Models aggregated dynamically from VEDA inventory
+  const { vehicleBrands, modelsByBrand } = useMemo(() => {
+    const brandSet = new Set<string>();
+    const brandToModels = new Map<string, Set<string>>();
+
+    for (const product of products) {
+      const fit = readFitment(product);
+      if (fit.kind === 'vehicle' && fit.brand && fit.brand.toLowerCase() !== 'universal') {
+        const b = fit.brand.trim();
+        brandSet.add(b);
+        if (!brandToModels.has(b)) brandToModels.set(b, new Set());
+        if (fit.model && fit.model.toLowerCase() !== 'universal') {
+          brandToModels.get(b)!.add(fit.model.trim());
+        }
+      }
+
+      if (product.fitment && typeof product.fitment === 'object' && !Array.isArray(product.fitment)) {
+        const rec = product.fitment as Record<string, any>;
+        const b = typeof rec.brand === 'string' ? rec.brand.trim() : '';
+        const m = typeof rec.model === 'string' ? rec.model.trim() : '';
+        if (b && b.toLowerCase() !== 'universal') {
+          brandSet.add(b);
+          if (!brandToModels.has(b)) brandToModels.set(b, new Set());
+          if (m && m.toLowerCase() !== 'universal') {
+            brandToModels.get(b)!.add(m);
+          }
+        }
+      }
+    }
+
+    const sortedBrands = ['All Brands', ...[...brandSet].sort((a, b) => a.localeCompare(b))];
+    const modelsRecord: Record<string, string[]> = {};
+    for (const [b, models] of brandToModels.entries()) {
+      modelsRecord[b] = [...models].sort((a, b) => a.localeCompare(b));
+    }
+
+    return {
+      vehicleBrands: sortedBrands,
+      modelsByBrand: modelsRecord,
+    };
   }, [products]);
   const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
   const [selectedModel, setSelectedModel] = useState<string>('all');
@@ -97,25 +135,36 @@ export default function WholesaleCatalogPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // Category filter
-      if (selectedCategory !== 'all' && p.c !== selectedCategory) return false;
+      // Category filter (matched against grouped category IDs or label)
+      if (selectedCategory !== 'all') {
+        const selectedCatObj = categories.find((c) => c.id === selectedCategory);
+        const matchingIds = selectedCatObj ? selectedCatObj.allIds : [selectedCategory];
+        if (!matchingIds.includes(p.c) && p.categoryLabel !== selectedCatObj?.label) return false;
+      }
 
       const fitmentStr = getFitmentString(p).toLowerCase();
       const nameStr = p.n.toLowerCase();
+      const fit = readFitment(p);
 
-      // Brand filter
+      // Brand filter (dynamically matched against VEDA product fitment)
       if (selectedBrand !== 'All Brands') {
         const brandQuery = selectedBrand.toLowerCase();
-        const brandMatch = fitmentStr.includes(brandQuery) || nameStr.includes(brandQuery);
-        const isUniversal = fitmentStr.includes('universal');
+        const brandMatch =
+          (fit.kind === 'vehicle' && fit.brand.toLowerCase() === brandQuery) ||
+          fitmentStr.includes(brandQuery) ||
+          nameStr.includes(brandQuery);
+        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
         if (!brandMatch && !isUniversal) return false;
       }
 
-      // Model filter
+      // Model filter (dynamically matched against VEDA product model)
       if (selectedModel !== 'all') {
         const modelQuery = selectedModel.toLowerCase();
-        const modelMatch = fitmentStr.includes(modelQuery) || nameStr.includes(modelQuery);
-        const isUniversal = fitmentStr.includes('universal');
+        const modelMatch =
+          (fit.kind === 'vehicle' && fit.model.toLowerCase() === modelQuery) ||
+          fitmentStr.includes(modelQuery) ||
+          nameStr.includes(modelQuery);
+        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
         if (!modelMatch && !isUniversal) return false;
       }
 
@@ -190,7 +239,7 @@ export default function WholesaleCatalogPage() {
     );
   }
 
-  const availableModels = selectedBrand !== 'All Brands' ? POPULAR_MODELS[selectedBrand] || [] : [];
+  const availableModels = selectedBrand !== 'All Brands' ? modelsByBrand[selectedBrand] || [] : [];
   const tierName = 'Verified Wholesale Partner';
 
   return (
@@ -375,7 +424,7 @@ export default function WholesaleCatalogPage() {
         {/* Multi-Vehicle Brand Filter Chips */}
         <div className="ws-brand-chips-row">
           <span className="ws-brand-chips-label">Vehicle Brand:</span>
-          {VEHICLE_BRANDS.map((b) => (
+          {vehicleBrands.map((b) => (
             <button
               key={b}
               type="button"

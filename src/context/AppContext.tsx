@@ -21,7 +21,6 @@ import type {
 } from '@/types/customer';
 import {
   DEFAULT_CUSTOMER_ADDRESSES,
-  DEFAULT_ORDER_HISTORY,
   DEFAULT_SAVED_PAYMENTS,
   DEFAULT_COMMUNICATION_PREFS,
   DEFAULT_GST_INFO,
@@ -646,12 +645,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   }, [addresses, isLoaded]);
 
+  // Orders are strictly server-authoritative; ensure legacy client cache is purged
   useEffect(() => {
     if (!isLoaded) return;
     try {
-      localStorage.setItem('cx_order_history', JSON.stringify(orders));
+      localStorage.removeItem('cx_order_history');
     } catch (e) {}
-  }, [orders, isLoaded]);
+  }, [isLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -752,7 +752,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setOrders([]);
         setAddresses([]);
         setB2bProfile(null);
+        setWholesaleBasket({});
         try {
+          localStorage.removeItem('cx_order_history');
+          localStorage.removeItem('cx_addresses');
+          localStorage.removeItem('cx_b2b_profile');
+          localStorage.removeItem('cx_wholesale_basket');
           localStorage.setItem('cx_user_profile', JSON.stringify(constructed));
           if (result.token) {
             localStorage.setItem('cx_auth_token', result.token);
@@ -775,6 +780,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fullName?: string
   ) => {
     try {
+      try {
+        localStorage.removeItem('cx_order_history');
+        localStorage.removeItem('cx_addresses');
+        localStorage.removeItem('cx_b2b_profile');
+        localStorage.removeItem('cx_wholesale_basket');
+        localStorage.removeItem('cx_user_profile');
+        localStorage.removeItem('cx_auth_token');
+      } catch {}
+      setOrders([]);
+      setAddresses([]);
+      setB2bProfile(null);
+      setWholesaleBasket({});
+
       const resp = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -835,6 +853,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setOrders([]);
     setAddresses([]);
     setB2bProfile(null);
+    setWholesaleBasket({});
     try {
       localStorage.removeItem('cx_demo_user');
       localStorage.removeItem('cx_user');
@@ -843,6 +862,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('cx_user_profile');
       localStorage.removeItem('cx_auth_token');
       localStorage.removeItem('cx_custom_coupons');
+      localStorage.removeItem('cx_b2b_profile');
+      localStorage.removeItem('cx_wholesale_basket');
       document.cookie = 'cx_session=; path=/; max-age=0; SameSite=Lax';
     } catch (e) {}
     showToast('Signed out successfully');
@@ -1001,13 +1022,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Orders
   const saveOrderToHistory = (order: CustomerOrderHistoryRecord) => {
     setOrders((prev) => {
-      const updated = [order, ...prev.filter((o) => o.orderNumber !== order.orderNumber)];
-      try {
-        localStorage.setItem('cx_order_history', JSON.stringify(updated));
-      } catch (err) {
-        console.error('Failed to sync order history to localStorage:', err);
-      }
-      return updated;
+      return [order, ...prev.filter((o) => o.orderNumber !== order.orderNumber)];
     });
   };
 
@@ -1027,15 +1042,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       setOrders((prev) => {
-        const updated = prev.map((o) =>
+        return prev.map((o) =>
           o.orderNumber === orderNumber || o.id === orderNumber
             ? { ...o, status: 'CANCELLED' as const, statusMessage: 'Order cancelled within 6h relief period' }
             : o
         );
-        try {
-          localStorage.setItem('cx_order_history', JSON.stringify(updated));
-        } catch {}
-        return updated;
       });
 
       showToast(`Order #${orderNumber} cancelled successfully.`);
