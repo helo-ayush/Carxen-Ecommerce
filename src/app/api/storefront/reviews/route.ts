@@ -305,10 +305,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const settings = store.settings || {};
-  const moderation = settings.reviewModeration !== false;
-  const status = moderation ? 'PENDING' : 'PUBLISHED';
-  const publishedAt = moderation ? null : new Date().toISOString();
+  // Reviews are published immediately on the go (no moderation delay)
+  const status = 'PUBLISHED';
+  const publishedAt = new Date().toISOString();
 
   // Check if an existing review already exists for this product by this customer
   const { data: existing } = await supabase
