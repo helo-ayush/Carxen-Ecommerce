@@ -331,7 +331,7 @@ function ProductDetailContent({ product }: { product: Product }) {
 
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState('Delivery in 2 — 4 business days · Express Shipping available');
-  const [activeInfoTab, setActiveInfoTab] = useState<'specs' | 'install' | 'desc' | 'fitment' | 'box'>('specs');
+  const [activeInfoTab, setActiveInfoTab] = useState<'specs' | 'install' | 'desc' | 'fitment'>('specs');
 
   // Sticky buy bar should only appear when the main in-page CTA buttons have scrolled out of view
   const mainCtaRef = useRef<HTMLDivElement>(null);
@@ -350,7 +350,7 @@ function ProductDetailContent({ product }: { product: Product }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleScrollToInfoTab = (tabKey: 'specs' | 'install' | 'desc' | 'fitment' | 'box') => {
+  const handleScrollToInfoTab = (tabKey: 'specs' | 'install' | 'desc' | 'fitment') => {
     setActiveInfoTab(tabKey);
     const el = document.getElementById('product-details-hub');
     if (el) {
@@ -1198,7 +1198,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
             <h2 className="ps-info-hub-title">Product Details & Technical Hub</h2>
             <p className="ps-info-hub-subtitle">
-              Comprehensive engineering specifications, step-by-step DIY installation instructions, vehicle fitment verification, and package contents for your {product.n}.
+              Comprehensive engineering specifications, step-by-step DIY installation instructions, and vehicle fitment verification for your {product.n}.
             </p>
           </div>
 
@@ -1247,16 +1247,7 @@ function ProductDetailContent({ product }: { product: Product }) {
               <span>Vehicle Fitment</span>
               <span className="ps-tab-badge">Verified</span>
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeInfoTab === 'box'}
-              className={`ps-info-tab-btn ${activeInfoTab === 'box' ? 'active' : ''}`}
-              onClick={() => setActiveInfoTab('box')}
-            >
-              <PackageCheck size={15} />
-              <span>What&apos;s in the Box</span>
-            </button>
+
           </div>
 
           {/* TAB 1: SPECIFICATIONS */}
@@ -1455,28 +1446,7 @@ function ProductDetailContent({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* TAB 5: PACKAGE CONTENTS */}
-          {activeInfoTab === 'box' && (
-            <div className="ps-info-panel" role="tabpanel">
-              {packageContents.length === 0 ? (
-                <p className="ps-spec-val" style={{ color: 'var(--steel, #5d5d64)' }}>
-                  Package contents have not been published for this item yet.
-                </p>
-              ) : (
-              <div className="ps-package-grid">
-                {packageContents.map((item, idx) => (
-                  <div key={idx} className="ps-package-item-card">
-                    <div className="ps-package-item-left">
-                      <PackageCheck size={16} style={{ color: 'var(--red, #e2231a)', flexShrink: 0 }} />
-                      <span>{item.name}</span>
-                    </div>
-                    {item.qty && <span className="ps-package-qty-badge">{item.qty}</span>}
-                  </div>
-                ))}
-              </div>
-              )}
-            </div>
-          )}
+
         </section>
 
         {/* ------------------------------------------------------------------
