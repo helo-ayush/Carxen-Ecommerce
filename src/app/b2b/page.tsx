@@ -1002,7 +1002,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     maxLength={15}
                     value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15) })}
                   />
                 </div>
               </div>
@@ -1241,7 +1241,8 @@ export default function B2BWholesalePage() {
                     type="tel"
                     required
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    maxLength={14}
+                    onChange={(e) => { let v = e.target.value.replace(/[^\d+]/g, ''); if (v.startsWith('+')) v = '+' + v.slice(1).replace(/\+/g, '').slice(0, 13); else v = v.replace(/\+/g, '').slice(0, 10); setFormData({ ...formData, phone: v }); }}
                     placeholder="e.g. +91 98765 43210"
                   />
                   <span className="b2b-field-hint">Used for dispatch tracking updates and order confirmations.</span>
@@ -1293,7 +1294,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     maxLength={15}
                     value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15) })}
                     placeholder="e.g. 27AAAAA0000A1Z5"
                     style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
                   />
@@ -1308,7 +1309,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     maxLength={10}
                     value={formData.pan}
-                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) })}
                     placeholder="e.g. ABCDE1234F"
                     style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
                   />
@@ -1390,7 +1391,7 @@ export default function B2BWholesalePage() {
                     type="text"
                     maxLength={6}
                     value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                     placeholder="e.g. 411019"
                   />
                 </div>

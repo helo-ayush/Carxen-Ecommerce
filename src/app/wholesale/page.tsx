@@ -27,6 +27,35 @@ import {
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+const sanitizePan = (val: string) => {
+  return val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+};
+
+const sanitizeGstin = (val: string) => {
+  return val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+};
+
+const sanitizePhone = (val: string) => {
+  let cleaned = val.replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned.slice(1).replace(/\+/g, '');
+    return cleaned.slice(0, 14);
+  }
+  return cleaned.replace(/\+/g, '').slice(0, 10);
+};
+
+const sanitizePincode = (val: string) => {
+  return val.replace(/\D/g, '').slice(0, 6);
+};
+
+const isValidPhone = (val: string) => {
+  const digits = val.replace(/\D/g, '');
+  return digits.length === 10 || (digits.length === 12 && digits.startsWith('91'));
+};
+
 export default function WholesaleDashboardPage() {
   const router = useRouter();
   const {
@@ -93,11 +122,71 @@ export default function WholesaleDashboardPage() {
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setErrorMessage(null);
 
+    // 1. Legal Name
+    if (!formData.businessName.trim()) {
+      setErrorMessage('Please enter your registered Legal Business Name.');
+      return;
+    }
+
+    // 2. Contact Name
+    if (!formData.name.trim()) {
+      setErrorMessage('Please enter the contact person name.');
+      return;
+    }
+
+    // 3. Phone validation
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      setErrorMessage('Please enter a valid 10-digit mobile or WhatsApp number.');
+      return;
+    }
+
+    // 4. PAN validation (if provided)
+    if (formData.pan.trim()) {
+      const cleanPan = formData.pan.trim().toUpperCase();
+      if (cleanPan.length !== 10) {
+        setErrorMessage('PAN number must be exactly 10 alphanumeric characters (e.g. ABCDE1234F).');
+        return;
+      }
+      if (!PAN_REGEX.test(cleanPan)) {
+        setErrorMessage('Invalid PAN format. It must be 5 letters, 4 digits, and 1 letter (e.g. ABCDE1234F).');
+        return;
+      }
+    }
+
+    // 5. GSTIN validation (if provided)
+    if (formData.gstin.trim()) {
+      const cleanGst = formData.gstin.trim().toUpperCase();
+      if (cleanGst.length !== 15) {
+        setErrorMessage('GSTIN must be exactly 15 alphanumeric characters (e.g. 07AAAAA0000A1Z5), or leave blank.');
+        return;
+      }
+    }
+
+    // 6. Address & PIN Code
+    if (!formData.businessAddress.trim()) {
+      setErrorMessage('Please enter your registered business address.');
+      return;
+    }
+    if (!formData.city.trim() || !formData.state.trim()) {
+      setErrorMessage('Please enter city and state.');
+      return;
+    }
+    if (!/^\d{6}$/.test(formData.pincode.trim())) {
+      setErrorMessage('Postal PIN code must be a 6-digit number (e.g. 110001).');
+      return;
+    }
+
+    setSubmitting(true);
     const result = await applyForWholesale({
       ...formData,
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      pan: formData.pan.trim().toUpperCase(),
+      gstin: formData.gstin.trim().toUpperCase(),
+      pincode: formData.pincode.trim(),
       b2bDocuments: [],
     });
 
@@ -206,26 +295,99 @@ export default function WholesaleDashboardPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                    GSTIN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional — for ITC)</span>
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      GSTIN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional — for ITC)</span>
+                    </label>
+                    {formData.gstin ? (
+                      <span style={{ fontSize: '11px', color: formData.gstin.length === 15 ? '#059669' : '#64748b', fontWeight: 600 }}>
+                        {formData.gstin.length}/15
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     type="text"
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px', fontFamily: 'monospace' }}
+                    maxLength={15}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: formData.gstin && formData.gstin.length > 0 && formData.gstin.length < 15 ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                      padding: '0 12px',
+                      fontSize: '13.5px',
+                      fontFamily: 'monospace',
+                    }}
                     placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
                     value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      const clean = sanitizeGstin(e.target.value);
+                      const prevGst = formData.gstin;
+                      setFormData((prev) => {
+                        const next = { ...prev, gstin: clean };
+                        if (clean.length >= 12 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(clean)) {
+                          const extractedPan = clean.slice(2, 12);
+                          if (!prev.pan || prev.pan === prevGst.slice(2, 12)) {
+                            next.pan = extractedPan;
+                          }
+                        }
+                        return next;
+                      });
+                    }}
                   />
+                  {formData.gstin.length > 0 && formData.gstin.length < 15 && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
+                      GSTIN must be 15 alphanumeric characters ({formData.gstin.length}/15)
+                    </span>
+                  )}
+                  {formData.gstin.length === 15 && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
+                      ✓ 15-character GSTIN entered
+                    </span>
+                  )}
                 </div>
+
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>PAN Number</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      PAN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional)</span>
+                    </label>
+                    {formData.pan ? (
+                      <span style={{ fontSize: '11px', color: formData.pan.length === 10 && PAN_REGEX.test(formData.pan) ? '#059669' : '#64748b', fontWeight: 600 }}>
+                        {formData.pan.length}/10
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     type="text"
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px', fontFamily: 'monospace' }}
+                    maxLength={10}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: formData.pan && formData.pan.length > 0 && (formData.pan.length < 10 || !PAN_REGEX.test(formData.pan)) ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                      padding: '0 12px',
+                      fontSize: '13.5px',
+                      fontFamily: 'monospace',
+                    }}
                     placeholder="ABCDE1234F"
                     value={formData.pan}
-                    onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, pan: sanitizePan(e.target.value) })}
                   />
+                  {formData.pan.length > 0 && formData.pan.length < 10 && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
+                      PAN must be 10 characters ({formData.pan.length}/10)
+                    </span>
+                  )}
+                  {formData.pan.length === 10 && !PAN_REGEX.test(formData.pan) && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#dc2626', marginTop: '4px' }}>
+                      Format: 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F)
+                    </span>
+                  )}
+                  {formData.pan.length === 10 && PAN_REGEX.test(formData.pan) && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
+                      ✓ Valid PAN format
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -241,15 +403,40 @@ export default function WholesaleDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Business Phone / WhatsApp *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>Business Phone / WhatsApp *</label>
+                    {formData.phone ? (
+                      <span style={{ fontSize: '11px', color: isValidPhone(formData.phone) ? '#059669' : '#64748b', fontWeight: 600 }}>
+                        {formData.phone.replace(/\D/g, '').length} digits
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     type="tel"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
-                    placeholder="+91 98765 43210"
+                    maxLength={14}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: formData.phone && !isValidPhone(formData.phone) ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                      padding: '0 12px',
+                      fontSize: '13.5px',
+                    }}
+                    placeholder="+91 9876543210 or 9876543210"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: sanitizePhone(e.target.value) })}
                   />
+                  {formData.phone && !isValidPhone(formData.phone) && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
+                      Please enter a valid 10-digit mobile number
+                    </span>
+                  )}
+                  {formData.phone && isValidPhone(formData.phone) && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
+                      ✓ Valid mobile number
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -287,18 +474,42 @@ export default function WholesaleDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>PIN Code *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>PIN Code *</label>
+                    {formData.pincode ? (
+                      <span style={{ fontSize: '11px', color: formData.pincode.length === 6 ? '#059669' : '#64748b', fontWeight: 600 }}>
+                        {formData.pincode.length}/6
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     type="text"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    maxLength={6}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: formData.pincode && formData.pincode.length < 6 ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                      padding: '0 12px',
+                      fontSize: '13.5px',
+                    }}
                     placeholder="110001"
                     value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, pincode: sanitizePincode(e.target.value) })}
                   />
+                  {formData.pincode && formData.pincode.length < 6 && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
+                      6-digit postal code required
+                    </span>
+                  )}
+                  {formData.pincode && formData.pincode.length === 6 && (
+                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
+                      ✓ Valid PIN code
+                    </span>
+                  )}
                 </div>
               </div>
-
               <button
                 type="submit"
                 disabled={submitting}
