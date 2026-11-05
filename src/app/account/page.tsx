@@ -875,9 +875,13 @@ function AccountContent() {
     setIsVehicleModalOpen(false);
   };
 
-  // Password update
+  // Password update with current password identity verification
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword) {
+      showToast('Please enter your current password');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       showToast('New password must be at least 6 characters');
       return;
@@ -886,29 +890,27 @@ function AccountContent() {
       showToast('New passwords do not match');
       return;
     }
+    if (currentPassword === newPassword) {
+      showToast('New password cannot be the same as your current password');
+      return;
+    }
 
     setIsPasswordSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword,
+      const sessionRes = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      const token = sessionRes.data?.session?.access_token;
+      const res = await fetch('/api/storefront/customer/password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      if (error) {
-        const sessionRes = await supabase.auth.getSession();
-        const token = sessionRes.data?.session?.access_token;
-        const res = await fetch('/api/storefront/customer/password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ newPassword }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || error.message);
-        }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to update password');
       }
 
       setCurrentPassword('');
