@@ -43,10 +43,6 @@ export default function WholesaleQuickOrderPage() {
     }
   }, [authLoading, isWholesaleApproved, router, user]);
 
-  if (authLoading || !user || !isWholesaleApproved) {
-    return null;
-  }
-
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const categories = useMemo(() => {
@@ -79,6 +75,10 @@ export default function WholesaleQuickOrderPage() {
       return true;
     });
   }, [products, selectedCategory, search]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
 
   const handleQtyChange = (productId: number, val: number, moq: number) => {
     if (val <= 0) {

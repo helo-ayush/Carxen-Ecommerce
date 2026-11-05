@@ -148,10 +148,6 @@ export default function WholesaleQuotesPage() {
     }
   }, [authLoading, isWholesaleApproved, router, user]);
 
-  if (authLoading || !user || !isWholesaleApproved) {
-    return null;
-  }
-
   // Recalculate totals for an assortment
   const computeTotals = (items: { productId: number; quantity: number }[]) => {
     let units = 0;
@@ -165,6 +161,15 @@ export default function WholesaleQuotesPage() {
     });
     return { units, value };
   };
+
+  // Modal live totals calculation
+  const modalLiveTotals = useMemo(() => {
+    return computeTotals(modalItems);
+  }, [modalItems, products]);
+
+  if (authLoading || !user || !isWholesaleApproved) {
+    return null;
+  }
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
@@ -387,11 +392,6 @@ export default function WholesaleQuotesPage() {
   };
 
 
-
-  // Modal live totals calculation
-  const modalLiveTotals = useMemo(() => {
-    return computeTotals(modalItems);
-  }, [modalItems, products]);
 
   return (
     <div className="ws-page-container">
