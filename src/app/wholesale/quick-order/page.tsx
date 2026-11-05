@@ -319,13 +319,13 @@ export default function WholesaleQuickOrderPage() {
           <table className="ws-procurement-table ws-quick-order-table">
             <thead>
               <tr>
-                <th style={{ width: '27%' }}>Product Line</th>
-                <th style={{ width: '14%' }}>SKU / Part #</th>
-                <th style={{ width: '8%' }}>MOQ</th>
-                <th style={{ width: '13%' }}>Wholesale Price</th>
-                <th style={{ width: '14%' }}>Volume Price (20+)</th>
-                <th style={{ width: '10%', textAlign: 'center' }}>Batch Qty</th>
-                <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
+                <th style={{ width: '25%' }}>Product Line</th>
+                <th style={{ width: '13%' }}>SKU / Part #</th>
+                <th style={{ width: '7%' }}>MOQ</th>
+                <th style={{ width: '12%' }}>Wholesale Price</th>
+                <th style={{ width: '13%' }}>Volume Price (20+)</th>
+                <th style={{ width: '14%', minWidth: '95px', textAlign: 'center' }}>Batch Qty</th>
+                <th style={{ width: '16%', minWidth: '115px', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -385,7 +385,7 @@ export default function WholesaleQuickOrderPage() {
                       </div>
                     </td>
 
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
                       <div className="ws-stepper">
                         <button
                           type="button"

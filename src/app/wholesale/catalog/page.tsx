@@ -496,13 +496,13 @@ export default function WholesaleCatalogPage() {
           <table className="ws-procurement-table">
             <thead>
               <tr>
-                <th style={{ width: '28%' }}>Product Details</th>
-                <th style={{ width: '14%' }}>SKU / Part #</th>
-                <th style={{ width: '13%' }}>Vehicle Fitment</th>
-                <th style={{ width: '8%' }}>MOQ</th>
-                <th style={{ width: '13%' }}>Wholesale Price</th>
-                <th style={{ width: '10%', textAlign: 'center' }}>Quantity</th>
-                <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
+                <th style={{ width: '24%' }}>Product Details</th>
+                <th style={{ width: '12%' }}>SKU / Part #</th>
+                <th style={{ width: '12%' }}>Vehicle Fitment</th>
+                <th style={{ width: '7%' }}>MOQ</th>
+                <th style={{ width: '12%' }}>Wholesale Price</th>
+                <th style={{ width: '15%', minWidth: '95px', textAlign: 'center' }}>Quantity</th>
+                <th style={{ width: '18%', minWidth: '115px', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -564,7 +564,7 @@ export default function WholesaleCatalogPage() {
                       </div>
                     </td>
 
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
                       <div className="ws-stepper">
                         <button
                           type="button"
