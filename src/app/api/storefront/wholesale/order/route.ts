@@ -35,6 +35,8 @@ export async function POST(request: Request) {
       factoryNotes,
       couponCode,
       discountAmount,
+      saveAddressToAccount,
+      warehouseLabel,
       paymentMethod,
       razorpayOrderId,
       razorpayPaymentId,
@@ -579,6 +581,55 @@ export async function POST(request: Request) {
         updatedAt: now,
       });
     } catch {}
+
+    // Auto-persist warehouse address to account if customer has no saved addresses or saveAddressToAccount is requested
+    const targetCustId = customer?.id || authUser?.id;
+    if (targetCustId && shippingAddress?.line1 && shippingAddress?.postalCode) {
+      try {
+        const { data: existingAddresses } = await supabase
+          .from('ecommerce_addresses')
+          .select('id, line1, postalCode')
+          .eq('customerId', targetCustId);
+
+        const shouldSave =
+          saveAddressToAccount !== false &&
+          (Boolean(saveAddressToAccount) || !existingAddresses || existingAddresses.length === 0);
+
+        if (shouldSave) {
+          const alreadyExists = existingAddresses?.some(
+            (a: any) =>
+              a.line1?.toLowerCase().trim() === shippingAddress.line1.toLowerCase().trim() &&
+              a.postalCode?.trim() === shippingAddress.postalCode.trim()
+          );
+
+          if (!alreadyExists) {
+            const newAddrId = `addr_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
+            const isFirst = !existingAddresses || existingAddresses.length === 0;
+            await supabase.from('ecommerce_addresses').insert({
+              id: newAddrId,
+              storeId,
+              factoryId,
+              customerId: targetCustId,
+              label: (warehouseLabel || (isFirst ? 'Central Workshop & Warehouse' : 'Regional Warehouse')).trim(),
+              addressType: 'SHIPPING',
+              recipientName: (shippingAddress.recipientName || representativeName || businessName || 'Warehouse Manager').trim(),
+              phone: (shippingAddress.phone || phone || '').trim(),
+              line1: shippingAddress.line1.trim(),
+              line2: shippingAddress.line2?.trim() || null,
+              city: (shippingAddress.city || 'Delhi').trim(),
+              state: (shippingAddress.state || 'Delhi').trim(),
+              postalCode: shippingAddress.postalCode.trim(),
+              country: (shippingAddress.country || 'India').trim(),
+              isDefault: isFirst,
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        }
+      } catch (addrErr) {
+        console.warn('Could not auto-persist warehouse address to account in order route:', addrErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

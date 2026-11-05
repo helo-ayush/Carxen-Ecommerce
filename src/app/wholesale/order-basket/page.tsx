@@ -79,6 +79,8 @@ export default function WholesaleOrderBasketPage() {
     isWholesaleApproved,
     authLoading,
     addresses,
+    addAddress,
+    orders,
     wholesaleBasket,
     wholesaleBasketCount,
     wholesaleBasketSkuCount,
@@ -116,6 +118,9 @@ export default function WholesaleOrderBasketPage() {
   const [shippingState, setShippingState] = useState(b2bProfile?.state || '');
   const [shippingPincode, setShippingPincode] = useState(b2bProfile?.pincode || '');
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [saveAddressToAccount, setSaveAddressToAccount] = useState(true);
+  const [warehouseLabel, setWarehouseLabel] = useState('Central Workshop & Warehouse');
+  const [isPrefilledFromPreviousOrder, setIsPrefilledFromPreviousOrder] = useState(false);
 
   // Keep entity identity synchronized with verified business account
   useEffect(() => {
@@ -142,8 +147,85 @@ export default function WholesaleOrderBasketPage() {
       setShippingPincode(primary.postalCode);
       if (primary.name) setRepresentativeName(primary.name);
       if (primary.phone) setPhone(primary.phone);
+      setIsPrefilledFromPreviousOrder(false);
+    } else {
+      // Check if last placed order has an address snapshot to prefill
+      const lastWholesale = (orders || []).find(
+        (o) => (o.orderNumber.startsWith('CX-B2B-') || (o as any).isWholesale) && o.shippingAddress?.addressLine1
+      ) || (orders || []).find((o) => o.shippingAddress?.addressLine1);
+
+      if (lastWholesale?.shippingAddress) {
+        const s = lastWholesale.shippingAddress;
+        setShippingLine1(s.addressLine1 + (s.addressLine2 ? `, ${s.addressLine2}` : ''));
+        if (s.city) setShippingCity(s.city);
+        if (s.state) setShippingState(s.state);
+        if (s.postalCode) setShippingPincode(s.postalCode);
+        if (s.name && !representativeName) setRepresentativeName(s.name);
+        if (s.phone && !phone) setPhone(s.phone);
+        setIsPrefilledFromPreviousOrder(true);
+      } else if (!b2bProfile?.businessAddress) {
+        setIsEditingAddress(true);
+      }
     }
-  }, [addresses]);
+  }, [addresses, orders, b2bProfile]);
+
+  const handleSaveWarehouseAddress = async () => {
+    if (!shippingLine1.trim() || !shippingCity.trim() || !shippingPincode.trim()) {
+      setSubmissionError('Please provide a complete warehouse delivery address (Address, City, and PIN Code).');
+      return;
+    }
+
+    setSubmissionError(null);
+
+    if (saveAddressToAccount) {
+      try {
+        await addAddress({
+          label: warehouseLabel.trim() || (addresses.length === 0 ? 'Central Workshop & Warehouse' : 'Regional Warehouse'),
+          name: representativeName.trim() || businessName.trim() || 'Warehouse Manager',
+          phone: phone.trim() || user?.phone || '',
+          addressLine1: shippingLine1.trim(),
+          city: shippingCity.trim(),
+          state: shippingState.trim() || 'Delhi',
+          postalCode: shippingPincode.trim(),
+          country: 'India',
+          isPrimary: addresses.length === 0,
+        });
+        showToast('Warehouse location registered to your Business Account!');
+      } catch (err) {
+        console.warn('Could not save warehouse address:', err);
+      }
+    }
+
+    setIsPrefilledFromPreviousOrder(false);
+    setIsEditingAddress(false);
+  };
+
+  const persistWarehouseAddressLocally = async () => {
+    if (saveAddressToAccount && shippingLine1.trim() && shippingPincode.trim()) {
+      const alreadySaved = addresses.some(
+        (a) =>
+          a.addressLine1.toLowerCase().trim() === shippingLine1.toLowerCase().trim() &&
+          a.postalCode.trim() === shippingPincode.trim()
+      );
+      if (!alreadySaved) {
+        try {
+          await addAddress({
+            label: warehouseLabel.trim() || (addresses.length === 0 ? 'Central Workshop & Warehouse' : 'Regional Warehouse'),
+            name: representativeName.trim() || businessName.trim() || 'Warehouse Manager',
+            phone: phone.trim() || user?.phone || '',
+            addressLine1: shippingLine1.trim(),
+            city: shippingCity.trim(),
+            state: shippingState.trim() || 'Delhi',
+            postalCode: shippingPincode.trim(),
+            country: 'India',
+            isPrimary: addresses.length === 0,
+          });
+        } catch (e) {
+          console.warn('Auto-save warehouse address failed:', e);
+        }
+      }
+    }
+  };
 
   const handleSelectWarehouseAddress = (addrId: string) => {
     setSelectedAddressId(addrId);
@@ -323,6 +405,8 @@ export default function WholesaleOrderBasketPage() {
     factoryNotes: factoryNotes.trim() || undefined,
     couponCode: appliedCoupon || undefined,
     discountAmount: couponDiscount,
+    saveAddressToAccount,
+    warehouseLabel: warehouseLabel.trim() || (addresses.length === 0 ? 'Central Workshop & Warehouse' : 'Regional Warehouse'),
     ...extra,
   });
 
@@ -413,6 +497,7 @@ export default function WholesaleOrderBasketPage() {
         setSubmissionError(data?.error || 'Order placement failed: The server did not return a valid order reference.');
         return;
       }
+      await persistWarehouseAddressLocally();
       completeWholesaleOrderPlacement(data.order, 'Cash on delivery');
     } catch (err: any) {
       setSubmitting(false);
@@ -431,8 +516,14 @@ export default function WholesaleOrderBasketPage() {
       setSubmissionError('One or more items do not satisfy the minimum wholesale order quantity (MOQ).');
       return;
     }
-    if (!shippingLine1 || !shippingCity || !shippingPincode) {
-      setSubmissionError('Please provide a complete warehouse delivery address.');
+    if (!shippingLine1.trim() || !shippingCity.trim() || !shippingPincode.trim()) {
+      setIsEditingAddress(true);
+      setSubmissionError('Please provide a complete warehouse delivery address before confirming the order.');
+      const el = document.getElementById('ws-warehouse-delivery-input');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
       return;
     }
 
@@ -557,6 +648,7 @@ export default function WholesaleOrderBasketPage() {
       if (!data?.order?.orderNumber) {
         throw new Error(data?.error || 'Payment was verified, but no valid order reference was returned by the server. Please contact support with payment ID: ' + paymentDetails.razorpayPaymentId);
       }
+      await persistWarehouseAddressLocally();
       completeWholesaleOrderPlacement(data.order, 'Razorpay Secure (UPI / Cards)');
     } catch (err: any) {
       setSubmitting(false);
@@ -1025,9 +1117,21 @@ export default function WholesaleOrderBasketPage() {
                     transition: 'all 0.2s ease'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: isEditingAddress ? '#0369a1' : '#64748b', letterSpacing: '0.04em' }}>
-                        Warehouse Destination
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: isEditingAddress ? '#0369a1' : '#64748b', letterSpacing: '0.04em' }}>
+                          Warehouse Destination
+                        </span>
+                        {isPrefilledFromPreviousOrder && (
+                          <span style={{ fontSize: '9.5px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                            Prefilled from Last Order
+                          </span>
+                        )}
+                        {!shippingLine1.trim() && (
+                          <span style={{ fontSize: '9.5px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                            Required
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => setIsEditingAddress(!isEditingAddress)}
@@ -1128,10 +1232,11 @@ export default function WholesaleOrderBasketPage() {
                     <div className="ws-form-group" style={{ marginBottom: '12px' }}>
                       <label className="ws-form-label">Warehouse Delivery Address *</label>
                       <input
+                        id="ws-warehouse-delivery-input"
                         type="text"
                         required
                         className="ws-form-input"
-                        placeholder="Plot / Industrial Area / Landmark / SMQ"
+                        placeholder="Plot / Industrial Area / Landmark / Warehouse Bay"
                         value={shippingLine1}
                         onChange={(e) => setShippingLine1(e.target.value)}
                       />
@@ -1170,11 +1275,68 @@ export default function WholesaleOrderBasketPage() {
                       </div>
                     </div>
 
+                    {/* Save as Location Checkbox & Label */}
+                    <div style={{ marginTop: '14px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={saveAddressToAccount}
+                          onChange={(e) => setSaveAddressToAccount(e.target.checked)}
+                          style={{ marginTop: '3px', accentColor: '#059669', width: '16px', height: '16px' }}
+                        />
+                        <div>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#166534' }}>
+                            Save as registered warehouse location in Business Account
+                          </span>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#15803d', lineHeight: 1.4 }}>
+                            This facility will be saved to your verified account locations so future orders are instantly prefilled.
+                          </p>
+                        </div>
+                      </label>
+
+                      {saveAddressToAccount && (
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #dcfce7' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#166534', display: 'block', marginBottom: '4px' }}>
+                            Location Label / Facility Name:
+                          </label>
+                          <input
+                            type="text"
+                            className="ws-form-input"
+                            value={warehouseLabel}
+                            onChange={(e) => setWarehouseLabel(e.target.value)}
+                            placeholder="e.g. Central Workshop & Warehouse"
+                            style={{ fontSize: '12.5px', padding: '6px 10px', height: '34px', background: '#fff' }}
+                          />
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            {['Central Workshop & Warehouse', 'Regional Hub #2', 'Factory Staging Unit'].map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => setWarehouseLabel(preset)}
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  border: warehouseLabel === preset ? '1px solid #059669' : '1px solid #bbf7d0',
+                                  background: warehouseLabel === preset ? '#dcfce7' : '#fff',
+                                  color: warehouseLabel === preset ? '#166534' : '#475569',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                       <button
                         type="button"
                         className="ws-btn-primary"
-                        onClick={() => setIsEditingAddress(false)}
+                        onClick={handleSaveWarehouseAddress}
                         style={{ minWidth: '110px' }}
                       >
                         <Check size={14} />
@@ -1533,6 +1695,61 @@ export default function WholesaleOrderBasketPage() {
                 <span>Transit-insured factory batch delivery</span>
               </div>
             </div>
+
+            {/* Inline Pre-Validation Alert */}
+            {(!shippingLine1.trim() || !shippingCity.trim() || !shippingPincode.trim()) && (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  marginTop: '16px',
+                  marginBottom: '6px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                }}
+              >
+                <AlertCircle size={18} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#991b1b' }}>
+                    Warehouse Delivery Address Required
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#b91c1c', marginTop: '2px', lineHeight: 1.4 }}>
+                    Please provide your warehouse delivery address to verify freight routing and proceed with procurement.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingAddress(true);
+                      const el = document.getElementById('ws-warehouse-delivery-input');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.focus();
+                      }
+                    }}
+                    style={{
+                      background: '#fff',
+                      border: '1px solid #fca5a5',
+                      color: '#dc2626',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      marginTop: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>Enter Warehouse Address</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Submit / Pay Button */}
             <button
