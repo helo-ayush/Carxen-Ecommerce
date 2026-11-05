@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
-import { RotateCcw, MapPin, Check, Plus, XCircle, AlertTriangle, HelpCircle, PackageOpen } from 'lucide-react';
+import { RotateCcw, MapPin, Check, Plus, XCircle, AlertTriangle, HelpCircle, PackageOpen, FileText } from 'lucide-react';
 import '../wholesale.css';
 
 interface WholesaleOrderMock {
@@ -358,7 +358,14 @@ export default function WholesaleOrdersPage() {
               {/* Card Header */}
               <div className="ws-order-header">
                 <div className="ws-order-title-group">
-                  <span className="ws-order-num">{ord.orderNumber}</span>
+                  <Link
+                    href={`/wholesale/orders/${encodeURIComponent(ord.orderNumber)}`}
+                    className="ws-order-num"
+                    style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                    title="View Consignment Dossier"
+                  >
+                    {ord.orderNumber}
+                  </Link>
                   <span className="ws-order-po-ref">{ord.poNumber}</span>
                   {getStatusBadge(ord.status, ord.statusLabel)}
                 </div>
@@ -446,6 +453,15 @@ export default function WholesaleOrdersPage() {
                       return null;
                     })()
                   )}
+
+                  <Link
+                    href={`/wholesale/orders/${encodeURIComponent(ord.orderNumber)}`}
+                    className="ws-btn-secondary"
+                    style={{ fontSize: '12.5px', padding: '6px 12px', minHeight: '32px', color: '#0f172a', textDecoration: 'none' }}
+                  >
+                    <FileText size={13} />
+                    <span>View Dossier</span>
+                  </Link>
 
                   <button
                     type="button"

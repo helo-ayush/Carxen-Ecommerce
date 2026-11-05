@@ -606,3 +606,80 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const orderNumber = searchParams.get('orderNumber') || searchParams.get('id');
+
+    if (!orderNumber || !orderNumber.trim()) {
+      return NextResponse.json({ error: 'Order reference is required.' }, { status: 400 });
+    }
+
+    const { user, customer } = await getAuthenticatedCustomer(request);
+    if (!user && !customer) {
+      return NextResponse.json({ error: 'Authentication required to view wholesale order details.' }, { status: 401 });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const cleanNum = orderNumber.trim();
+
+    const { data: order, error: orderErr } = await supabase
+      .from('ecommerce_orders')
+      .select('*')
+      .or(`orderNumber.eq.${cleanNum},id.eq.${cleanNum}`)
+      .maybeSingle();
+
+    if (orderErr || !order) {
+      return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+    }
+
+    // Authorization verification
+    const authEmail = (user?.email || customer?.email || '').toLowerCase().trim();
+    const custId = customer?.id || user?.id || '';
+    const snapEmail = ((order.customerSnapshot as any)?.email || '').toLowerCase().trim();
+    const orderCustId = order.customerId || '';
+
+    const isAuthorized =
+      (custId && orderCustId && custId === orderCustId) ||
+      (authEmail && snapEmail && authEmail === snapEmail) ||
+      user?.role === 'admin';
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'You are not authorized to view this consignment.' }, { status: 403 });
+    }
+
+    // Fetch line items
+    const { data: items } = await supabase
+      .from('ecommerce_order_items')
+      .select('*')
+      .eq('orderId', order.id);
+
+    // Fetch shipment tracking stub
+    const { data: shipment } = await supabase
+      .from('ecommerce_shipments')
+      .select('*')
+      .eq('orderId', order.id)
+      .maybeSingle();
+
+    // Fetch order history milestones / events
+    const { data: events } = await supabase
+      .from('ecommerce_order_events')
+      .select('*')
+      .eq('orderId', order.id)
+      .order('createdAt', { ascending: false });
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        ...order,
+        items: items || [],
+        shipment: shipment || null,
+        events: events || [],
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching wholesale order details:', err);
+    return NextResponse.json({ error: 'Failed to retrieve order details.' }, { status: 500 });
+  }
+}

@@ -384,6 +384,7 @@ export default function WholesaleOrderBasketPage() {
     }
 
     showToast(`Wholesale order ${placedOrder.orderNumber} placed successfully!`);
+    router.push(`/wholesale/orders/${encodeURIComponent(placedOrder.orderNumber)}?confirmed=1`);
   };
 
   const executeCodOrderPlacement = async () => {
@@ -604,9 +605,12 @@ export default function WholesaleOrderBasketPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/wholesale/orders" className="ws-btn-primary ws-btn-brand">
-              <span>View Wholesale Orders</span>
+            <Link href={`/wholesale/orders/${encodeURIComponent(submittedOrder.orderNumber || submittedOrder.id)}?confirmed=1`} className="ws-btn-primary ws-btn-brand">
+              <span>View Order Dossier & Tracking</span>
               <ArrowRight size={15} />
+            </Link>
+            <Link href="/wholesale/orders" className="ws-btn-secondary">
+              All Orders
             </Link>
             <Link href="/wholesale/catalog" className="ws-btn-secondary">
               Browse More Parts
