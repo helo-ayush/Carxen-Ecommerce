@@ -55,6 +55,16 @@ export async function POST(request: Request) {
       );
     }
 
+    let authUser: any = null;
+    let customer: any = null;
+    try {
+      const auth = await getAuthenticatedCustomer(request);
+      authUser = auth.user;
+      customer = auth.customer;
+    } catch {
+      // Unauthenticated / guest session fallback
+    }
+
     // Load catalog to get authoritative wholesale pricing & verify MOQs
     let catalog: Product[] = [];
     try {
@@ -110,7 +120,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate coupon and apply discounts
+    // Validate coupon and apply authoritative discounts (reject client-supplied discountAmount)
     let couponDiscount = 0;
     let campaignId: string | null = null;
     let validCouponCode: string | null = null;
@@ -125,30 +135,94 @@ export async function POST(request: Request) {
         .eq('status', 'ACTIVE')
         .maybeSingle();
 
-      if (campaign) {
-        const now = new Date();
-        const startsOk = !campaign.startsAt || new Date(campaign.startsAt) <= now;
-        const endsOk = !campaign.endsAt || new Date(campaign.endsAt) >= now;
-        const usageOk = !campaign.usageLimit || !campaign.usageCount || Number(campaign.usageCount) < Number(campaign.usageLimit);
-        const minOrderOk = !campaign.minimumOrderAmount || subtotal >= Number(campaign.minimumOrderAmount);
+      if (!campaign) {
+        return NextResponse.json(
+          { error: `Coupon "${codeUpper}" is invalid or expired.` },
+          { status: 400 }
+        );
+      }
 
-        if (startsOk && endsOk && usageOk && minOrderOk) {
-          validCouponCode = campaign.code;
-          campaignId = campaign.id;
-          const val = Number(campaign.discountValue) || 0;
-          if (campaign.discountType === 'PERCENTAGE' || campaign.discountType === 'Percentage') {
-            couponDiscount = Math.round((subtotal * val) / 100);
-            if (campaign.maxDiscountAmount && couponDiscount > Number(campaign.maxDiscountAmount)) {
-              couponDiscount = Math.round(Number(campaign.maxDiscountAmount));
-            }
-          } else {
-            couponDiscount = Math.min(subtotal, Math.round(val));
+      const now = new Date();
+      if (campaign.startsAt && new Date(campaign.startsAt) > now) {
+        return NextResponse.json(
+          { error: `Coupon "${campaign.code}" is not active yet.` },
+          { status: 400 }
+        );
+      }
+      if (campaign.endsAt && new Date(campaign.endsAt) < now) {
+        return NextResponse.json(
+          { error: `Coupon "${campaign.code}" has expired.` },
+          { status: 400 }
+        );
+      }
+      if (campaign.usageLimit && campaign.usageCount && Number(campaign.usageCount) >= Number(campaign.usageLimit)) {
+        return NextResponse.json(
+          { error: `Coupon "${campaign.code}" has reached its maximum usage limit.` },
+          { status: 400 }
+        );
+      }
+      if (campaign.minimumOrderAmount && subtotal < Number(campaign.minimumOrderAmount)) {
+        return NextResponse.json(
+          {
+            error: `Minimum order of ₹${Number(campaign.minimumOrderAmount).toLocaleString('en-IN')} required to use coupon "${campaign.code}". Current subtotal is ₹${subtotal.toLocaleString('en-IN')}.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check audience eligibility and targeted B2B buyer rules
+      const rules = campaign.audienceRules && typeof campaign.audienceRules === 'object' ? campaign.audienceRules : {};
+      const targetEmail = rules.targetWholesaleBuyerEmail ? String(rules.targetWholesaleBuyerEmail).toLowerCase().trim() : null;
+      const targetName = rules.targetWholesaleBuyerName ? String(rules.targetWholesaleBuyerName).toLowerCase().trim() : null;
+      const targetBuyerId = rules.targetWholesaleBuyerId ? String(rules.targetWholesaleBuyerId).trim() : null;
+
+      const buyerEmail = (email || customer?.email || authUser?.email || '').toLowerCase().trim();
+      const buyerBiz = (businessName || '').toLowerCase().trim();
+      const buyerTrade = (tradeName || '').toLowerCase().trim();
+      const buyerName = (representativeName || customer?.name || '').toLowerCase().trim();
+      const buyerId = customer?.id || authUser?.id || '';
+
+      const isTargeted = Boolean(targetEmail || targetName || targetBuyerId);
+
+      if (isTargeted) {
+        let matches = false;
+        if (targetEmail && buyerEmail && targetEmail === buyerEmail) {
+          matches = true;
+        }
+        if (!matches && targetName) {
+          if (buyerBiz && (buyerBiz === targetName || buyerBiz.includes(targetName) || targetName.includes(buyerBiz))) {
+            matches = true;
+          } else if (buyerTrade && (buyerTrade === targetName || buyerTrade.includes(targetName) || targetName.includes(buyerTrade))) {
+            matches = true;
+          } else if (buyerName && (buyerName === targetName || buyerName.includes(targetName) || targetName.includes(buyerName))) {
+            matches = true;
           }
         }
+        if (!matches && targetBuyerId && buyerId && targetBuyerId === buyerId) {
+          matches = true;
+        }
+
+        if (!matches) {
+          const targetLabel = rules.targetWholesaleBuyerName || rules.targetWholesaleBuyerEmail || 'an assigned business partner';
+          return NextResponse.json(
+            { error: `Coupon "${campaign.code}" is exclusive to ${targetLabel}.` },
+            { status: 400 }
+          );
+        }
       }
-    } else if (typeof discountAmount === 'number' && discountAmount > 0) {
-      couponDiscount = Math.min(subtotal, Math.round(discountAmount));
-      if (couponCode) validCouponCode = String(couponCode).trim().toUpperCase();
+
+      // Authoritative discount calculation strictly from DB campaign settings
+      validCouponCode = campaign.code;
+      campaignId = campaign.id;
+      const val = Number(campaign.discountValue) || 0;
+      if (campaign.discountType === 'PERCENTAGE' || campaign.discountType === 'Percentage') {
+        couponDiscount = Math.round((subtotal * val) / 100);
+        if (campaign.maxDiscountAmount && couponDiscount > Number(campaign.maxDiscountAmount)) {
+          couponDiscount = Math.round(Number(campaign.maxDiscountAmount));
+        }
+      } else {
+        couponDiscount = Math.min(subtotal, Math.round(val));
+      }
     }
 
     const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
@@ -205,16 +279,6 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
-    let authUser: any = null;
-    let customer: any = null;
-
-    try {
-      const auth = await getAuthenticatedCustomer(request);
-      authUser = auth.user;
-      customer = auth.customer;
-    } catch {
-      // Unauthenticated
-    }
 
     const isRazorpay = paymentMethod === 'Razorpay' || paymentMethod === 'razorpay';
     const paymentStatus: 'PAID' | 'PENDING' = isRazorpay ? 'PAID' : 'PENDING';
@@ -364,7 +428,7 @@ export async function POST(request: Request) {
         orderNumber,
         customerId: customer?.id || null,
         campaignId: campaignId || null,
-        couponCode: validCouponCode || (couponCode ? String(couponCode).trim().toUpperCase() : null),
+        couponCode: validCouponCode || null,
         channel: 'WHOLESALE_PORTAL',
         status: 'CONFIRMED',
         paymentStatus,

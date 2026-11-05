@@ -737,12 +737,12 @@ export default function WholesaleOrderBasketPage() {
                   <table className="ws-basket-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '42%' }}>Part &amp; Specifications</th>
-                        <th style={{ width: '13%', textAlign: 'center' }}>MOQ Status</th>
-                        <th style={{ width: '15%', textAlign: 'right' }}>Wholesale Price</th>
-                        <th style={{ width: '15%', textAlign: 'center' }}>Batch Quantity</th>
-                        <th style={{ width: '11%', textAlign: 'right' }}>Line Total</th>
-                        <th style={{ width: '4%', textAlign: 'center' }}></th>
+                        <th>Part &amp; Specifications</th>
+                        <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>MOQ Status</th>
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Wholesale Price</th>
+                        <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Batch Qty</th>
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Line Total</th>
+                        <th style={{ textAlign: 'center', width: '36px' }}></th>
                       </tr>
                     </thead>
                     <tbody>

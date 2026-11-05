@@ -6582,9 +6582,17 @@ textarea.ws-form-control {
   width: 100%;
 }
 
-@media (max-width: 1150px) {
+@media (max-width: 1240px) {
   .ws-order-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 1040px) {
+  .ws-order-layout {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
   }
 }
 
@@ -6654,13 +6662,21 @@ textarea.ws-form-control {
 }
 
 .ws-basket-table th {
-  padding: 14px 18px;
-  font-size: 11.5px;
+  padding: 12px 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: #64748b;
   white-space: nowrap;
+}
+
+.ws-basket-table th:first-child {
+  padding-left: 16px;
+}
+
+.ws-basket-table th:last-child {
+  padding-right: 16px;
 }
 
 .ws-basket-table tbody tr {
@@ -6677,8 +6693,16 @@ textarea.ws-form-control {
 }
 
 .ws-basket-table td {
-  padding: 16px 18px;
+  padding: 12px 10px;
   vertical-align: middle;
+}
+
+.ws-basket-table td:first-child {
+  padding-left: 16px;
+}
+
+.ws-basket-table td:last-child {
+  padding-right: 16px;
 }
 
 /* Product Info Cell */
@@ -6689,8 +6713,8 @@ textarea.ws-form-control {
 }
 
 .ws-item-thumb {
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
@@ -6955,7 +6979,7 @@ textarea.ws-form-control {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1040px) {
   .ws-basket-desktop-table {
     display: none !important;
   }
