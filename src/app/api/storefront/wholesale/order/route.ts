@@ -340,10 +340,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate B2B order identifier
-    const randNum = Math.floor(10000 + Math.random() * 90000);
-    const orderNumber = `CX-B2B-${randNum}`;
-    const orderId = `ord_${crypto.randomUUID().replace(/-/g, '')}`;
     const now = new Date().toISOString();
 
     const orderMetadata = isRazorpay
@@ -417,39 +413,71 @@ export async function POST(request: Request) {
       validCouponCode ? `Coupon Applied: ${validCouponCode} (-₹${couponDiscount})` : null,
     ].filter(Boolean).join(' | ');
 
-    // Insert authoritative wholesale order in ecommerce_orders
+    // Insert authoritative wholesale order in ecommerce_orders with collision retry
     const { storeId, factoryId } = await resolveStoreMeta();
-    const { error: orderInsertErr } = await supabase
-      .from('ecommerce_orders')
-      .insert({
-        id: orderId,
-        storeId,
-        factoryId,
-        orderNumber,
-        customerId: customer?.id || null,
-        campaignId: campaignId || null,
-        couponCode: validCouponCode || null,
-        channel: 'WHOLESALE_PORTAL',
-        status: 'CONFIRMED',
-        paymentStatus,
-        fulfillmentStatus: 'PENDING',
-        currency: 'INR',
-        subtotal,
-        discountAmount: couponDiscount,
-        taxAmount: gstAmount,
-        shippingAmount: 0,
-        totalAmount: totalOrderValue,
-        customerSnapshot,
-        shippingAddressSnapshot: shippingSnapshot,
-        billingAddressSnapshot: billingSnapshot,
-        notes: formattedNotes || 'Wholesale Order placed via /wholesale portal.',
-        placedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      });
+    const MAX_ORDER_INSERT_RETRIES = 5;
+    let orderInserted = false;
+    let orderNumber = '';
+    let orderId = '';
+    let lastInsertError: any = null;
 
-    if (orderInsertErr) {
-      console.error('Failed to create wholesale order in database:', orderInsertErr);
+    for (let attempt = 1; attempt <= MAX_ORDER_INSERT_RETRIES; attempt++) {
+      orderId = `ord_${crypto.randomUUID().replace(/-/g, '')}`;
+      // High-entropy 6-digit random identifier (100000 to 999999 -> 900,000 combinations)
+      const randDigits = Math.floor(100000 + Math.random() * 900000);
+      orderNumber = `CX-B2B-${randDigits}`;
+
+      const { error: insertErr } = await supabase
+        .from('ecommerce_orders')
+        .insert({
+          id: orderId,
+          storeId,
+          factoryId,
+          orderNumber,
+          customerId: customer?.id || null,
+          campaignId: campaignId || null,
+          couponCode: validCouponCode || null,
+          channel: 'WHOLESALE_PORTAL',
+          status: 'CONFIRMED',
+          paymentStatus,
+          fulfillmentStatus: 'PENDING',
+          currency: 'INR',
+          subtotal,
+          discountAmount: couponDiscount,
+          taxAmount: gstAmount,
+          shippingAmount: 0,
+          totalAmount: totalOrderValue,
+          customerSnapshot,
+          shippingAddressSnapshot: shippingSnapshot,
+          billingAddressSnapshot: billingSnapshot,
+          notes: formattedNotes || 'Wholesale Order placed via /wholesale portal.',
+          placedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+      if (!insertErr) {
+        orderInserted = true;
+        break;
+      }
+
+      lastInsertError = insertErr;
+      const isDuplicateKey =
+        insertErr.code === '23505' ||
+        insertErr.message?.toLowerCase().includes('duplicate') ||
+        insertErr.message?.toLowerCase().includes('unique');
+
+      if (isDuplicateKey && attempt < MAX_ORDER_INSERT_RETRIES) {
+        console.warn(`[Wholesale Order] Order number collision on ${orderNumber}. Retrying attempt ${attempt + 1}/${MAX_ORDER_INSERT_RETRIES}...`);
+        continue;
+      } else {
+        console.error('[Wholesale Order] Database insertion error:', insertErr);
+        break;
+      }
+    }
+
+    if (!orderInserted) {
+      console.error('Failed to create wholesale order in database after retries:', lastInsertError);
       return NextResponse.json(
         { error: 'Could not record wholesale order. Please review your details and try again.' },
         { status: 500 }

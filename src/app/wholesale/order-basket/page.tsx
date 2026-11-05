@@ -408,13 +408,11 @@ export default function WholesaleOrderBasketPage() {
       }
 
       setShowCodWarningModal(false);
-      const placed = data.order || {
-        orderNumber: `CX-B2B-${Math.floor(10000 + Math.random() * 90000)}`,
-        totalAmount: totalOrderValue,
-        paymentMethod: 'Cash on delivery',
-        paymentStatus: 'PENDING',
-      };
-      completeWholesaleOrderPlacement(placed, 'Cash on delivery');
+      if (!data?.order?.orderNumber) {
+        setSubmissionError(data?.error || 'Order placement failed: The server did not return a valid order reference.');
+        return;
+      }
+      completeWholesaleOrderPlacement(data.order, 'Cash on delivery');
     } catch (err: any) {
       setSubmitting(false);
       setShowCodWarningModal(false);
@@ -555,13 +553,10 @@ export default function WholesaleOrderBasketPage() {
         throw new Error(data.error || 'Payment recorded but order registration failed.');
       }
 
-      const placed = data.order || {
-        orderNumber: `CX-B2B-${Math.floor(10000 + Math.random() * 90000)}`,
-        totalAmount: totalOrderValue,
-        paymentMethod: 'Razorpay Secure (UPI / Cards / NetBanking)',
-        paymentStatus: 'PAID',
-      };
-      completeWholesaleOrderPlacement(placed, 'Razorpay Secure (UPI / Cards)');
+      if (!data?.order?.orderNumber) {
+        throw new Error(data?.error || 'Payment was verified, but no valid order reference was returned by the server. Please contact support with payment ID: ' + paymentDetails.razorpayPaymentId);
+      }
+      completeWholesaleOrderPlacement(data.order, 'Razorpay Secure (UPI / Cards)');
     } catch (err: any) {
       setSubmitting(false);
       setSubmissionError(err?.message || 'Payment verification could not be completed.');
