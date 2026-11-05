@@ -609,6 +609,41 @@ function OrderTrackingContent() {
                         <span>Shipping ({carrier.includes('Air') ? 'Express' : 'Standard'})</span>
                         <span>{shippingAmount ? formatINR(shippingAmount) : 'Free'}</span>
                       </div>
+
+                      {/* Statutory 18% GST Breakdown (Included in Retail Price) */}
+                      {(() => {
+                        const netProducts = Math.max(0, subtotal - (discountAmount || 0));
+                        const taxable = Math.round((netProducts / 1.18) * 100) / 100;
+                        const gst = Math.round((netProducts - taxable) * 100) / 100;
+                        const destState = ((address as any)?.state || '').trim().toLowerCase();
+                        const isInter = destState !== 'delhi' && destState !== 'dl' && destState !== 'new delhi';
+                        return (
+                          <>
+                            <div className="trk-cost-row" style={{ fontSize: 12, color: '#64748b' }}>
+                              <span>Taxable Base</span>
+                              <span>{formatINR(taxable)}</span>
+                            </div>
+                            {isInter ? (
+                              <div className="trk-cost-row" style={{ fontSize: 12, color: '#64748b' }}>
+                                <span>IGST (18% Incl.)</span>
+                                <span>{formatINR(gst)}</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="trk-cost-row" style={{ fontSize: 12, color: '#64748b' }}>
+                                  <span>CGST (9% Incl.)</span>
+                                  <span>{formatINR(Math.round((gst / 2) * 100) / 100)}</span>
+                                </div>
+                                <div className="trk-cost-row" style={{ fontSize: 12, color: '#64748b' }}>
+                                  <span>SGST (9% Incl.)</span>
+                                  <span>{formatINR(Math.round((gst / 2) * 100) / 100)}</span>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+
                       <div className="trk-cost-row total">
                         <span>Total Paid</span>
                         <span style={{ color: 'var(--red, #e2231a)' }}>{formatINR(totalAmount)}</span>

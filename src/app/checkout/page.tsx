@@ -332,6 +332,16 @@ export default function CheckoutPage() {
 
   const finalTotal = cartSubtotal - couponDiscount + shippingCost;
 
+  // Statutory 18% GST Breakdown (B2C Retail prices are Inclusive of GST)
+  const discountedProductSubtotal = Math.max(0, cartSubtotal - couponDiscount);
+  const taxableCartAmount = Math.round((discountedProductSubtotal / 1.18) * 100) / 100;
+  const totalGstAmount = Math.round((discountedProductSubtotal - taxableCartAmount) * 100) / 100;
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
+  const destinationState = (newAddress.state || selectedAddress?.state || 'Delhi').trim().toLowerCase();
+  const isInterState = destinationState !== 'delhi' && destinationState !== 'dl' && destinationState !== 'new delhi';
+  const cgstAmount = Math.round((totalGstAmount / 2) * 100) / 100;
+  const sgstAmount = Math.round((totalGstAmount - cgstAmount) * 100) / 100;
+
   const assignedCoupon: StorefrontCoupon | null = useMemo(() => {
     const candidate = getAssignedCouponForBuyer(buyerContext, coupons);
     if (!candidate) return null;
@@ -988,6 +998,25 @@ export default function CheckoutPage() {
                       </div>
                     ))}
                   </div>
+
+                  {(() => {
+                    const isExp = placedOrderData.carrier?.toLowerCase().includes('air') || placedOrderData.carrier?.toLowerCase().includes('blue dart');
+                    const netProd = Math.max(0, placedOrderData.finalTotal - (isExp ? 199 : 0));
+                    const taxable = Math.round((netProd / 1.18) * 100) / 100;
+                    const gst = Math.round((netProd - taxable) * 100) / 100;
+                    return (
+                      <div style={{ padding: '8px 0', borderTop: '1px solid #eeede8', fontSize: 12, color: '#64748b', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Taxable Value (Base):</span>
+                          <span>{formatINR(taxable)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>GST (18% Statutory Incl.):</span>
+                          <span>{formatINR(gst)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ paddingTop: 10, borderTop: '1px solid #eeede8', display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, color: '#0e0e10' }}>
                     <span>Total Amount Paid</span>
@@ -1963,10 +1992,28 @@ export default function CheckoutPage() {
                           </div>
                         )}
 
-                        <div className="inf-ck-summary-row">
-                          <span>Tax</span>
-                          <span>Included</span>
+                        <div className="inf-ck-summary-row" style={{ fontSize: '13px' }}>
+                          <span>Taxable Value (Base)</span>
+                          <span>{formatINR(taxableCartAmount)}</span>
                         </div>
+
+                        {isInterState ? (
+                          <div className="inf-ck-summary-row" style={{ fontSize: '12px', color: '#64748b' }}>
+                            <span>IGST (18% Incl.)</span>
+                            <span>{formatINR(totalGstAmount)}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="inf-ck-summary-row" style={{ fontSize: '12px', color: '#64748b' }}>
+                              <span>CGST (9% Incl.)</span>
+                              <span>{formatINR(cgstAmount)}</span>
+                            </div>
+                            <div className="inf-ck-summary-row" style={{ fontSize: '12px', color: '#64748b' }}>
+                              <span>SGST (9% Incl.)</span>
+                              <span>{formatINR(sgstAmount)}</span>
+                            </div>
+                          </>
+                        )}
 
                         <div className="inf-ck-summary-row">
                           <span>Delivery</span>

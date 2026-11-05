@@ -324,7 +324,9 @@ export default function WholesaleOrderBasketPage() {
 
   const couponDiscount = couponValidation?.valid ? couponValidation.discountAmount : 0;
   const discountedSubtotal = Math.max(0, totalSubtotal - couponDiscount);
-  const gstAmount = Math.round(discountedSubtotal * 0.18);
+  // When wholesale buyer selects COD, do not add GST; when Razorpay/Online, add 18% GST
+  const isCod = paymentOption === 'cod';
+  const gstAmount = isCod ? 0 : Math.round(discountedSubtotal * 0.18);
   const totalOrderValue = discountedSubtotal + gstAmount;
 
   // Assigned coupon specifically for this buyer (from Veda promotions)
@@ -1435,8 +1437,8 @@ export default function WholesaleOrderBasketPage() {
             )}
 
             <div className="ws-price-row">
-              <span>GST (18% ITC Eligible)</span>
-              <strong>{formatINR(gstAmount)}</strong>
+              <span>{isCod ? 'GST (COD Exemption)' : 'GST (18% ITC Eligible)'}</span>
+              <strong style={isCod ? { color: '#059669' } : undefined}>{isCod ? '₹0' : formatINR(gstAmount)}</strong>
             </div>
             <div className="ws-price-row">
               <span>Factory Logistics</span>
@@ -1673,7 +1675,7 @@ export default function WholesaleOrderBasketPage() {
                 {paymentOption === 'cod' && (
                   <div className="ws-pay-card-details">
                     <p style={{ margin: 0 }}>
-                      Pay via physical cash or courier dynamic UPI QR code scan upon consignment handover at your warehouse.
+                      Pay via physical cash or courier dynamic UPI QR code scan upon consignment handover at your warehouse. <strong>(18% GST is not added on COD orders).</strong>
                     </p>
                   </div>
                 )}
@@ -1891,7 +1893,7 @@ export default function WholesaleOrderBasketPage() {
                   fontSize: 14,
                 }}
               >
-                <span style={{ color: '#0f172a' }}>Total Amount Due (inc. 18% GST):</span>
+                <span style={{ color: '#0f172a' }}>Total Amount Due (Cash on Delivery):</span>
                 <span style={{ color: '#e2231a' }}>{formatINR(totalOrderValue)}</span>
               </div>
             </div>

@@ -228,8 +228,11 @@ export async function POST(request: Request) {
     }
 
     const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
-    // 18% GST for wholesale components
-    const gstRate = 0.18;
+    const isRazorpay = paymentMethod === 'Razorpay' || paymentMethod === 'razorpay';
+    const isCod = !isRazorpay && action !== 'create-razorpay-order';
+
+    // When wholesale buyer selects COD, do not add GST; when Razorpay/Online, 18% GST is added
+    const gstRate = isCod ? 0 : 0.18;
     const gstAmount = Math.round(discountedSubtotal * gstRate);
     const totalOrderValue = discountedSubtotal + gstAmount;
 
@@ -282,7 +285,6 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    const isRazorpay = paymentMethod === 'Razorpay' || paymentMethod === 'razorpay';
     const paymentStatus: 'PAID' | 'PENDING' = isRazorpay ? 'PAID' : 'PENDING';
     const resolvedPaymentMethod = isRazorpay ? 'Razorpay Secure (UPI / Cards / NetBanking)' : 'Cash on delivery';
 

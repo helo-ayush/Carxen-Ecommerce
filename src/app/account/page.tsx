@@ -624,6 +624,12 @@ function AccountContent() {
 
   // Download official formatted tax invoice HTML/PDF document
   const handleDownloadInvoice = (order: CustomerOrderHistoryRecord) => {
+    const netPayable = Math.max(0, order.subtotal - (order.discountAmount || 0));
+    const taxableBase = Math.round((netPayable / 1.18) * 100) / 100;
+    const totalGst = Math.round((netPayable - taxableBase) * 100) / 100;
+    const destState = (order.shippingAddress?.state || '').trim().toLowerCase();
+    const isDelhi = destState.includes('delhi') || destState === 'dl';
+
     const invoiceHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -715,6 +721,13 @@ function AccountContent() {
   <div class="totals">
     <div class="totals-row"><span>Subtotal:</span><span>${formatINR(order.subtotal)}</span></div>
     ${order.discountAmount > 0 ? `<div class="totals-row" style="color:#16a34a"><span>Discount:</span><span>- ${formatINR(order.discountAmount)}</span></div>` : ''}
+    <div class="totals-row"><span>Taxable Value (Base):</span><span>${formatINR(taxableBase)}</span></div>
+    ${isDelhi ? `
+      <div class="totals-row"><span>CGST (9%):</span><span>${formatINR(Math.round((totalGst / 2) * 100) / 100)}</span></div>
+      <div class="totals-row"><span>SGST (9%):</span><span>${formatINR(Math.round((totalGst / 2) * 100) / 100)}</span></div>
+    ` : `
+      <div class="totals-row"><span>IGST (18%):</span><span>${formatINR(totalGst)}</span></div>
+    `}
     <div class="totals-row"><span>Shipping & Handling:</span><span>FREE</span></div>
     <div class="totals-row grand"><span>Total Amount:</span><span>${formatINR(order.totalAmount)}</span></div>
   </div>
@@ -2628,7 +2641,7 @@ function AccountContent() {
             </table>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-              <div style={{ width: '200px', fontSize: '12.5px' }}>
+              <div style={{ width: '240px', fontSize: '12.5px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                   <span style={{ color: '#71717a' }}>Subtotal:</span>
                   <span>{formatINR(invoiceModalOrder.subtotal)}</span>
@@ -2639,6 +2652,23 @@ function AccountContent() {
                     <span>- {formatINR(invoiceModalOrder.discountAmount)}</span>
                   </div>
                 )}
+                {(() => {
+                  const net = Math.max(0, invoiceModalOrder.subtotal - (invoiceModalOrder.discountAmount || 0));
+                  const taxable = Math.round((net / 1.18) * 100) / 100;
+                  const gst = Math.round((net - taxable) * 100) / 100;
+                  return (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#71717a' }}>
+                        <span>Taxable Value:</span>
+                        <span>{formatINR(taxable)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#71717a' }}>
+                        <span>GST (18% Incl.):</span>
+                        <span>{formatINR(gst)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px solid #e4e4e7', fontWeight: 700, fontSize: '14px' }}>
                   <span>Total:</span>
                   <span>{formatINR(invoiceModalOrder.totalAmount)}</span>
