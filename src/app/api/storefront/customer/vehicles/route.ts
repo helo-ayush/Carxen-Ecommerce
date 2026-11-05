@@ -14,23 +14,19 @@ export interface GarageVehicleRecord {
   isDefault?: boolean;
 }
 
-const DEFAULT_VEHICLES: GarageVehicleRecord[] = [
-  { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
-  { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
-  { id: 'veh-3', b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' },
-];
+
 
 export async function GET(request: Request) {
   try {
     const { customer } = await getAuthenticatedCustomer(request);
     if (!customer) {
-      return NextResponse.json({ success: true, vehicles: DEFAULT_VEHICLES, isGuest: true });
+      return NextResponse.json({ success: true, vehicles: [], isGuest: true });
     }
 
     const meta = (customer.metadata || {}) as Record<string, any>;
-    const vehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
+    const vehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles)
       ? meta.garageVehicles
-      : DEFAULT_VEHICLES;
+      : [];
 
     return NextResponse.json({
       success: true,
@@ -75,9 +71,7 @@ export async function POST(request: Request) {
     };
 
     const meta = (customer.metadata || {}) as Record<string, any>;
-    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
-      ? meta.garageVehicles
-      : [...DEFAULT_VEHICLES];
+    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) ? meta.garageVehicles : [];
 
     // If marked default, unset other defaults
     const updatedVehicles: GarageVehicleRecord[] = isDefault
@@ -137,9 +131,7 @@ export async function PUT(request: Request) {
     }
 
     const meta = (customer.metadata || {}) as Record<string, any>;
-    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
-      ? meta.garageVehicles
-      : [...DEFAULT_VEHICLES];
+    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) ? meta.garageVehicles : [];
 
     const exists = existingVehicles.some((v) => v.id === id);
     if (!exists) {
@@ -211,9 +203,7 @@ export async function DELETE(request: Request) {
     }
 
     const meta = (customer.metadata || {}) as Record<string, any>;
-    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
-      ? meta.garageVehicles
-      : [...DEFAULT_VEHICLES];
+    const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) ? meta.garageVehicles : [];
 
     const updatedVehicles = existingVehicles.filter((v) => v.id !== id);
 

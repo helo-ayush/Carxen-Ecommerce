@@ -834,10 +834,6 @@ function AccountContent() {
 
   const handleDeleteVehicle = async (id: string, name: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (garageVehicles.length <= 1) {
-      showToast('You must keep at least 1 vehicle in your garage.');
-      return;
-    }
     if (window.confirm(`Are you sure you want to remove "${name}" from your garage?`)) {
       await deleteGarageVehicle(id);
     }
@@ -1191,7 +1187,7 @@ function AccountContent() {
                       className="ac-stat-number"
                       style={{ fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                     >
-                      {car ? `${car.b} ${car.m}` : 'Porsche 911 GT3'}
+                      {car ? `${car.b} ${car.m}` : garageVehicles.length > 0 ? `${garageVehicles[0].b} ${garageVehicles[0].m}` : 'No Vehicle Selected'}
                     </div>
                     <div className="ac-stat-tag">
                       <CarFront size={12} />
@@ -2000,10 +1996,10 @@ function AccountContent() {
                           ACTIVE VEHICLE &amp; FITMENT GUARANTEE
                         </div>
                         <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#09090b', margin: '4px 0 2px' }}>
-                          {car ? `${car.y} ${car.b} ${car.m}` : '2023 Porsche 911 GT3 (992)'}
+                          {car ? `${car.y} ${car.b} ${car.m}` : garageVehicles.length > 0 ? `${garageVehicles[0].y} ${garageVehicles[0].b} ${garageVehicles[0].m}` : 'No Vehicle Configured'}
                         </h3>
                         <div style={{ fontSize: '13px', color: '#71717a' }}>
-                          Trim / Engine: {car?.f || 'Petrol'}
+                          {car || garageVehicles.length > 0 ? `Trim / Engine: ${car?.f || garageVehicles[0]?.f || 'Petrol'}` : 'Configure your vehicle to ensure compatible parts'}
                         </div>
                       </div>
 
@@ -2041,6 +2037,25 @@ function AccountContent() {
                       </div>
                     </div>
 
+                    {garageVehicles.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '36px 16px', color: '#71717a' }}>
+                        <CarFront size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#09090b', marginBottom: '4px' }}>
+                          No vehicles in your garage
+                        </div>
+                        <p style={{ fontSize: '12.5px', margin: '0 0 16px' }}>
+                          Add your car to filter compatible parts and unlock exact fitment guarantees.
+                        </p>
+                        <button
+                          type="button"
+                          className="ac-btn-red"
+                          onClick={handleOpenAddVehicle}
+                          style={{ height: '34px', fontSize: '12.5px', margin: '0 auto' }}
+                        >
+                          <Plus size={14} /> Add Vehicle
+                        </button>
+                      </div>
+                    ) : (
                     <div className="ac-garage-grid">
                       {garageVehicles.map((veh) => {
                         const isActive =
@@ -2129,6 +2144,7 @@ function AccountContent() {
                         </small>
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
               )}

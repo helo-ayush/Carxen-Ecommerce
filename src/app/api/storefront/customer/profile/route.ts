@@ -51,13 +51,7 @@ export async function GET(request: Request) {
       communicationPrefs: meta.communicationPrefs || null,
       gstBilling: meta.gstBilling || null,
       savedPayments: Array.isArray(meta.savedPayments) ? meta.savedPayments : null,
-      garageVehicles: Array.isArray(meta.garageVehicles) && meta.garageVehicles.length > 0
-        ? meta.garageVehicles
-        : [
-            { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
-            { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
-            { id: 'veh-3', b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' },
-          ],
+      garageVehicles: Array.isArray(meta.garageVehicles) ? meta.garageVehicles : [],
       activeVehicle: meta.activeVehicle || null,
       b2bStatus: (customer as any).b2bStatus || 'NONE',
       businessName: (customer as any).businessName || null,

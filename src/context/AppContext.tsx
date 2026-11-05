@@ -84,11 +84,7 @@ export interface SupportModalOptions {
   businessName?: string;
 }
 
-export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [
-  { id: 'veh-1', b: 'Porsche', m: '911 GT3 (992)', y: '2023', f: 'Petrol', isDefault: true },
-  { id: 'veh-2', b: 'BMW', m: 'M3 Competition', y: '2024', f: 'Petrol' },
-  { id: 'veh-3', b: 'Toyota', m: 'GR Supra 3.0', y: '2022', f: 'Petrol' },
-];
+export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [];
 
 interface AppContextType {
   products: Product[];
@@ -401,7 +397,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(data.profile.savedPayments)) {
             setSavedPayments(data.profile.savedPayments);
           }
-          if (Array.isArray(data.profile.garageVehicles) && data.profile.garageVehicles.length > 0) {
+          if (Array.isArray(data.profile.garageVehicles)) {
             setGarageVehicles(data.profile.garageVehicles);
           }
           if (data.profile.activeVehicle) {
@@ -579,7 +575,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedGarage = localStorage.getItem('cx_garage_vehicles');
       if (savedGarage) {
         const parsed = JSON.parse(savedGarage);
-        if (Array.isArray(parsed) && parsed.length > 0) setGarageVehicles(parsed);
+        if (Array.isArray(parsed)) setGarageVehicles(parsed);
       }
     } catch (e) {
       console.error('Storage access error', e);
