@@ -107,12 +107,7 @@ export async function createStorefrontOrder(
       if (directToken && !headers['Authorization']) {
         headers['Authorization'] = `Bearer ${directToken}`;
       }
-      const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.id) headers['x-demo-user-id'] = parsed.id;
-        if (parsed.email) headers['x-demo-user-email'] = parsed.email;
-      }
+
     }
   } catch {}
 

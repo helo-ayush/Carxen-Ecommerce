@@ -135,156 +135,100 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 
   if (token) {
     try {
+      // 1. Try verifying as Supabase session token / JWT
       const { data, error } = await supabase.auth.getUser(token);
       if (!error && data?.user) {
         authUser = data.user;
+      } else if (
+        typeof token === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)
+      ) {
+        // 2. Direct session fallback: verify UUID directly against auth.users table
+        const { data: adminUserData, error: adminUserErr } = await supabase.auth.admin.getUserById(token);
+        if (!adminUserErr && adminUserData?.user) {
+          authUser = adminUserData.user;
+        }
       }
     } catch (err) {
       console.warn('Error verifying auth token:', err);
     }
   }
 
-  const demoUserId = request.headers.get('x-demo-user-id')?.trim();
-  const demoUserEmail = request.headers.get('x-demo-user-email')?.trim();
+  if (!authUser) {
+    return { user: null, customer: null };
+  }
 
-  if (authUser) {
-    // Find customer by authUserId or email
-    const authOrFilters: string[] = [`authUserId.eq.${authUser.id}`];
-    if (authUser.email && authUser.email.trim()) {
-      authOrFilters.push(`email.ilike.${authUser.email.trim()}`);
-    }
+  // Find customer by authUserId or verified email
+  const authOrFilters: string[] = [`authUserId.eq.${authUser.id}`];
+  if (authUser.email && authUser.email.trim()) {
+    authOrFilters.push(`email.ilike.${authUser.email.trim()}`);
+  }
 
-    let { data: customer } = await supabase
+  let { data: customer } = await supabase
+    .from('ecommerce_customers')
+    .select('*')
+    .or(authOrFilters.join(','))
+    .order('createdAt', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!customer) {
+    // Auto-provision customer
+    const { storeId, factoryId } = await resolveStoreMeta();
+    const now = new Date().toISOString();
+    const newCust = {
+      id: `cust_${crypto.randomUUID().replace(/-/g, '')}`,
+      storeId,
+      factoryId,
+      authUserId: authUser.id,
+      name:
+        authUser.user_metadata?.full_name ||
+        authUser.user_metadata?.name ||
+        authUser.email?.split('@')[0] ||
+        'Driver',
+      email: authUser.email ? authUser.email.toLowerCase().trim() : null,
+      phone: authUser.user_metadata?.phone || null,
+      status: 'ACTIVE',
+      metadata: {
+        avatarUrl: authUser.user_metadata?.avatar_url || '',
+        rewardPoints: 250,
+        joinedDate: new Date(authUser.created_at || Date.now()).toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const { data: created, error: createErr } = await supabase
       .from('ecommerce_customers')
-      .select('*')
-      .or(authOrFilters.join(','))
-      .order('createdAt', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .insert(newCust)
+      .select()
+      .single();
 
-    if (!customer) {
-      // Auto-provision customer
-      const { storeId, factoryId } = await resolveStoreMeta();
-      const now = new Date().toISOString();
-      const newCust = {
-        id: `cust_${crypto.randomUUID().replace(/-/g, '')}`,
-        storeId,
-        factoryId,
-        authUserId: authUser.id,
-        name:
-          authUser.user_metadata?.full_name ||
-          authUser.user_metadata?.name ||
-          authUser.email?.split('@')[0] ||
-          'Driver',
-        email: authUser.email ? authUser.email.toLowerCase().trim() : null,
-        phone: authUser.user_metadata?.phone || null,
-        status: 'ACTIVE',
-        metadata: {
-          avatarUrl: authUser.user_metadata?.avatar_url || '',
-          rewardPoints: 250,
-          joinedDate: new Date(authUser.created_at || Date.now()).toLocaleDateString('en-US', {
-            month: 'short',
-            year: 'numeric',
-          }),
-        },
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      const { data: created, error: createErr } = await supabase
+    if (createErr) {
+      console.error('Failed to provision customer row:', createErr);
+      const { data: retry } = await supabase
         .from('ecommerce_customers')
-        .insert(newCust)
-        .select()
-        .single();
-
-      if (createErr) {
-        console.error('Failed to provision customer row:', createErr);
-        const { data: retry } = await supabase
-          .from('ecommerce_customers')
-          .select('*')
-          .or(authOrFilters.join(','))
-          .limit(1)
-          .maybeSingle();
-        customer = retry;
-      } else {
-        customer = created;
-      }
-    } else if (!customer.authUserId) {
-      // Link existing customer row with this auth user ID
-      await supabase
-        .from('ecommerce_customers')
-        .update({ authUserId: authUser.id, updatedAt: new Date().toISOString() })
-        .eq('id', customer.id);
-      customer.authUserId = authUser.id;
+        .select('*')
+        .or(authOrFilters.join(','))
+        .limit(1)
+        .maybeSingle();
+      customer = retry;
+    } else {
+      customer = created;
     }
-
-    return { user: authUser, customer: customer || null };
+  } else if (!customer.authUserId) {
+    // Link existing customer row with this auth user ID
+    await supabase
+      .from('ecommerce_customers')
+      .update({ authUserId: authUser.id, updatedAt: new Date().toISOString() })
+      .eq('id', customer.id);
+    customer.authUserId = authUser.id;
   }
 
-  // Fallback for user identified by header (e.g. demo mode or client state)
-  if (demoUserEmail || demoUserId) {
-    const filters: string[] = [];
-    if (demoUserId) {
-      filters.push(`id.eq.${demoUserId}`, `authUserId.eq.${demoUserId}`);
-    }
-    if (demoUserEmail) {
-      filters.push(`email.ilike.${demoUserEmail}`);
-    }
-
-    let { data: customer } = filters.length > 0
-      ? await supabase
-          .from('ecommerce_customers')
-          .select('*')
-          .or(filters.join(','))
-          .order('createdAt', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : { data: null };
-
-    if (!customer && (demoUserEmail || demoUserId)) {
-      const { storeId, factoryId } = await resolveStoreMeta();
-      const cleanEmail = demoUserEmail ? demoUserEmail.toLowerCase() : null;
-      const now = new Date().toISOString();
-      const idToUse = demoUserId || `cust_demo_${crypto.randomUUID().slice(0, 8)}`;
-      const { data: created, error: insertErr } = await supabase
-        .from('ecommerce_customers')
-        .insert({
-          id: idToUse,
-          storeId,
-          factoryId,
-          name: cleanEmail ? cleanEmail.split('@')[0] : 'Driver',
-          email: cleanEmail,
-          phone: '+91 98201 44829',
-          status: 'ACTIVE',
-          metadata: {
-            avatarUrl: '',
-            rewardPoints: 250,
-            joinedDate: 'Oct 2024',
-          },
-          createdAt: now,
-          updatedAt: now,
-        })
-        .select()
-        .single();
-
-      if (insertErr) {
-        console.error('Failed to provision customer fallback row:', insertErr);
-        const { data: retry } = await supabase
-          .from('ecommerce_customers')
-          .select('*')
-          .or(filters.join(','))
-          .limit(1)
-          .maybeSingle();
-        customer = retry;
-      } else {
-        customer = created;
-      }
-    }
-
-    return { user: null, customer: customer || null };
-  }
-
-  return { user: null, customer: null };
+  return { user: authUser, customer: customer || null };
 }
 
 export function mapAddressDbToDto(row: AddressDbRow): CustomerAddress {

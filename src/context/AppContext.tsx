@@ -268,12 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (directToken && !customHeaders['Authorization']) {
             customHeaders['Authorization'] = `Bearer ${directToken}`;
           }
-          const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed.id) customHeaders['x-demo-user-id'] = parsed.id;
-            if (parsed.email) customHeaders['x-demo-user-email'] = parsed.email;
-          }
+
         }
       } catch {}
 
@@ -359,19 +354,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
-    if (user?.id) headers['x-demo-user-id'] = user.id;
-    if (user?.email) headers['x-demo-user-email'] = user.email;
 
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (!headers['x-demo-user-id'] && parsed?.id) headers['x-demo-user-id'] = parsed.id;
-          if (!headers['x-demo-user-email'] && parsed?.email) headers['x-demo-user-email'] = parsed.email;
-        }
-      } catch {}
-    }
 
     return headers;
   }, [user?.id, user?.email]);
@@ -388,10 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (activeToken) {
         headers['Authorization'] = `Bearer ${activeToken}`;
       }
-      const activeId = u?.id || user?.id;
-      const activeEmail = u?.email || user?.email;
-      if (activeId) headers['x-demo-user-id'] = activeId;
-      if (activeEmail) headers['x-demo-user-email'] = activeEmail;
+
 
       const res = await fetch('/api/storefront/customer/profile', {
         headers,
