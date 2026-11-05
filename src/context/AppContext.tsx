@@ -143,6 +143,7 @@ interface AppContextType {
   updateCommunicationPrefs: (prefs: Partial<CommunicationPreferences>) => void;
   updateGstBilling: (info: Partial<GstBillingInfo>) => void;
   setVehicle: (v: Vehicle) => void;
+  clearActiveVehicle: () => Promise<void>;
   addGarageVehicle: (v: Omit<GarageVehicle, 'id'>) => Promise<GarageVehicle>;
   updateGarageVehicle: (v: GarageVehicle) => Promise<void>;
   deleteGarageVehicle: (id: string) => Promise<void>;
@@ -1187,7 +1188,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setVehicle = async (v: Vehicle) => {
     setCar(v);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cx_car', JSON.stringify(v));
+    }
     showToast(`Garage set — ${v.y} ${v.b} ${v.m}`);
+
+    // Ensure the vehicle exists in garageVehicles as well so it is visible and deletable
+    const exists = garageVehicles.some(
+      (item) => item.b?.toLowerCase() === v.b?.toLowerCase() && item.m?.toLowerCase() === v.m?.toLowerCase()
+    );
+    if (!exists) {
+      const newVeh: GarageVehicle = {
+        id: `veh_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        b: v.b,
+        m: v.m,
+        y: v.y,
+        f: v.f,
+        isDefault: true,
+      };
+      setGarageVehicles((prev) => [newVeh, ...prev.map((item) => ({ ...item, isDefault: false }))]);
+      try {
+        const headers = await getAuthHeaders();
+        await fetch('/api/storefront/customer/vehicles', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(newVeh),
+        });
+      } catch (err) {
+        // quiet
+      }
+    }
 
     try {
       const headers = await getAuthHeaders();
@@ -1198,6 +1228,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err) {
       // quiet
+    }
+  };
+
+  const clearActiveVehicle = async () => {
+    setCar(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cx_car');
+    }
+    showToast('Active vehicle removed');
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch('/api/storefront/customer/profile', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ activeVehicle: null }),
+      });
+    } catch (err) {
+      console.warn('Backend clear active vehicle error:', err);
     }
   };
 
@@ -1259,10 +1308,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = garageVehicles.filter((x) => x.id !== id);
     setGarageVehicles(updated);
 
-    if (target && car && car.m === target.m && car.y === target.y) {
+    const isCurrentActive =
+      id.startsWith('veh_active_') ||
+      id === 'active' ||
+      (target && car && car.m?.toLowerCase() === target.m?.toLowerCase()) ||
+      updated.length === 0;
+
+    if (isCurrentActive) {
       if (updated.length > 0) {
         const nextActive = updated[0];
         setCar({ b: nextActive.b, m: nextActive.m, y: nextActive.y, f: nextActive.f });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cx_car', JSON.stringify({ b: nextActive.b, m: nextActive.m, y: nextActive.y, f: nextActive.f }));
+        }
+      } else {
+        setCar(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cx_car');
+        }
       }
     }
     showToast('Vehicle removed from garage');
@@ -1705,6 +1768,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateCommunicationPrefs,
         updateGstBilling,
         setVehicle,
+        clearActiveVehicle,
         garageVehicles,
         availableVehicles,
         vehicleBrands,

@@ -109,3 +109,4 @@ async function fetchVehiclesFromServer(signal?: AbortSignal): Promise<Storefront
   inMemoryVehiclesCache = fallback;
   return fallback;
 }
+

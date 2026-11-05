@@ -107,6 +107,7 @@ function AccountContent() {
     authLoading,
     car,
     setVehicle,
+    clearActiveVehicle,
     logout,
     login,
     updateUserProfile,
@@ -1935,19 +1936,31 @@ function AccountContent() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <ShieldCheck size={13} color="#16a34a" />
-                          ACTIVE VEHICLE &amp; FITMENT GUARANTEE
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: car ? '#16a34a' : '#71717a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <ShieldCheck size={13} color={car ? '#16a34a' : '#71717a'} />
+                          {car ? 'ACTIVE VEHICLE & FITMENT GUARANTEE' : 'NO VEHICLE SELECTED'}
                         </div>
                         <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#09090b', margin: '4px 0 2px' }}>
-                          {car ? `${car.y} ${car.b} ${car.m}` : garageVehicles.length > 0 ? `${garageVehicles[0].y} ${garageVehicles[0].b} ${garageVehicles[0].m}` : 'No Vehicle Configured'}
+                          {car ? `${car.y} ${car.b} ${car.m}` : 'No Vehicle Configured'}
                         </h3>
                         <div style={{ fontSize: '13px', color: '#71717a' }}>
-                          {car || garageVehicles.length > 0 ? `Trim / Engine: ${car?.f || garageVehicles[0]?.f || 'Petrol'}` : 'Configure your vehicle to ensure compatible parts'}
+                          {car ? `Trim / Engine: ${car.f || 'Petrol'}` : 'Configure your vehicle to ensure compatible parts and unlock exact fitment.'}
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {car && (
+                          <button
+                            type="button"
+                            className="ac-btn-outline"
+                            onClick={() => clearActiveVehicle()}
+                            style={{ height: '36px', fontSize: '13px', color: '#dc2626', borderColor: '#fca5a5' }}
+                            title="Remove active vehicle from fitment filter"
+                          >
+                            <Trash2 size={14} />
+                            Remove Active
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="ac-btn-red"
@@ -1955,7 +1968,7 @@ function AccountContent() {
                           style={{ height: '36px', fontSize: '13px' }}
                         >
                           <Plus size={14} />
-                          Add New Vehicle
+                          {car ? 'Switch / Add Vehicle' : 'Add Vehicle'}
                         </button>
                       </div>
                     </div>
@@ -1985,19 +1998,11 @@ function AccountContent() {
                       <div style={{ textAlign: 'center', padding: '36px 16px', color: '#71717a' }}>
                         <CarFront size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
                         <div style={{ fontSize: '14px', fontWeight: 600, color: '#09090b', marginBottom: '4px' }}>
-                          No vehicles in your garage
+                          No vehicles saved in your garage
                         </div>
-                        <p style={{ fontSize: '12.5px', margin: '0 0 16px' }}>
-                          Add your car to filter compatible parts and unlock exact fitment guarantees.
+                        <p style={{ fontSize: '12.5px', margin: '0' }}>
+                          Add your cars to quickly switch fitment guarantees while browsing the catalog.
                         </p>
-                        <button
-                          type="button"
-                          className="ac-btn-red"
-                          onClick={handleOpenAddVehicle}
-                          style={{ height: '34px', fontSize: '12.5px', margin: '0 auto' }}
-                        >
-                          <Plus size={14} /> Add Vehicle
-                        </button>
                       </div>
                     ) : (
                     <div className="ac-garage-grid">

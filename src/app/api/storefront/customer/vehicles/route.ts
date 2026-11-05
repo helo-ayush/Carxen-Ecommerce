@@ -25,8 +25,27 @@ export async function GET(request: Request) {
 
     const meta = (customer.metadata || {}) as Record<string, any>;
     const vehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles)
-      ? meta.garageVehicles
+      ? [...meta.garageVehicles]
       : [];
+
+    if (meta.activeVehicle && meta.activeVehicle.b && meta.activeVehicle.m) {
+      const existsInList = vehicles.some(
+        (v) =>
+          v.b?.toLowerCase() === meta.activeVehicle.b?.toLowerCase() &&
+          v.m?.toLowerCase() === meta.activeVehicle.m?.toLowerCase()
+      );
+      if (!existsInList) {
+        const synthetic: GarageVehicleRecord = {
+          id: `veh_active_${meta.activeVehicle.b}_${meta.activeVehicle.m}`.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+          b: meta.activeVehicle.b,
+          m: meta.activeVehicle.m,
+          y: meta.activeVehicle.y || '2024',
+          f: meta.activeVehicle.f || 'Petrol',
+          isDefault: true,
+        };
+        vehicles.unshift(synthetic);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -205,13 +224,26 @@ export async function DELETE(request: Request) {
     const meta = (customer.metadata || {}) as Record<string, any>;
     const existingVehicles: GarageVehicleRecord[] = Array.isArray(meta.garageVehicles) ? meta.garageVehicles : [];
 
+    const targetVeh = existingVehicles.find((v) => v.id === id);
     const updatedVehicles = existingVehicles.filter((v) => v.id !== id);
+
+    const isTargetActive =
+      id.startsWith('veh_active_') ||
+      id === 'active' ||
+      id === 'all' ||
+      meta.activeVehicle?.id === id ||
+      (targetVeh && meta.activeVehicle && targetVeh.m?.toLowerCase() === meta.activeVehicle.m?.toLowerCase()) ||
+      updatedVehicles.length === 0;
+
+    const newActiveVehicle = isTargetActive
+      ? (updatedVehicles[0] ? { b: updatedVehicles[0].b, m: updatedVehicles[0].m, y: updatedVehicles[0].y, f: updatedVehicles[0].f } : null)
+      : (meta.activeVehicle || null);
 
     const supabase = getSupabaseAdmin();
     const updatedMeta = {
       ...meta,
       garageVehicles: updatedVehicles,
-      ...(meta.activeVehicle?.id === id ? { activeVehicle: updatedVehicles[0] || null } : {}),
+      activeVehicle: newActiveVehicle,
     };
 
     const { error: updateErr } = await supabase
@@ -230,6 +262,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({
       success: true,
       vehicles: updatedVehicles,
+      activeVehicle: newActiveVehicle,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to delete vehicle';

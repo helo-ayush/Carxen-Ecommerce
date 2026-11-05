@@ -37,7 +37,7 @@ function HeaderContent() {
   const isLandingPage = pathname === '/';
   const isShopPage = pathname === '/shop' || pathname.startsWith('/shop/');
   const currentQuery = searchParams.get('q') || '';
-  const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
+  const activeCar = car;
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isRibbonHidden, setIsRibbonHidden] = useState(false);
@@ -510,12 +510,12 @@ function HeaderContent() {
                   </svg>
                   <input
                     type="search"
-                    placeholder={`Search parts for your ${activeCar.m}…`}
+                    placeholder={activeCar ? `Search parts for your ${activeCar.m}…` : 'Search parts, brands, accessories…'}
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
                     onFocus={() => document.documentElement.classList.add('cx-searching')}
                     onBlur={() => document.documentElement.classList.remove('cx-searching')}
-                    aria-label={`Search parts for ${activeCar.m}`}
+                    aria-label={activeCar ? `Search parts for ${activeCar.m}` : 'Search parts'}
                   />
                   {searchVal && (
                     <button
@@ -580,7 +580,7 @@ function HeaderContent() {
                     href="/account?tab=garage"
                     className="tool vehicle-tool"
                     id="vehBtn"
-                    aria-label={`Change vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m}`}
+                    aria-label={activeCar ? `Change vehicle: ${activeCar.y} ${activeCar.b} ${activeCar.m}` : 'Select your vehicle'}
                   >
                     <svg viewBox="0 0 24 24">
                       <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
@@ -588,12 +588,18 @@ function HeaderContent() {
                       <path d="M9 17h6" />
                       <circle cx="17" cy="17" r="2" />
                     </svg>
-                    <span className="veh-status-dot" />
+                    {activeCar && <span className="veh-status-dot" />}
                     <div className="veh-hover-tooltip" role="tooltip">
-                      <span className="veh-tt-title">Change Vehicle</span>
+                      <span className="veh-tt-title">{activeCar ? 'Change Vehicle' : 'Select Vehicle'}</span>
                       <span className="veh-tt-sub">
-                        <span className="veh-tt-dot" />
-                        <span>{activeCar.y} {activeCar.b} {activeCar.m}</span>
+                        {activeCar ? (
+                          <>
+                            <span className="veh-tt-dot" />
+                            <span>{activeCar.y} {activeCar.b} {activeCar.m}</span>
+                          </>
+                        ) : (
+                          <span>No vehicle selected</span>
+                        )}
                       </span>
                     </div>
                   </Link>
