@@ -214,10 +214,10 @@ function OrderTrackingContent() {
     return () => controller.abort();
   }, [fetchOrder]);
 
-  const trackingNum = localOrder?.trackingNumber || '';
-  const carrier = localOrder?.carrier || 'CarXen Express Delivery';
-  const trackingUrl = localOrder?.trackingUrl;
-  const estimatedDelivery = localOrder?.estimatedDelivery || '';
+  const trackingNum = localOrder?.trackingNumber || serverOrder?.trackingNumber || '';
+  const carrier = localOrder?.carrier || serverOrder?.carrier || 'CarXen Express Delivery';
+  const trackingUrl = localOrder?.trackingUrl || serverOrder?.trackingUrl;
+  const estimatedDelivery = localOrder?.estimatedDelivery || serverOrder?.estimatedDelivery || '';
 
   const customerName =
     localOrder?.shippingAddress?.name || serverOrder?.customer?.name || 'Customer';
@@ -264,7 +264,7 @@ function OrderTrackingContent() {
   const shippingAmount = localOrder?.shippingAmount ?? serverOrder?.shippingAmount ?? 0;
   const totalAmount = localOrder?.totalAmount ?? serverOrder?.totalAmount ?? 0;
 
-  const paymentMethod = localOrder?.paymentMethod || 'Credit / Debit Card';
+  const paymentMethod = localOrder?.paymentMethod || serverOrder?.paymentMethod || 'Credit / Debit Card';
   const paymentStatus = localOrder?.paymentStatus || serverOrder?.paymentStatus || 'PAID';
   const placedAtDate = localOrder?.placedAt || serverOrder?.placedAt;
 

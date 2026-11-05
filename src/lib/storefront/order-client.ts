@@ -144,10 +144,30 @@ export async function loadStorefrontOrder(
 ): Promise<StorefrontOrderSnapshot | null> {
   let response: Response;
 
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      headers['Authorization'] = `Bearer ${data.session.access_token}`;
+    }
+  } catch {}
+
+  try {
+    if (typeof window !== 'undefined') {
+      const directToken = localStorage.getItem('cx_auth_token');
+      if (directToken && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${directToken}`;
+      }
+    }
+  } catch {}
+
   try {
     response = await fetch(`/api/storefront/orders/${encodeURIComponent(orderNumber)}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers,
       credentials: 'same-origin',
       cache: 'no-store',
       signal,

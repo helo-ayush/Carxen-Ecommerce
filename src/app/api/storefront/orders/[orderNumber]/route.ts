@@ -54,12 +54,16 @@ export async function GET(
 
         if (dbOrder) {
           const authEmail = (user?.email || customer?.email || '').toLowerCase().trim();
-          const custId = customer?.id || user?.id || '';
-          const snapEmail = ((dbOrder.customerSnapshot as any)?.email || '').toLowerCase().trim();
+          const custId = customer?.id || '';
+          const authUserId = user?.id || '';
           const orderCustId = dbOrder.customerId || '';
+          const orderAuthUserId = dbOrder.authUserId || '';
+          const snapEmail = ((dbOrder.customerSnapshot as any)?.email || dbOrder.customerEmail || '').toLowerCase().trim();
 
           const isAuthorized =
             (custId && orderCustId && custId === orderCustId) ||
+            (authUserId && orderAuthUserId && authUserId === orderAuthUserId) ||
+            (authUserId && orderCustId && authUserId === orderCustId) ||
             (authEmail && snapEmail && authEmail === snapEmail) ||
             user?.role === 'admin';
 
@@ -69,6 +73,13 @@ export async function GET(
               .from('ecommerce_order_items')
               .select('*')
               .eq('orderId', dbOrder.id);
+
+            // Fetch shipment
+            const { data: shipment } = await supabase
+              .from('ecommerce_shipments')
+              .select('*')
+              .eq('orderId', dbOrder.id)
+              .maybeSingle();
 
             const items: StorefrontOrderItemSnapshot[] = (dbItems || []).map((it: any) => ({
               productId: it.productId,
@@ -87,7 +98,7 @@ export async function GET(
               shippingAmount: Number(dbOrder.shippingAmount || 0),
               totalAmount: Number(dbOrder.totalAmount || 0),
               paymentStatus: dbOrder.paymentStatus || 'PAID',
-              fulfillmentStatus: dbOrder.fulfillmentStatus || 'PROCESSING',
+              fulfillmentStatus: dbOrder.fulfillmentStatus || shipment?.status || 'PROCESSING',
               couponCode: dbOrder.couponCode || null,
               customer: (dbOrder.customerSnapshot as any) || {
                 name: customer?.name || user?.user_metadata?.full_name || 'Driver',
@@ -95,6 +106,11 @@ export async function GET(
               shippingAddress: (dbOrder.shippingAddressSnapshot as any) || {},
               placedAt: dbOrder.placedAt || dbOrder.createdAt,
               items,
+              carrier: shipment?.carrier || dbOrder.carrier || undefined,
+              trackingNumber: shipment?.trackingNumber || dbOrder.trackingNumber || undefined,
+              estimatedDelivery: shipment?.estimatedDelivery || dbOrder.estimatedDelivery || undefined,
+              trackingUrl: shipment?.trackingUrl || dbOrder.trackingUrl || undefined,
+              paymentMethod: dbOrder.paymentMethod || undefined,
             };
           }
         }

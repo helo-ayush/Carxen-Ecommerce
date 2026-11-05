@@ -501,6 +501,11 @@ function toOrderSnapshot(value: unknown): StorefrontOrderSnapshot | null {
     shippingAddress: toSafeAddress(value.shippingAddress),
     placedAt: asTimestamp(value.placedAt),
     items,
+    carrier: typeof value.carrier === 'string' ? value.carrier : undefined,
+    trackingNumber: typeof value.trackingNumber === 'string' ? value.trackingNumber : undefined,
+    estimatedDelivery: typeof value.estimatedDelivery === 'string' ? value.estimatedDelivery : undefined,
+    trackingUrl: typeof value.trackingUrl === 'string' ? value.trackingUrl : undefined,
+    paymentMethod: typeof value.paymentMethod === 'string' ? value.paymentMethod : undefined,
   };
 }
 

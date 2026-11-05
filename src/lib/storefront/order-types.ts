@@ -64,6 +64,11 @@ export interface StorefrontOrderSnapshot extends StorefrontOrderSummary {
   shippingAddress: StorefrontShippingAddressSnapshot;
   placedAt: string | null;
   items: StorefrontOrderItemSnapshot[];
+  carrier?: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  trackingUrl?: string;
+  paymentMethod?: string;
 }
 
 export interface StorefrontOrderSummaryResponse {
