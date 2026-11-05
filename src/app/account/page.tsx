@@ -118,8 +118,6 @@ function AccountContent() {
     orders,
     cancelOrder,
     openSupportModal,
-    communicationPrefs,
-    updateCommunicationPrefs,
     b2bProfile,
     isWholesaleApproved,
     isWholesalePending,
@@ -2100,61 +2098,6 @@ function AccountContent() {
               {/* ========================================================= */}
               {activeTab === 'security' && (
                 <div style={{ maxWidth: '680px' }}>
-                  {/* Preferences */}
-                  <div
-                    style={{
-                      background: '#fff',
-                      border: '1px solid #e4e4e7',
-                      borderRadius: '14px',
-                      padding: '20px',
-                      marginBottom: '16px',
-                    }}
-                  >
-                    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '14px', color: '#09090b' }}>
-                      Notification Preferences
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                        <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 500 }}>WhatsApp Delivery Updates</div>
-                          <div style={{ fontSize: '12px', color: '#71717a' }}>Receive order dispatch and live delivery notifications</div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={communicationPrefs.whatsappUpdates}
-                          onChange={(e) => updateCommunicationPrefs({ whatsappUpdates: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
-                        />
-                      </label>
-
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                        <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 500 }}>SMS Order Alerts</div>
-                          <div style={{ fontSize: '12px', color: '#71717a' }}>Receive OTP and delivery verification via SMS</div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={communicationPrefs.smsAlerts}
-                          onChange={(e) => updateCommunicationPrefs({ smsAlerts: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
-                        />
-                      </label>
-
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                        <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 500 }}>Vehicle Maintenance Reminders</div>
-                          <div style={{ fontSize: '12px', color: '#71717a' }}>Periodic brake fluid, pad wear, and seasonal alerts</div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={communicationPrefs.garageFitmentAlerts}
-                          onChange={(e) => updateCommunicationPrefs({ garageFitmentAlerts: e.target.checked })}
-                          style={{ width: '18px', height: '18px', accentColor: '#e2231a' }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-
                   {/* Password Form */}
                   <div
                     style={{
