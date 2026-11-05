@@ -559,11 +559,10 @@ export default function CheckoutPage() {
       setMockModalOpen(false);
       clearCart();
       showToast('Payment verified & order placed successfully!');
-      setActiveStep('confirmation');
-
-      setTimeout(() => {
-        triggerConfetti();
-      }, 100);
+      try {
+        sessionStorage.setItem('cx_last_order', verifiedOrder.orderNumber);
+      } catch {}
+      router.replace(`/order/${encodeURIComponent(verifiedOrder.orderNumber)}?confirmed=1`);
     } catch (err: any) {
       console.error('Order placement error:', err);
       const msg = err?.message || 'Payment verification could not be completed.';
@@ -800,11 +799,10 @@ export default function CheckoutPage() {
 
       clearCart();
       showToast('Order placed successfully!');
-      setActiveStep('confirmation');
-
-      setTimeout(() => {
-        triggerConfetti();
-      }, 100);
+      try {
+        sessionStorage.setItem('cx_last_order', order.orderNumber);
+      } catch {}
+      router.replace(`/order/${encodeURIComponent(order.orderNumber)}?confirmed=1`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The order could not be placed.';
       setSubmitError(message);
@@ -1039,21 +1037,41 @@ export default function CheckoutPage() {
                   <p style={{ fontSize: 13, color: '#5d5d64', marginBottom: 20 }}>
                     Add a few genuine parts or accessories before checking out.
                   </p>
-                  <Link
-                    href="/shop"
-                    style={{
-                      display: 'inline-block',
-                      background: 'var(--red, #e2231a)',
-                      color: '#fff',
-                      padding: '10px 24px',
-                      borderRadius: 10,
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Browse Shop
-                  </Link>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Link
+                      href="/shop"
+                      style={{
+                        display: 'inline-block',
+                        background: 'var(--red, #e2231a)',
+                        color: '#fff',
+                        padding: '10px 24px',
+                        borderRadius: 10,
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Browse Shop
+                    </Link>
+                    {orders.length > 0 && (
+                      <Link
+                        href={`/order/${encodeURIComponent(orders[0].orderNumber)}`}
+                        style={{
+                          display: 'inline-block',
+                          background: '#ffffff',
+                          color: '#0e0e10',
+                          border: '1px solid #d4d4d8',
+                          padding: '10px 20px',
+                          borderRadius: 10,
+                          fontSize: 13.5,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        View Recent Order (#{orders[0].orderNumber})
+                      </Link>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="inf-ck-grid">

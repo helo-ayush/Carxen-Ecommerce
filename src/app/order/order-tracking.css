@@ -476,3 +476,52 @@
   background: #f4f3ef;
   border-color: #0e0e10;
 }
+
+
+/* Confetti Canvas */
+.trk-confetti-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Confirmed Celebration Banner */
+.trk-confirm-banner {
+  animation: trkSlideDown 0.4s ease-out;
+}
+
+@keyframes trkSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media print {
+  .trk-nav-breadcrumb,
+  .trk-actions-bar,
+  .trk-copy-btn,
+  .trk-confetti-canvas,
+  footer,
+  header {
+    display: none !important;
+  }
+  .trk-page-wrap {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .trk-card {
+    box-shadow: none !important;
+    border: 1px solid #d4d4d8 !important;
+    break-inside: avoid;
+  }
+}

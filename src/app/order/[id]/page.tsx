@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useCallback, useEffect, useRef, useState, Suspense } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
@@ -33,6 +33,7 @@ import {
   Phone,
   ArrowLeft,
   Sparkles,
+  Printer,
 } from 'lucide-react';
 
 import '../order-tracking.css';
@@ -61,10 +62,12 @@ function formatDate(dateStr?: string | null) {
   });
 }
 
-export default function OrderTrackingPage() {
+function OrderTrackingContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const rawOrderNumber = params?.id;
   const orderNumber = Array.isArray(rawOrderNumber) ? rawOrderNumber[0] : rawOrderNumber;
+  const isConfirmed = searchParams.get('confirmed') === '1' || searchParams.get('confirmed') === 'true';
 
   const { orders, products, showToast } = useApp();
 
@@ -72,6 +75,94 @@ export default function OrderTrackingPage() {
   const [loadState, setLoadState] = useState<OrderLoadState>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
+
+  // Confetti Canvas ref
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (isConfirmed && typeof window !== 'undefined') {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#e2231a', '#ff4d4d', '#10b981', '#f59e0b', '#0e0e10', '#ffffff', '#fbbf24'];
+      const particles: Array<{
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        size: number;
+        rotation: number;
+        vRot: number;
+        color: string;
+        shape: string;
+        opacity: number;
+      }> = [];
+
+      for (let i = 0; i < 140; i++) {
+        particles.push({
+          x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+          y: canvas.height * 0.35,
+          vx: (Math.random() - 0.5) * 16,
+          vy: -Math.random() * 14 - 4,
+          size: Math.random() * 8 + 5,
+          rotation: Math.random() * 360,
+          vRot: (Math.random() - 0.5) * 12,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          shape: Math.random() > 0.4 ? 'rect' : 'circle',
+          opacity: 1,
+        });
+      }
+
+      let frame = 0;
+      let animId: number;
+      const render = () => {
+        frame++;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.35;
+          p.vx *= 0.985;
+          p.rotation += p.vRot;
+
+          if (frame > 120) {
+            p.opacity = Math.max(0, 1 - (frame - 120) / 100);
+          }
+
+          ctx.save();
+          ctx.globalAlpha = p.opacity;
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+
+          if (p.shape === 'rect') {
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        });
+
+        if (frame < 220) {
+          animId = requestAnimationFrame(render);
+        }
+      };
+
+      animId = requestAnimationFrame(render);
+      return () => {
+        if (animId) cancelAnimationFrame(animId);
+      };
+    }
+  }, [isConfirmed]);
 
   // Look up in AppContext saved order history first
   const localOrder: CustomerOrderHistoryRecord | undefined = orders.find(
@@ -124,11 +215,8 @@ export default function OrderTrackingPage() {
   }, [fetchOrder]);
 
   const trackingNum = localOrder?.trackingNumber || '';
-
-  const carrier = localOrder?.carrier || 'CarXen Delivery';
-
+  const carrier = localOrder?.carrier || 'CarXen Express Delivery';
   const trackingUrl = localOrder?.trackingUrl;
-
   const estimatedDelivery = localOrder?.estimatedDelivery || '';
 
   const customerName =
@@ -187,6 +275,9 @@ export default function OrderTrackingPage() {
 
   return (
     <div style={{ background: 'var(--bg, #f4f3ef)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Confetti canvas */}
+      <canvas ref={canvasRef} className="trk-confetti-canvas" />
+
       <main style={{ flex: '1 0 auto' }}>
         <div className="trk-page-wrap">
           {/* Breadcrumb Navigation */}
@@ -198,10 +289,85 @@ export default function OrderTrackingPage() {
             <span style={{ color: '#0e0e10' }}>Tracking #{orderNumber}</span>
           </nav>
 
+          {/* CELEBRATION CONFIRMATION BANNER */}
+          {isConfirmed && (
+            <div
+              className="trk-confirm-banner"
+              style={{
+                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                color: '#ffffff',
+                borderRadius: '14px',
+                padding: '22px 26px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '18px',
+                flexWrap: 'wrap',
+                boxShadow: '0 10px 25px -5px rgba(5, 150, 105, 0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '12px', flexShrink: 0 }}>
+                  <CheckCircle2 size={30} color="#ffffff" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 4px 0', color: '#ffffff' }}>
+                    Order Confirmed!
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '13.5px', color: 'rgba(255,255,255,0.92)', lineHeight: 1.5 }}>
+                    Thank you for choosing CARXEN, <strong>{customerName}</strong>. Your order <strong>#{orderNumber}</strong> has been received and forwarded to our fulfillment center.
+                    This receipt is permanent, reloadable, and registered to your account.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    background: '#ffffff',
+                    color: '#047857',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                  }}
+                >
+                  <Printer size={15} />
+                  <span>Print Slip</span>
+                </button>
+                <Link
+                  href="/shop"
+                  style={{
+                    background: 'rgba(255,255,255,0.18)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>Continue Shopping &rarr;</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Header Row */}
           <div className="trk-header-row">
             <div className="trk-title-group">
-              <h1>Order Tracking</h1>
+              <h1>Order Tracking &amp; Receipt</h1>
               <p>
                 Order #{orderNumber} · Placed {formatDate(placedAtDate)}
               </p>
@@ -482,5 +648,19 @@ export default function OrderTrackingPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function OrderTrackingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ background: 'var(--bg, #f4f3ef)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#0e0e10' }}>Loading tracking details…</div>
+        </div>
+      }
+    >
+      <OrderTrackingContent />
+    </Suspense>
   );
 }
