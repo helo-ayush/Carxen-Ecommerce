@@ -135,6 +135,8 @@ function AccountContent() {
     addGarageVehicle,
     updateGarageVehicle,
     deleteGarageVehicle,
+    vehicleBrands,
+    getModelsForBrand,
   } = useApp();
 
   const searchParams = useSearchParams();
@@ -170,6 +172,7 @@ function AccountContent() {
     isDefault: false,
   });
   const [isCustomBrand, setIsCustomBrand] = useState(false);
+  const [isCustomModel, setIsCustomModel] = useState(false);
 
   // Modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -3180,23 +3183,7 @@ function AccountContent() {
                       background: '#fff',
                     }}
                   >
-                    {[
-                      'Porsche',
-                      'BMW',
-                      'Mercedes-Benz',
-                      'Audi',
-                      'Toyota',
-                      'Maruti Suzuki',
-                      'Hyundai',
-                      'Tata',
-                      'Mahindra',
-                      'Kia',
-                      'Honda',
-                      'Ford',
-                      'Ferrari',
-                      'Lamborghini',
-                      'Volkswagen',
-                    ].map((brand) => (
+                    {vehicleBrands.map((brand) => (
                       <option key={brand} value={brand}>
                         {brand}
                       </option>
@@ -3207,14 +3194,47 @@ function AccountContent() {
 
               {/* Model */}
               <div className="ac-field">
-                <label>Model &amp; Generation</label>
-                <input
-                  type="text"
-                  value={vehicleForm.m}
-                  onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
-                  placeholder="e.g. 911 GT3 (992), M3 Competition, Fortuner"
-                  required
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ margin: 0 }}>Model &amp; Generation</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomModel(!isCustomModel)}
+                    style={{ fontSize: '11.5px', color: '#e2231a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    {isCustomModel ? 'Choose from list' : '+ Enter custom model'}
+                  </button>
+                </div>
+                {isCustomModel || !getModelsForBrand(vehicleForm.b).length ? (
+                  <input
+                    type="text"
+                    value={vehicleForm.m}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
+                    placeholder="e.g. Creta, Thar, Scorpio N, Fortuner"
+                    required
+                  />
+                ) : (
+                  <select
+                    value={vehicleForm.m}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid #d4d4d8',
+                      padding: '0 10px',
+                      fontSize: '13.5px',
+                      background: '#fff',
+                    }}
+                    required
+                  >
+                    <option value="">Select {vehicleForm.b || 'car'} model...</option>
+                    {getModelsForBrand(vehicleForm.b).map((mod) => (
+                      <option key={mod} value={mod}>
+                        {mod}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Year & Fuel */}

@@ -143,6 +143,8 @@ export default function HomePage() {
     catalogError,
     retryCatalog,
     storefrontConfig,
+    vehicleBrands,
+    getModelsForBrand,
   } = useApp();
 
   const heroConfig = storefrontConfig?.hero;
@@ -349,7 +351,7 @@ export default function HomePage() {
   const [selectedYear, setSelectedYear] = useState('');
   const [fitmentResult, setFitmentResult] = useState<{ count: number; text: string } | null>(null);
 
-  const availableModels = selectedBrand ? VEHICLES[selectedBrand] || [] : [];
+  const availableModels = selectedBrand ? getModelsForBrand(selectedBrand) : [];
   const years = Array.from({ length: 9 }, (_, i) => String(2026 - i));
 
   const handleCheckFitment = () => {
@@ -1034,7 +1036,7 @@ export default function HomePage() {
                       }}
                     >
                       <option value="">Choose your brand</option>
-                      {Object.keys(VEHICLES).map((b) => (
+                      {vehicleBrands.map((b) => (
                         <option key={b} value={b}>{b}</option>
                       ))}
                     </select>

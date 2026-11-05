@@ -71,13 +71,14 @@ export interface Product {
 // Product records are loaded from the storefront API. The remaining values are
 // presentation constants used by fitment, filters, reviews, and product UI.
 export const VEHICLES: Record<string, string[]> = {
-  'Maruti Suzuki': ['Swift', 'Baleno', 'Brezza', 'Dzire', 'Fronx'],
-  'Hyundai': ['Creta', 'i20', 'Venue', 'Verna'],
-  'Tata': ['Nexon', 'Punch', 'Harrier', 'Altroz'],
-  'Mahindra': ['Thar', 'Scorpio-N', 'XUV700', 'XUV 3XO'],
-  'Kia': ['Seltos', 'Sonet', 'Carens'],
-  'Toyota': ['Innova', 'Fortuner', 'Hyryder'],
-  'Honda': ['City', 'Amaze', 'Elevate'],
+  Mahindra: ['Scorpio N', 'Thar', 'Thar Roxx', 'XUV700', 'XUV 3X0', 'Bolero'],
+  Tata: ['Nexon', 'Punch', 'Harrier', 'Safari', 'Altroz', 'Tiago', 'Curvv'],
+  Hyundai: ['Creta', 'Venue', 'i20', 'Verna', 'Tucson', 'Alcazar', 'Exter', 'Aura'],
+  MG: ['Comet EV', 'Hector', 'Astor', 'ZS EV', 'Windsor EV'],
+  'Maruti Suzuki': ['Swift', 'Baleno', 'Brezza', 'Dzire', 'Ertiga', 'Grand Vitara', 'Fronx', 'Jimny'],
+  Toyota: ['Fortuner', 'Innova Crysta', 'Innova Hycross', 'Urban Cruiser Hyryder', 'Glanza'],
+  Honda: ['City', 'Amaze', 'Elevate'],
+  Kia: ['Seltos', 'Sonet', 'Carens', 'EV6', 'Carnival'],
 };
 
 export const SERIES_LIST: [string, string][] = [

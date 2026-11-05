@@ -12,7 +12,7 @@ import {
   isSteeringCategory,
   normalizeCategoryKey,
 } from '@/lib/storefront/categories';
-import { fitBadgeText, fitsVehicle } from '@/lib/storefront/fitment';
+import { fitBadgeText, fitsVehicle, readFitment } from '@/lib/storefront/fitment';
 import { CatalogState } from '@/components/CatalogState';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
@@ -150,12 +150,19 @@ function ShopContent() {
     catalogStatus,
     catalogError,
     retryCatalog,
+    vehicleBrands,
+    inventoryVehicles,
   } = useApp();
 
-  // Active vehicle model of customer
+  // Active vehicle model of customer (resolved dynamically from garage or inventory)
   const activeCar = useMemo(() => {
-    return car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
-  }, [car]);
+    if (car) return car;
+    if (inventoryVehicles && inventoryVehicles.length > 0) {
+      const first = inventoryVehicles[0];
+      return { b: first.brand, m: first.models[0] || 'Vehicle', y: '2024', f: 'Petrol' };
+    }
+    return { b: 'Mahindra', m: 'Scorpio N', y: '2024', f: 'Petrol' };
+  }, [car, inventoryVehicles]);
 
   const vehicleTag = activeCar.m || 'Creta';
 
@@ -193,6 +200,7 @@ function ShopContent() {
 
   const [category, setCategory] = useState(() => (catParam === 'all' ? 'all' : normalizeCategoryKey(catParam)));
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
+  const [selectedVehicleBrand, setSelectedVehicleBrand] = useState<string>('all');
   const [priceTier, setPriceTier] = useState<string>('all');
   const [seriesFilter, setSeriesFilter] = useState(seriesParam);
   const [searchQuery, setSearchQuery] = useState(queryParam);
@@ -202,6 +210,7 @@ function ShopContent() {
 
   // Section collapse states
   const [expandedSections, setExpandedSections] = useState({
+    vehicle: true,
     tags: true,
     fit: true,
     price: true,
@@ -288,6 +297,19 @@ function ShopContent() {
       const matchCat = category === 'all' || p.c === category;
       const matchFit =
         fitType === 'all' || (fitType === 'c') === isCustomFit(p);
+
+      if (selectedVehicleBrand !== 'all') {
+        const bQuery = selectedVehicleBrand.toLowerCase();
+        const fit = readFitment(p);
+        const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment).toLowerCase() : String(p.fitment || '').toLowerCase();
+        const nameStr = p.n.toLowerCase();
+        const brandMatch =
+          (fit.kind === 'vehicle' && fit.brand.toLowerCase() === bQuery) ||
+          fitmentStr.includes(bQuery) ||
+          nameStr.includes(bQuery);
+        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
+        if (!brandMatch && !isUniversal) return false;
+      }
       const matchPrice =
         !activePriceBand ||
         (p.p >= activePriceBand.min &&
@@ -344,6 +366,7 @@ function ShopContent() {
   }, [
     category,
     fitType,
+    selectedVehicleBrand,
     activePriceBand,
     seriesFilter,
     searchQuery,
@@ -358,7 +381,7 @@ function ShopContent() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, fitType, priceTier, seriesFilter, searchQuery, sortBy, dealsOnly]);
+  }, [category, fitType, selectedVehicleBrand, priceTier, seriesFilter, searchQuery, sortBy, dealsOnly]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
   const paginatedProducts = useMemo(() => {
@@ -369,6 +392,7 @@ function ShopContent() {
   const hasActiveFilters =
     category !== 'all' ||
     fitType !== 'all' ||
+    selectedVehicleBrand !== 'all' ||
     priceTier !== 'all' ||
     seriesFilter !== 'all' ||
     dealsOnly ||
@@ -386,6 +410,7 @@ function ShopContent() {
   const resetAllFilters = () => {
     setCategory('all');
     setFitType('all');
+    setSelectedVehicleBrand('all');
     setPriceTier('all');
     setSeriesFilter('all');
     setSearchQuery('');
@@ -497,6 +522,46 @@ function ShopContent() {
             </div>
 
             <div className="shop-filter-groups-scroll">
+              {/* Dynamic Vehicle Brand Section */}
+              <div className="shop-filter-group">
+                <button
+                  type="button"
+                  className="shop-filter-group-header"
+                  onClick={() => setExpandedSections((prev) => ({ ...prev, vehicle: !prev.vehicle }))}
+                  aria-expanded={expandedSections.vehicle}
+                >
+                  <div className="shop-filter-group-title">
+                    <CarFront style={{ width: 13, height: 13, color: '#0f172a' }} />
+                    <span>Vehicle Brand</span>
+                  </div>
+                  {expandedSections.vehicle ? (
+                    <ChevronUp className="shop-filter-chevron" />
+                  ) : (
+                    <ChevronDown className="shop-filter-chevron" />
+                  )}
+                </button>
+                {expandedSections.vehicle && (
+                  <div className="shop-filter-pills-wrap" style={{ gap: '5px' }}>
+                    {['all', ...vehicleBrands].map((b) => {
+                      const isSelected = selectedVehicleBrand === b;
+                      const label = b === 'all' ? 'All Brands' : b;
+                      return (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setSelectedVehicleBrand(isSelected && b !== 'all' ? 'all' : b)}
+                          className={`shop-pill-chip ${isSelected ? 'active' : ''}`}
+                          title={`Filter by ${label}`}
+                          style={{ padding: '4px 10px', fontSize: '11px' }}
+                        >
+                          <span>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Section 1: Search Tags */}
             {referenceTagsData.length > 0 && (
             <div className="shop-filter-group">

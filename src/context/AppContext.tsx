@@ -10,6 +10,12 @@ import React, {
 } from 'react';
 import type { Product } from '@/data/products';
 import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
+import {
+  loadActiveVehicles,
+  FALLBACK_VEHICLES,
+  FALLBACK_INVENTORY_VEHICLES,
+  type ActiveInventoryVehicle,
+} from '@/lib/storefront/vehicle-client';
 import { getEffectiveWholesaleUnitPrice, calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { supabase } from '@/lib/supabase/client';
 import type {
@@ -97,6 +103,11 @@ interface AppContextType {
   authLoading: boolean;
   car: Vehicle | null;
   garageVehicles: GarageVehicle[];
+  availableVehicles: Record<string, string[]>;
+  vehicleBrands: string[];
+  inventoryVehicles: ActiveInventoryVehicle[];
+  inventoryModels: string[];
+  getModelsForBrand: (brand: string) => string[];
   cart: Record<number, number>;
   cartCount: number;
   cartSubtotal: number;
@@ -200,6 +211,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
   const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
+  const [availableVehicles, setAvailableVehicles] = useState<Record<string, string[]>>(FALLBACK_VEHICLES);
+  const [vehicleBrands, setVehicleBrands] = useState<string[]>(Object.keys(FALLBACK_VEHICLES));
+  const [inventoryVehicles, setInventoryVehicles] = useState<ActiveInventoryVehicle[]>(FALLBACK_INVENTORY_VEHICLES);
+  const [inventoryModels, setInventoryModels] = useState<string[]>(
+    Array.from(new Set(FALLBACK_INVENTORY_VEHICLES.flatMap((v) => v.models))),
+  );
   const [b2bProfile, setB2bProfile] = useState<B2BProfile | null>(null);
   const [workspaceMode, setWorkspaceModeState] = useState<'retail' | 'wholesale'>('retail');
   const [wholesaleBasket, setWholesaleBasket] = useState<Record<number, number>>({});
@@ -220,6 +237,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
   }, []);
+
+  // Load active vehicle makes and models from VEDA / Storefront endpoint
+  useEffect(() => {
+    const controller = new AbortController();
+    loadActiveVehicles(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (data && Array.isArray(data.brands) && data.brands.length > 0) {
+          setVehicleBrands(data.brands);
+          setAvailableVehicles(data.modelsByBrand);
+          setInventoryVehicles(data.inventoryVehicles);
+          setInventoryModels(data.inventoryModels);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const getModelsForBrand = useCallback(
+    (brand: string): string[] => {
+      if (!brand) return [];
+      const trimmed = brand.trim();
+      return availableVehicles[trimmed] || [];
+    },
+    [availableVehicles],
+  );
 
   const isWholesaleApproved = b2bProfile?.status === 'APPROVED';
   const isWholesalePending = b2bProfile?.status === 'PENDING';
@@ -1663,6 +1706,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateGstBilling,
         setVehicle,
         garageVehicles,
+        availableVehicles,
+        vehicleBrands,
+        inventoryVehicles,
+        inventoryModels,
+        getModelsForBrand,
         addGarageVehicle,
         updateGarageVehicle,
         deleteGarageVehicle,

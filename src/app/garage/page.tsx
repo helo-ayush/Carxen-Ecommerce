@@ -4,18 +4,17 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
-import { VEHICLES } from '@/data/products';
 
 export default function GaragePage() {
   const router = useRouter();
-  const { car, setVehicle } = useApp();
+  const { car, setVehicle, vehicleBrands, getModelsForBrand } = useApp();
 
   const [brand, setBrand] = useState(car?.b || '');
   const [model, setModel] = useState(car?.m || '');
   const [year, setYear] = useState(car?.y || '');
   const [fuel, setFuel] = useState(car?.f || 'Petrol');
 
-  const models = brand ? VEHICLES[brand] || [] : [];
+  const models = brand ? getModelsForBrand(brand) : [];
   const years = Array.from({ length: 9 }, (_, i) => String(2026 - i));
   const fuels = ['Petrol', 'Diesel', 'CNG', 'Electric'];
 
@@ -57,7 +56,7 @@ export default function GaragePage() {
 
         <p className="gr-h">Brand</p>
         <div className="gr-brands">
-          {Object.keys(VEHICLES).map((b) => (
+          {vehicleBrands.map((b) => (
             <button
               key={b}
               className={`gr-t ${brand === b ? 'on' : ''}`}

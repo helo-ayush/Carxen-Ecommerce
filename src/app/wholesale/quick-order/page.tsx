@@ -9,6 +9,7 @@ import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
+import { readFitment } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { CatalogState } from '@/components/CatalogState';
 import { Plus, Minus, X, ArrowRight, Check } from 'lucide-react';
@@ -31,6 +32,7 @@ export default function WholesaleQuickOrderPage() {
     addToWholesaleBasket,
     b2bProfile,
     showToast,
+    vehicleBrands,
   } = useApp();
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function WholesaleQuickOrderPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
   const categories = useMemo(() => {
     const map = new Map<string, string>();
     for (const product of products) {
@@ -64,6 +67,19 @@ export default function WholesaleQuickOrderPage() {
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       if (selectedCategory !== 'all' && p.c !== selectedCategory) return false;
+
+      if (selectedBrand !== 'All Brands') {
+        const brandQuery = selectedBrand.toLowerCase();
+        const fit = readFitment(p);
+        const fitmentStr = typeof p.fitment === 'object' ? JSON.stringify(p.fitment).toLowerCase() : String(p.fitment || '').toLowerCase();
+        const nameStr = p.n.toLowerCase();
+        const brandMatch =
+          (fit.kind === 'vehicle' && fit.brand.toLowerCase() === brandQuery) ||
+          fitmentStr.includes(brandQuery) ||
+          nameStr.includes(brandQuery);
+        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
+        if (!brandMatch && !isUniversal) return false;
+      }
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchName = p.n.toLowerCase().includes(q);
@@ -74,7 +90,7 @@ export default function WholesaleQuickOrderPage() {
       }
       return true;
     });
-  }, [products, selectedCategory, search]);
+  }, [products, selectedCategory, selectedBrand, search]);
 
   if (authLoading || !user || !isWholesaleApproved) {
     return null;
@@ -260,6 +276,22 @@ export default function WholesaleQuickOrderPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Dynamic Vehicle Brand Pills */}
+        <div className="ws-brand-chips-row">
+          <span className="ws-brand-chips-label">Vehicle Brand:</span>
+          {['All Brands', ...vehicleBrands].map((b) => (
+            <button
+              key={b}
+              type="button"
+              className={`ws-category-chip ${selectedBrand === b ? 'active' : ''}`}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
+              onClick={() => setSelectedBrand(b)}
+            >
+              {b}
+            </button>
+          ))}
         </div>
       </div>
 

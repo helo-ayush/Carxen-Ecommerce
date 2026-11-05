@@ -35,6 +35,8 @@ export default function WholesaleCatalogPage() {
     wholesaleBasketSubtotal,
     addToWholesaleBasket,
     showToast,
+    vehicleBrands: appVehicleBrands,
+    availableVehicles,
   } = useApp();
 
   useEffect(() => {
@@ -74,10 +76,16 @@ export default function WholesaleCatalogPage() {
     ];
   }, [products]);
 
-  // Vehicle Brands & Models aggregated dynamically from VEDA inventory
+  // Vehicle Brands & Models aggregated dynamically from VEDA inventory & registry
   const { vehicleBrands, modelsByBrand } = useMemo(() => {
-    const brandSet = new Set<string>();
+    const brandSet = new Set<string>(appVehicleBrands || []);
     const brandToModels = new Map<string, Set<string>>();
+
+    for (const [b, models] of Object.entries(availableVehicles || {})) {
+      brandSet.add(b);
+      if (!brandToModels.has(b)) brandToModels.set(b, new Set());
+      for (const m of models) brandToModels.get(b)!.add(m);
+    }
 
     for (const product of products) {
       const fit = readFitment(product);
