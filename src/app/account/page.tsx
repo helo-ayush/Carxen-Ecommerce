@@ -18,7 +18,6 @@ import {
   Package,
   MapPin,
   CarFront,
-  CreditCard,
   Settings2,
   Camera,
   Check,
@@ -45,7 +44,7 @@ import {
 } from 'lucide-react';
 import './account.css';
 
-type AccountTab = 'orders' | 'addresses' | 'garage' | 'payments' | 'security';
+type AccountTab = 'orders' | 'addresses' | 'garage' | 'security';
 type OrderFilter = 'ALL' | 'ACTIVE' | 'DELIVERED';
 
 const ORDER_EVENT_LABELS: Record<string, string> = {
@@ -119,10 +118,6 @@ function AccountContent() {
     orders,
     cancelOrder,
     openSupportModal,
-    savedPayments,
-    addSavedPayment,
-    deleteSavedPayment,
-    setDefaultPayment,
     communicationPrefs,
     updateCommunicationPrefs,
     b2bProfile,
@@ -154,7 +149,6 @@ function AccountContent() {
       tabParam === 'garage' ||
       tabParam === 'orders' ||
       tabParam === 'addresses' ||
-      tabParam === 'payments' ||
       tabParam === 'security'
     ) {
       setActiveTab(tabParam as AccountTab);
@@ -178,7 +172,6 @@ function AccountContent() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [trackingModalOrder, setTrackingModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
   const [invoiceModalOrder, setInvoiceModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
   const [cancelModalOrder, setCancelModalOrder] = useState<CustomerOrderHistoryRecord | null>(null);
@@ -218,13 +211,6 @@ function AccountContent() {
     postalCode: '',
     isPrimary: false,
   });
-
-  // Payment Form state
-  const [paymentType, setPaymentType] = useState<'card' | 'upi'>('card');
-  const [newCardNumber, setNewCardNumber] = useState('');
-  const [newCardName, setNewCardName] = useState('');
-  const [newCardExpiry, setNewCardExpiry] = useState('');
-  const [newUpiId, setNewUpiId] = useState('');
 
   // Password update form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -753,43 +739,6 @@ function AccountContent() {
     showToast(`Invoice for order #${order.orderNumber} downloaded!`);
   };
 
-  // Payment Add
-  const handleSavePaymentMethod = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (paymentType === 'card') {
-      const cleanDigits = newCardNumber.replace(/\D/g, '');
-      if (cleanDigits.length < 15) {
-        showToast('Please enter a valid card number');
-        return;
-      }
-      addSavedPayment({
-        type: 'card',
-        title: `${newCardName.trim() || 'Credit'} Card`,
-        last4OrVpa: cleanDigits.slice(-4),
-        expiry: newCardExpiry.trim() || '12/28',
-        brand: cleanDigits.startsWith('4') ? 'Visa' : 'Mastercard',
-        isDefault: savedPayments.length === 0,
-      });
-    } else {
-      if (!newUpiId.includes('@')) {
-        showToast('Please enter a valid UPI VPA (e.g. name@bank)');
-        return;
-      }
-      addSavedPayment({
-        type: 'upi',
-        title: 'UPI Payment',
-        last4OrVpa: newUpiId.trim(),
-        brand: 'UPI',
-        isDefault: savedPayments.length === 0,
-      });
-    }
-    setNewCardNumber('');
-    setNewCardName('');
-    setNewCardExpiry('');
-    setNewUpiId('');
-    setIsPaymentModalOpen(false);
-  };
-
   // Garage Vehicle Handlers
   const handleOpenAddVehicle = () => {
     setEditingVehicle(null);
@@ -1229,14 +1178,6 @@ function AccountContent() {
                 >
                   <CarFront size={15} />
                   My Garage
-                </button>
-                <button
-                  type="button"
-                  className={`ac-tab-item ${activeTab === 'payments' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('payments')}
-                >
-                  <CreditCard size={15} />
-                  Payment & Billing
                 </button>
                 <button
                   type="button"
@@ -2155,126 +2096,6 @@ function AccountContent() {
               )}
 
               {/* ========================================================= */}
-              {/* TAB 4: PAYMENT & BILLING                                  */}
-              {/* ========================================================= */}
-              {activeTab === 'payments' && (
-                <div style={{ maxWidth: '680px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#09090b' }}>
-                        Saved Payment Methods
-                      </h3>
-                      <p style={{ color: '#71717a', fontSize: '13px' }}>
-                        Quick checkout methods saved to your account.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="ac-btn-dark"
-                      onClick={() => setIsPaymentModalOpen(true)}
-                      style={{ height: '36px', fontSize: '13px' }}
-                    >
-                      <Plus size={14} />
-                      Add Method
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-                    {savedPayments.map((pm) => (
-                      <div
-                        key={pm.id}
-                        style={{
-                          background: '#fff',
-                          border: pm.isDefault ? '1.5px solid #18181b' : '1px solid #e4e4e7',
-                          borderRadius: '12px',
-                          padding: '16px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#71717a', textTransform: 'uppercase' }}>
-                            {pm.type === 'upi' ? 'UPI' : pm.brand || 'Card'}
-                          </span>
-                          {pm.isDefault && (
-                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef2f2', color: '#b91a12', border: '1px solid #fecaca', padding: '2px 6px', borderRadius: '4px' }}>
-                              Default
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#09090b' }}>
-                          {pm.type === 'card' ? `•••• •••• •••• ${pm.last4OrVpa}` : pm.last4OrVpa}
-                        </div>
-                        {pm.expiry && (
-                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>
-                            Expires {pm.expiry}
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f4f4f5' }}>
-                          {!pm.isDefault && (
-                            <button
-                              type="button"
-                              className="ac-btn-outline"
-                              onClick={() => setDefaultPayment(pm.id)}
-                              style={{ height: '28px', fontSize: '12px', padding: '0 8px' }}
-                            >
-                              Set Default
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="ac-btn-danger"
-                            onClick={() => deleteSavedPayment(pm.id)}
-                          >
-                            <Trash2 size={12} />
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Commercial B2B Partner Workspace Notice (only if user has a wholesale account) */}
-                  {(isWholesaleApproved || isWholesalePending || b2bProfile) && (
-                    <div
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '14px',
-                        padding: '18px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>Commercial Partner Workspace</span>
-                          <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                            B2B Portal
-                          </span>
-                        </div>
-                        <p style={{ color: '#64748b', fontSize: '12.5px', marginTop: '3px', margin: 0 }}>
-                          GSTIN tax credentials, legal company profile, and wholesale invoices are maintained in your B2B account.
-                        </p>
-                      </div>
-                      <Link
-                        href="/wholesale/account"
-                        className="ac-btn-outline"
-                        style={{ height: '34px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff' }}
-                      >
-                        <span>Manage B2B Profile</span>
-                        <ExternalLink size={13} />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ========================================================= */}
               {/* TAB 5: SETTINGS & SECURITY                                */}
               {/* ========================================================= */}
               {activeTab === 'security' && (
@@ -2395,6 +2216,44 @@ function AccountContent() {
                       </button>
                     </form>
                   </div>
+
+                  {/* Commercial B2B Partner Workspace Notice (only if user has a wholesale account) */}
+                  {(isWholesaleApproved || isWholesalePending || b2bProfile) && (
+                    <div
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '18px 20px',
+                        marginTop: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>Commercial Partner Workspace</span>
+                          <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            B2B Portal
+                          </span>
+                        </div>
+                        <p style={{ color: '#64748b', fontSize: '12.5px', marginTop: '3px', margin: 0 }}>
+                          GSTIN tax credentials, legal company profile, and wholesale invoices are maintained in your B2B account.
+                        </p>
+                      </div>
+                      <Link
+                        href="/wholesale/account"
+                        className="ac-btn-outline"
+                        style={{ height: '34px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff' }}
+                      >
+                        <span>Manage B2B Profile</span>
+                        <ExternalLink size={13} />
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -2621,119 +2480,6 @@ function AccountContent() {
                   style={{ height: '36px', fontSize: '13px' }}
                 >
                   Save Address
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* MODAL: ADD PAYMENT METHOD MODAL                                   */}
-      {/* ================================================================= */}
-      {isPaymentModalOpen && (
-        <div className="ac-dialog-overlay" onClick={() => setIsPaymentModalOpen(false)}>
-          <div className="ac-dialog-card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 600, color: '#09090b' }}>Add Payment Method</h3>
-              <button
-                type="button"
-                onClick={() => setIsPaymentModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
-              <button
-                type="button"
-                onClick={() => setPaymentType('card')}
-                className={paymentType === 'card' ? 'ac-btn-dark' : 'ac-btn-outline'}
-                style={{ flex: 1, height: '34px', fontSize: '13px' }}
-              >
-                <CreditCard size={13} />
-                Credit / Debit Card
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentType('upi')}
-                className={paymentType === 'upi' ? 'ac-btn-dark' : 'ac-btn-outline'}
-                style={{ flex: 1, height: '34px', fontSize: '13px' }}
-              >
-                ⚡ UPI ID (VPA)
-              </button>
-            </div>
-
-            <form onSubmit={handleSavePaymentMethod}>
-              {paymentType === 'card' ? (
-                <>
-                  <div className="ac-field">
-                    <label>Card Number</label>
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      value={newCardNumber}
-                      onChange={(e) => setNewCardNumber(e.target.value)}
-                      maxLength={19}
-                      required
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div className="ac-field" style={{ margin: 0 }}>
-                      <label>Cardholder Name</label>
-                      <input
-                        type="text"
-                        placeholder="Driver Name"
-                        value={newCardName}
-                        onChange={(e) => setNewCardName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="ac-field" style={{ margin: 0 }}>
-                      <label>Expiry (MM/YY)</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        value={newCardExpiry}
-                        onChange={(e) => setNewCardExpiry(e.target.value)}
-                        maxLength={5}
-                        required
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="ac-field">
-                  <label>UPI Virtual Payment Address</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. driver@okhdfcbank"
-                    value={newUpiId}
-                    onChange={(e) => setNewUpiId(e.target.value)}
-                    required
-                  />
-                  <small style={{ fontSize: '11.5px', color: '#71717a', marginTop: '2px' }}>
-                    Supports Google Pay, PhonePe, Paytm, BHIM and all banks.
-                  </small>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-                <button
-                  type="button"
-                  className="ac-btn-outline"
-                  onClick={() => setIsPaymentModalOpen(false)}
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="ac-btn-dark"
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  Save Method
                 </button>
               </div>
             </form>

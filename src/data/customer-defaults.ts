@@ -189,34 +189,7 @@ export const DEFAULT_ORDER_HISTORY: CustomerOrderHistoryRecord[] = [
   },
 ];
 
-export const DEFAULT_SAVED_PAYMENTS: SavedPaymentMethod[] = [
-  {
-    id: 'pm_upi_01',
-    type: 'upi',
-    title: 'Google Pay UPI',
-    last4OrVpa: 'aarav.speed@okhdfcbank',
-    brand: 'UPI',
-    isDefault: true,
-  },
-  {
-    id: 'pm_card_02',
-    type: 'card',
-    title: 'HDFC Regalia Gold Credit Card',
-    last4OrVpa: '4242',
-    expiry: '08/29',
-    brand: 'Visa',
-    isDefault: false,
-  },
-  {
-    id: 'pm_card_03',
-    type: 'card',
-    title: 'ICICI Sapphiro Metal Card',
-    last4OrVpa: '8891',
-    expiry: '11/28',
-    brand: 'Mastercard',
-    isDefault: false,
-  },
-];
+export const DEFAULT_SAVED_PAYMENTS: SavedPaymentMethod[] = [];
 
 export const DEFAULT_COMMUNICATION_PREFS: CommunicationPreferences = {
   whatsappUpdates: true,
