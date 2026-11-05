@@ -1,3 +1,4 @@
+import { verifySessionToken } from './session';
 import { getSupabaseAdmin } from './supabase-admin';
 import { getOrderStatusMessage, normalizeOrderStatus } from '@/lib/order-stages';
 import type { CustomerAddress, CustomerOrderHistoryRecord, OrderProgressStatus } from '@/types/customer';
@@ -135,18 +136,18 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 
   if (token) {
     try {
-      // 1. Try verifying as Supabase session token / JWT
-      const { data, error } = await supabase.auth.getUser(token);
-      if (!error && data?.user) {
-        authUser = data.user;
-      } else if (
-        typeof token === 'string' &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)
-      ) {
-        // 2. Direct session fallback: verify UUID directly against auth.users table
-        const { data: adminUserData, error: adminUserErr } = await supabase.auth.admin.getUserById(token);
+      // 1. Cryptographically verified HMAC-SHA256 session token
+      const sessionPayload = verifySessionToken(token);
+      if (sessionPayload?.sub) {
+        const { data: adminUserData, error: adminUserErr } = await supabase.auth.admin.getUserById(sessionPayload.sub);
         if (!adminUserErr && adminUserData?.user) {
           authUser = adminUserData.user;
+        }
+      } else {
+        // 2. Supabase session token / JWT
+        const { data, error } = await supabase.auth.getUser(token);
+        if (!error && data?.user) {
+          authUser = data.user;
         }
       }
     } catch (err) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPostgresPool } from '@/lib/server/pg-supabase-adapter';
+import { signSessionToken } from '@/lib/server/session';
 
 export async function POST(request: Request) {
   try {
@@ -46,6 +47,9 @@ export async function POST(request: Request) {
         );
       } catch {}
 
+      // Issue cryptographically signed HMAC-SHA256 session token
+      const sessionToken = signSessionToken(userRow.id, userRow.email || trimmedEmail);
+
       const response = NextResponse.json({
         success: true,
         user: {
@@ -54,12 +58,13 @@ export async function POST(request: Request) {
           name: fullName,
           fullName,
         },
-        token: userRow.id, // User ID acts as session token for direct DB auth
+        token: sessionToken,
       });
 
-      // 30 days persistent cookie
-      response.cookies.set('cx_session', userRow.id, {
-        httpOnly: false,
+      // 30 days persistent, secure, httpOnly session cookie
+      response.cookies.set('cx_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         path: '/',
         maxAge: 30 * 24 * 60 * 60,
         sameSite: 'lax',
@@ -77,4 +82,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

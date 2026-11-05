@@ -741,7 +741,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('cx_user_profile', JSON.stringify(constructed));
           if (result.token) {
             localStorage.setItem('cx_auth_token', result.token);
-            document.cookie = `cx_session=${encodeURIComponent(result.token)}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
           }
         } catch {}
         void fetchCustomerBackendProfile(result.token, result.user);
@@ -845,6 +844,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('cx_b2b_profile');
       localStorage.removeItem('cx_wholesale_basket');
       document.cookie = 'cx_session=; path=/; max-age=0; SameSite=Lax';
+      void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     } catch (e) {}
     showToast('Signed out successfully');
   };

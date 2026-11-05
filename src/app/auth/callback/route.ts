@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { resolveStoreMeta } from '@/lib/server/customer';
+import { signSessionToken } from '@/lib/server/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,15 +89,16 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  const cleanEmail = authUser.email?.trim().toLowerCase() || '';
+
   // Auto-provision or update customer record in ecommerce_customers
   try {
     const admin = getSupabaseAdmin();
-    const cleanEmail = authUser.email?.trim().toLowerCase();
 
     const fullName = (
       authUser.user_metadata?.full_name ||
       authUser.user_metadata?.name ||
-      cleanEmail?.split('@')[0] ||
+      cleanEmail.split('@')[0] ||
       'Driver'
     ).trim();
 
@@ -146,21 +148,16 @@ export async function GET(request: Request) {
         updatedAt: now,
       });
     }
-    // Set 30-day persistent session cookie so Google users stay logged in across reloads
-    response.cookies.set('cx_session', authUser.id, {
-      httpOnly: false,
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60,
-      sameSite: 'lax',
-    });
   } catch (dbErr) {
     console.error('[OAuth Callback] Customer auto-provision error:', dbErr);
     // Non-blocking: continue sign in even if secondary profile sync encounters an issue
   }
 
-  // Ensure persistent session cookie is always set even if DB sync threw
-  response.cookies.set('cx_session', authUser.id, {
-    httpOnly: false,
+  // Issue cryptographically signed HMAC-SHA256 session token with httpOnly cookie
+  const sessionToken = signSessionToken(authUser.id, cleanEmail);
+  response.cookies.set('cx_session', sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 30 * 24 * 60 * 60,
     sameSite: 'lax',
