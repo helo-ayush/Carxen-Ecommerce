@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     try {
       const { getSupabaseAdmin } = await import('@/lib/server/supabase-admin');
-      const { getAuthenticatedCustomer } = await import('@/lib/server/customer');
+      const { getAuthenticatedCustomer, persistShippingAddressToCustomer } = await import('@/lib/server/customer');
       const supabaseAdmin = getSupabaseAdmin();
 
       const { customer } = await getAuthenticatedCustomer(request);
@@ -119,6 +119,25 @@ export async function POST(request: Request) {
           createdAt: now,
           updatedAt: now,
         });
+
+        // Auto-persist delivery address to customer's permanent address book in ecommerce_addresses
+        try {
+          const shippingSnap = orderRow.shippingAddressSnapshot || payload.shippingAddress;
+          await persistShippingAddressToCustomer({
+            customerId,
+            customerEmail: payload.customer?.email || (shippingSnap as any)?.email,
+            recipientName: shippingSnap?.name || payload.customer?.name,
+            phone: shippingSnap?.phone || payload.customer?.phone,
+            addressLine1: shippingSnap?.addressLine1 || '',
+            addressLine2: shippingSnap?.addressLine2 || null,
+            city: shippingSnap?.city || 'Delhi',
+            state: shippingSnap?.state || 'Delhi',
+            postalCode: shippingSnap?.postalCode || '',
+            country: shippingSnap?.country || 'India',
+          });
+        } catch (addrErr) {
+          console.warn('Failed to auto-persist address after COD order:', addrErr);
+        }
       }
     } catch (linkErr) {
       console.warn('Could not link customer/shipment to placed order:', linkErr);

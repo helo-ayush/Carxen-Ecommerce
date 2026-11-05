@@ -258,6 +258,28 @@ export default function CheckoutPage() {
     }
   }, [addresses, selectedAddressId]);
 
+  // If address book is empty, prefill from latest placed order snapshot
+  useEffect(() => {
+    if (addresses.length === 0 && orders.length > 0) {
+      const lastOrder = orders.find((o) => o.shippingAddress?.addressLine1);
+      if (lastOrder?.shippingAddress) {
+        const s = lastOrder.shippingAddress;
+        setNewAddress((prev) => {
+          if (prev.addressLine1 || prev.postalCode) return prev;
+          return {
+            name: prev.name || s.name || user?.name || '',
+            phone: prev.phone || s.phone || user?.phone || '',
+            postalCode: prev.postalCode || s.postalCode || '',
+            city: prev.city || s.city || '',
+            state: prev.state || s.state || '',
+            addressLine1: prev.addressLine1 || s.addressLine1 || '',
+            addressLine2: prev.addressLine2 || s.addressLine2 || '',
+          };
+        });
+      }
+    }
+  }, [addresses, orders, user]);
+
   const cartEntries = Object.entries(cart)
     .map(([idStr, qty]) => ({
       product: products.find((p) => p.id === Number(idStr))!,

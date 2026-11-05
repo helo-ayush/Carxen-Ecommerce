@@ -15,7 +15,7 @@ import {
   ORDER_ACCESS_COOKIE_NAME,
   ORDER_ACCESS_COOKIE_PATH,
 } from '@/lib/storefront/order-access';
-import { getAuthenticatedCustomer, loadCustomerOrders } from '@/lib/server/customer';
+import { getAuthenticatedCustomer, loadCustomerOrders, persistShippingAddressToCustomer } from '@/lib/server/customer';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import type { WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
@@ -248,6 +248,25 @@ export async function POST(request: Request) {
         createdAt: now,
         updatedAt: now,
       });
+
+      // Auto-persist delivery address to customer's permanent address book in ecommerce_addresses
+      try {
+        const shippingSnap = orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress;
+        await persistShippingAddressToCustomer({
+          customerId,
+          customerEmail: parsedPayload.customer?.email || (shippingSnap as any)?.email,
+          recipientName: shippingSnap?.name || parsedPayload.customer?.name,
+          phone: shippingSnap?.phone || parsedPayload.customer?.phone,
+          addressLine1: shippingSnap?.addressLine1 || '',
+          addressLine2: shippingSnap?.addressLine2 || null,
+          city: shippingSnap?.city || 'Delhi',
+          state: shippingSnap?.state || 'Delhi',
+          postalCode: shippingSnap?.postalCode || '',
+          country: shippingSnap?.country || 'India',
+        });
+      } catch (addrErr) {
+        console.warn('Failed to auto-persist address after online payment:', addrErr);
+      }
     }
 
     // Step 9: Return response with secure order access cookie

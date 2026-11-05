@@ -486,3 +486,130 @@ export async function loadCustomerOrders(
     };
   });
 }
+
+
+/**
+ * Auto-persists a verified checkout delivery address to the customer's permanent address book in ecommerce_addresses.
+ * If the user checked out as a guest, links/creates the customer account by email so future signups/logins immediately find it.
+ * Intelligently deduplicates by addressLine1 and postalCode.
+ */
+export async function persistShippingAddressToCustomer({
+  customerId,
+  customerEmail,
+  recipientName,
+  phone,
+  addressLine1,
+  addressLine2,
+  city,
+  state,
+  postalCode,
+  country,
+  label,
+}: {
+  customerId?: string | null;
+  customerEmail?: string | null;
+  recipientName?: string | null;
+  phone?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  label?: string | null;
+}): Promise<void> {
+  const cleanLine1 = (addressLine1 || '').trim();
+  const cleanPostal = (postalCode || '').trim();
+  if (!cleanLine1 || !cleanPostal) return;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const cleanEmail = (customerEmail || '').trim().toLowerCase();
+    let targetCustId = customerId?.trim() || null;
+
+    if (!targetCustId && cleanEmail) {
+      const { data: matchedCust } = await supabase
+        .from('ecommerce_customers')
+        .select('id')
+        .ilike('email', cleanEmail)
+        .limit(1)
+        .maybeSingle();
+
+      if (matchedCust?.id) {
+        targetCustId = matchedCust.id;
+      } else {
+        // Auto-provision customer record so future logins immediately link orders & addresses
+        const { storeId, factoryId } = await resolveStoreMeta();
+        const newCustId = `cust_${crypto.randomUUID().replace(/-/g, '')}`;
+        const now = new Date().toISOString();
+        const { data: createdCust } = await supabase
+          .from('ecommerce_customers')
+          .insert({
+            id: newCustId,
+            storeId,
+            factoryId,
+            authUserId: null,
+            name: (recipientName || cleanEmail.split('@')[0] || 'Driver').trim(),
+            email: cleanEmail,
+            phone: phone?.trim() || null,
+            status: 'ACTIVE',
+            metadata: {
+              avatarUrl: '',
+              rewardPoints: 250,
+              joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            },
+            createdAt: now,
+            updatedAt: now,
+          })
+          .select('id')
+          .maybeSingle();
+
+        targetCustId = createdCust?.id || newCustId;
+      }
+    }
+
+    if (!targetCustId) return;
+
+    // Check existing addresses for this customer
+    const { data: existingAddresses } = await supabase
+      .from('ecommerce_addresses')
+      .select('id, line1, postalCode')
+      .eq('customerId', targetCustId);
+
+    const alreadyExists = (existingAddresses || []).some(
+      (a: any) =>
+        a.line1?.toLowerCase().trim() === cleanLine1.toLowerCase() &&
+        a.postalCode?.trim() === cleanPostal
+    );
+
+    if (alreadyExists) return;
+
+    const isFirst = !existingAddresses || existingAddresses.length === 0;
+    const { storeId, factoryId } = await resolveStoreMeta();
+    const newAddrId = `addr_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
+    const now = new Date().toISOString();
+
+    await supabase.from('ecommerce_addresses').insert({
+      id: newAddrId,
+      storeId,
+      factoryId,
+      customerId: targetCustId,
+      label: (label || (isFirst ? 'Primary Delivery' : 'Saved Address')).trim(),
+      addressType: 'SHIPPING',
+      recipientName: (recipientName || 'Driver').trim(),
+      phone: (phone || '').trim(),
+      line1: cleanLine1,
+      line2: addressLine2?.trim() || null,
+      city: (city || 'Delhi').trim(),
+      state: (state || 'Delhi').trim(),
+      postalCode: cleanPostal,
+      country: (country || 'India').trim(),
+      isDefault: isFirst,
+      metadata: {},
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (err) {
+    console.warn('Could not auto-persist shipping address in order flow:', err);
+  }
+}
