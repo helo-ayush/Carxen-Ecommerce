@@ -113,6 +113,7 @@ export default function CheckoutPage() {
     isVerifiedBuyer,
     orders,
     coupons,
+    storefrontConfig,
   } = useApp();
 
   const userName =
@@ -321,19 +322,54 @@ export default function CheckoutPage() {
   }, [appliedCoupon, cartSubtotal, buyerContext, coupons]);
 
   const couponDiscount = couponValidation?.valid ? couponValidation.discountAmount : 0;
-  const isEligibleForFreeStandard = cartSubtotal - couponDiscount >= 1499;
+  const discountedProductSubtotal = Math.max(0, cartSubtotal - couponDiscount);
 
-  const shippingCost =
-    shippingSpeed === 'exp'
-      ? 199
+  // Dynamic Shipping & Bulky Cargo Rules configured by Store Owner
+  const shippingConfig = storefrontConfig?.shipping;
+  const b2cShipping = shippingConfig?.b2c;
+  const standardFee = typeof b2cShipping?.standardFee === 'number' ? b2cShipping.standardFee : 99;
+  const freeDeliveryThreshold = typeof b2cShipping?.freeDeliveryThreshold === 'number' ? b2cShipping.freeDeliveryThreshold : 1499;
+  const expressAirEnabled = b2cShipping?.expressAirEnabled !== false;
+  const expressAirFee = typeof b2cShipping?.expressAirFee === 'number' ? b2cShipping.expressAirFee : 199;
+  const codHandlingFee = typeof b2cShipping?.codFee === 'number' ? b2cShipping.codFee : 0;
+  const enableFreeDeliveryHint = b2cShipping?.enableFreeDeliveryHint !== false;
+
+  const bulkyConfig = shippingConfig?.bulky;
+  const bulkyEnabled = bulkyConfig?.enabled !== false;
+  const bulkyFee = typeof bulkyConfig?.fee === 'number' ? bulkyConfig.fee : 250;
+  const bulkyNotice = bulkyConfig?.notice || 'Bulky cargo handling surcharge applied for heavy automotive accessories';
+  const bulkyCategories: string[] = Array.isArray(bulkyConfig?.categories)
+    ? bulkyConfig.categories
+    : ['Seat Covers', '7D & All-Weather Floor Mats', 'Boot & Trunk Liners'];
+
+  const hasBulkyItems = bulkyEnabled && cartEntries.some((entry) => {
+    const cat = (entry.product.c || '').trim().toLowerCase();
+    const name = (entry.product.n || '').trim().toLowerCase();
+    return bulkyCategories.some((bc) => {
+      const bcl = bc.trim().toLowerCase();
+      return (bcl && cat.includes(bcl)) || (bcl && bcl.includes(cat)) || (bcl && name.includes(bcl));
+    });
+  });
+  const bulkySurcharge = hasBulkyItems ? bulkyFee : 0;
+
+  const isEligibleForFreeStandard = freeDeliveryThreshold > 0
+    ? discountedProductSubtotal >= freeDeliveryThreshold
+    : false;
+
+  const activeShippingSpeed = expressAirEnabled ? shippingSpeed : 'std';
+  const baseShippingCost =
+    activeShippingSpeed === 'exp'
+      ? expressAirFee
       : isEligibleForFreeStandard
       ? 0
-      : 99;
+      : standardFee;
 
-  const finalTotal = cartSubtotal - couponDiscount + shippingCost;
+  const codFee = paymentOption === 'cod' ? codHandlingFee : 0;
+  const totalShippingAndHandling = baseShippingCost + bulkySurcharge + codFee;
+  const shippingCost = totalShippingAndHandling;
+  const finalTotal = discountedProductSubtotal + totalShippingAndHandling;
 
   // Statutory 18% GST Breakdown (B2C Retail prices are Inclusive of GST)
-  const discountedProductSubtotal = Math.max(0, cartSubtotal - couponDiscount);
   const taxableCartAmount = Math.round((discountedProductSubtotal / 1.18) * 100) / 100;
   const totalGstAmount = Math.round((discountedProductSubtotal - taxableCartAmount) * 100) / 100;
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
@@ -517,8 +553,8 @@ export default function CheckoutPage() {
 
       const verifiedOrder = data.order;
       const trackingNumber = data.trackingNumber || `CX-EXP-${Math.floor(100000 + Math.random() * 900000)}`;
-      const carrier = data.carrier || (shippingSpeed === 'exp' ? 'Blue Dart Air Express' : 'Delhivery Priority');
-      const estimatedDelivery = data.estimatedDelivery || (shippingSpeed === 'exp' ? 'Within 48 hours' : 'Within 3-4 days');
+      const carrier = data.carrier || (activeShippingSpeed === 'exp' ? 'CarXen Express Dedicated Line' : 'CarXen Dedicated Logistics Fleet');
+      const estimatedDelivery = data.estimatedDelivery || (activeShippingSpeed === 'exp' ? 'Within 48 hours' : 'Within 3-4 days');
 
       // Save to client order history
       saveOrderToHistory({
@@ -531,7 +567,7 @@ export default function CheckoutPage() {
         paymentMethod: 'Card',
         trackingNumber,
         carrier,
-        trackingUrl: `https://www.delhivery.com/track/package/${trackingNumber}`,
+        trackingUrl: `/order/${verifiedOrder.orderNumber}`,
         estimatedDelivery,
         shippingAddress: {
           name: params.selectedAddress.name || userName,
@@ -760,8 +796,8 @@ export default function CheckoutPage() {
 
       const order = await createStorefrontOrder(checkout);
       const trackingNumber = `CX-EXP-${Math.floor(100000 + Math.random() * 900000)}`;
-      const carrier = shippingSpeed === 'exp' ? 'Blue Dart Air Express' : 'Delhivery Priority';
-      const estimatedDelivery = shippingSpeed === 'exp' ? 'Within 48 hours' : 'Within 3-4 days';
+      const carrier = activeShippingSpeed === 'exp' ? 'CarXen Express Dedicated Line' : 'CarXen Dedicated Logistics Fleet';
+      const estimatedDelivery = activeShippingSpeed === 'exp' ? 'Within 48 hours' : 'Within 3-4 days';
 
       saveOrderToHistory({
         id: `order_${order.orderNumber}`,
@@ -773,7 +809,7 @@ export default function CheckoutPage() {
         paymentMethod: paymentMethodMap[paymentOption] || 'Cash on delivery',
         trackingNumber,
         carrier,
-        trackingUrl: `https://www.delhivery.com/track/package/${trackingNumber}`,
+        trackingUrl: `/order/${order.orderNumber}`,
         estimatedDelivery,
         shippingAddress: {
           name: selectedAddress.name || userName,
@@ -1257,20 +1293,80 @@ export default function CheckoutPage() {
                           </div>
                         )}
 
+                        {/* Dynamic Free Delivery Progress Bar */}
+                        {enableFreeDeliveryHint && freeDeliveryThreshold > 0 && (
+                          <div
+                            style={{
+                              marginTop: 12,
+                              marginBottom: 16,
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              background: isEligibleForFreeStandard ? 'rgba(16, 185, 129, 0.08)' : 'rgba(226, 35, 26, 0.05)',
+                              border: `1px solid ${isEligibleForFreeStandard ? 'rgba(16, 185, 129, 0.25)' : 'rgba(226, 35, 26, 0.18)'}`,
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 700, color: isEligibleForFreeStandard ? '#065f46' : '#991b1b' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Truck style={{ width: 16, height: 16, color: isEligibleForFreeStandard ? '#10b981' : 'var(--red, #e2231a)' }} />
+                                {isEligibleForFreeStandard
+                                  ? 'You unlocked FREE Standard Delivery!'
+                                  : `Add ${formatINR(freeDeliveryThreshold - discountedProductSubtotal)} more to unlock FREE Standard Delivery!`}
+                              </span>
+                              {isEligibleForFreeStandard && (
+                                <span style={{ fontSize: 11, background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: 20 }}>
+                                  UNLOCKED
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ width: '100%', height: 6, background: '#e2e8f0', borderRadius: 999, marginTop: 8, overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  width: `${Math.min(100, freeDeliveryThreshold > 0 ? (discountedProductSubtotal / freeDeliveryThreshold) * 100 : 100)}%`,
+                                  height: '100%',
+                                  background: isEligibleForFreeStandard ? '#10b981' : 'var(--red, #e2231a)',
+                                  borderRadius: 999,
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bulky / Heavy Cargo Notice */}
+                        {hasBulkyItems && (
+                          <div
+                            style={{
+                              marginBottom: 14,
+                              padding: '10px 14px',
+                              borderRadius: 10,
+                              background: 'rgba(245, 158, 11, 0.08)',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              fontSize: 12.5,
+                              color: '#92400e',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                            }}
+                          >
+                            <Package style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
+                            <span><strong>Bulky Cargo Handling:</strong> {bulkyNotice} (+{formatINR(bulkyFee)}).</span>
+                          </div>
+                        )}
+
                         {/* Shipping Speed Selection */}
                         <div style={{ marginTop: 8 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#0e0e10', marginBottom: 10 }}>
                             Choose Delivery Speed
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: expressAirEnabled ? '1fr 1fr' : '1fr', gap: 12 }}>
                             <div
                               onClick={() => setShippingSpeed('std')}
                               style={{
-                                border: `1.5px solid ${shippingSpeed === 'std' ? 'var(--red, #e2231a)' : '#e7e6e0'}`,
+                                border: `1.5px solid ${shippingSpeed === 'std' || !expressAirEnabled ? 'var(--red, #e2231a)' : '#e7e6e0'}`,
                                 borderRadius: 12,
                                 padding: '14px',
                                 cursor: 'pointer',
-                                background: shippingSpeed === 'std' ? 'rgba(226, 35, 26, 0.04)' : '#ffffff',
+                                background: shippingSpeed === 'std' || !expressAirEnabled ? 'rgba(226, 35, 26, 0.04)' : '#ffffff',
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13.5, color: '#0e0e10' }}>
@@ -1280,26 +1376,28 @@ export default function CheckoutPage() {
                                 {isEligibleForFreeStandard ? (
                                   <span style={{ color: '#10b981', fontWeight: 700 }}>FREE Shipping</span>
                                 ) : (
-                                  '₹99'
+                                  formatINR(standardFee)
                                 )}
                               </div>
                             </div>
 
-                            <div
-                              onClick={() => setShippingSpeed('exp')}
-                              style={{
-                                border: `1.5px solid ${shippingSpeed === 'exp' ? 'var(--red, #e2231a)' : '#e7e6e0'}`,
-                                borderRadius: 12,
-                                padding: '14px',
-                                cursor: 'pointer',
-                                background: shippingSpeed === 'exp' ? 'rgba(226, 35, 26, 0.04)' : '#ffffff',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13.5, color: '#0e0e10' }}>
-                                <Zap style={{ width: 16, height: 16, color: 'var(--red, #e2231a)' }} /> Express Air (48h)
+                            {expressAirEnabled && (
+                              <div
+                                onClick={() => setShippingSpeed('exp')}
+                                style={{
+                                  border: `1.5px solid ${shippingSpeed === 'exp' ? 'var(--red, #e2231a)' : '#e7e6e0'}`,
+                                  borderRadius: 12,
+                                  padding: '14px',
+                                  cursor: 'pointer',
+                                  background: shippingSpeed === 'exp' ? 'rgba(226, 35, 26, 0.04)' : '#ffffff',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13.5, color: '#0e0e10' }}>
+                                  <Zap style={{ width: 16, height: 16, color: 'var(--red, #e2231a)' }} /> Express Air (48h)
+                                </div>
+                                <div style={{ fontSize: 12, color: '#5d5d64', marginTop: 4 }}>{formatINR(expressAirFee)} &bull; Priority Dispatch</div>
                               </div>
-                              <div style={{ fontSize: 12, color: '#5d5d64', marginTop: 4 }}>₹199 &bull; Priority Dispatch</div>
-                            </div>
+                            )}
                           </div>
                         </div>
 
@@ -1359,7 +1457,7 @@ export default function CheckoutPage() {
                               </div>
                               <div className="inf-ck-ship-addr">
                                 {activeAddress?.addressLine1 || newAddress.addressLine1}, {activeAddress?.city || newAddress.city} &bull;{' '}
-                                {shippingSpeed === 'exp' ? 'Express Priority Air (₹199)' : isEligibleForFreeStandard ? 'Standard Delivery (Free)' : 'Standard Delivery (₹99)'}
+                                {activeShippingSpeed === 'exp' ? `Express Priority Air (${formatINR(expressAirFee)})` : isEligibleForFreeStandard ? 'Standard Delivery (Free)' : `Standard Delivery (${formatINR(standardFee)})`}{hasBulkyItems ? ` • Bulky Surcharge (${formatINR(bulkyFee)})` : ''}
                               </div>
                             </div>
                           </div>
@@ -2015,9 +2113,25 @@ export default function CheckoutPage() {
                           </>
                         )}
 
+                        {bulkySurcharge > 0 && (
+                          <div className="inf-ck-summary-row" style={{ fontSize: '12px', color: '#b45309' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Package style={{ width: 13, height: 13 }} /> Bulky Item Handling Fee
+                            </span>
+                            <span>{formatINR(bulkySurcharge)}</span>
+                          </div>
+                        )}
+
+                        {codFee > 0 && paymentOption === 'cod' && (
+                          <div className="inf-ck-summary-row" style={{ fontSize: '12px', color: '#64748b' }}>
+                            <span>COD Handling Fee</span>
+                            <span>{formatINR(codFee)}</span>
+                          </div>
+                        )}
+
                         <div className="inf-ck-summary-row">
                           <span>Delivery</span>
-                          <span>{shippingCost ? formatINR(shippingCost) : 'Free'}</span>
+                          <span>{baseShippingCost === 0 ? 'Free' : formatINR(baseShippingCost)}</span>
                         </div>
 
                         <div className="inf-ck-summary-row total">

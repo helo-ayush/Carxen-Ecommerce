@@ -18,6 +18,7 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
+  Package,
 } from 'lucide-react';
 import '@/components/storefront/cart-drawer.css';
 
@@ -39,6 +40,7 @@ export function CartDrawer() {
     showToast,
     isWholesaleApproved,
     b2bProfile,
+    storefrontConfig,
   } = useApp();
   const router = useRouter();
 
@@ -51,10 +53,35 @@ export function CartDrawer() {
       .filter((item) => !!item.product);
   }, [cart, products]);
 
-  const freeShippingThreshold = 1499;
+  // Dynamic Shipping & Bulky Cargo Configuration
+  const shippingConfig = storefrontConfig?.shipping;
+  const b2cShipping = shippingConfig?.b2c;
+  const standardFee = typeof b2cShipping?.standardFee === 'number' ? b2cShipping.standardFee : 99;
+  const freeShippingThreshold = typeof b2cShipping?.freeDeliveryThreshold === 'number' ? b2cShipping.freeDeliveryThreshold : 1499;
+  const enableFreeDeliveryHint = b2cShipping?.enableFreeDeliveryHint !== false;
+
+  const bulkyConfig = shippingConfig?.bulky;
+  const bulkyEnabled = bulkyConfig?.enabled !== false;
+  const bulkyFee = typeof bulkyConfig?.fee === 'number' ? bulkyConfig.fee : 250;
+  const bulkyCategories: string[] = Array.isArray(bulkyConfig?.categories)
+    ? bulkyConfig.categories
+    : ['Seat Covers', '7D & All-Weather Floor Mats', 'Boot & Trunk Liners'];
+
+  const hasBulkyItems = bulkyEnabled && cartEntries.some((entry) => {
+    const cat = (entry.product.c || '').trim().toLowerCase();
+    const name = (entry.product.n || '').trim().toLowerCase();
+    return bulkyCategories.some((bc) => {
+      const bcl = bc.trim().toLowerCase();
+      return (bcl && cat.includes(bcl)) || (bcl && bcl.includes(cat)) || (bcl && name.includes(bcl));
+    });
+  });
+  const bulkySurcharge = hasBulkyItems ? bulkyFee : 0;
+
   const amountLeft = Math.max(0, freeShippingThreshold - cartSubtotal);
-  const shippingPercent = Math.min(100, (cartSubtotal / freeShippingThreshold) * 100);
-  const hasFreeShipping = cartSubtotal >= freeShippingThreshold && cartSubtotal > 0;
+  const shippingPercent = freeShippingThreshold > 0 ? Math.min(100, (cartSubtotal / freeShippingThreshold) * 100) : 100;
+  const hasFreeShipping = freeShippingThreshold > 0 && cartSubtotal >= freeShippingThreshold && cartSubtotal > 0;
+  const estimatedShippingFee = hasFreeShipping ? 0 : standardFee;
+  const estimatedTotal = cartSubtotal + estimatedShippingFee + bulkySurcharge;
 
   // Curated quick add-ons (products not currently in cart)
   const upsellProducts = useMemo(() => {
@@ -120,36 +147,38 @@ export function CartDrawer() {
         </div>
 
         {/* Free Shipping Progress Banner */}
-        <div className="cx-cart-shipping-banner" id="ship">
-          <div className="cx-cart-shipping-status">
-            <div className="cx-cart-shipping-icon-text">
-              {hasFreeShipping ? (
-                <>
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>
-                    You unlocked <span className="cx-cart-shipping-highlight">Free Express Shipping</span>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Truck className="w-4 h-4 text-[#e2231a]" />
-                  <span>
-                    Add <span className="cx-cart-shipping-highlight">{formatINR(amountLeft)}</span> more for Free Shipping
-                  </span>
-                </>
+        {enableFreeDeliveryHint && freeShippingThreshold > 0 && (
+          <div className="cx-cart-shipping-banner" id="ship">
+            <div className="cx-cart-shipping-status">
+              <div className="cx-cart-shipping-icon-text">
+                {hasFreeShipping ? (
+                  <>
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>
+                      You unlocked <span className="cx-cart-shipping-highlight">Free Standard Delivery</span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="w-4 h-4 text-[#e2231a]" />
+                    <span>
+                      Add <span className="cx-cart-shipping-highlight">{formatINR(amountLeft)}</span> more for Free Shipping
+                    </span>
+                  </>
+                )}
+              </div>
+              {hasFreeShipping && (
+                <span className="cx-cart-shipping-unlocked-tag">UNLOCKED</span>
               )}
             </div>
-            {hasFreeShipping && (
-              <span className="cx-cart-shipping-unlocked-tag">UNLOCKED</span>
-            )}
+            <div className="cx-cart-progress-track">
+              <div
+                className={`cx-cart-progress-fill ${hasFreeShipping ? 'unlocked' : ''}`}
+                style={{ width: `${shippingPercent}%` }}
+              />
+            </div>
           </div>
-          <div className="cx-cart-progress-track">
-            <div
-              className={`cx-cart-progress-fill ${hasFreeShipping ? 'unlocked' : ''}`}
-              style={{ width: `${shippingPercent}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Scrollable Body */}
         <div className="cx-cart-body" id="dl">
@@ -312,15 +341,23 @@ export function CartDrawer() {
                   {formatINR(cartSubtotal)}
                 </span>
               </div>
+              {bulkySurcharge > 0 && (
+                <div className="cx-cart-summary-row" style={{ color: '#b45309', fontSize: 13 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Package className="w-3.5 h-3.5" /> Bulky Item Handling
+                  </span>
+                  <span>{formatINR(bulkySurcharge)}</span>
+                </div>
+              )}
               <div className="cx-cart-summary-row">
                 <span>Estimated Shipping</span>
                 <span className={hasFreeShipping ? 'font-bold text-emerald-600' : 'text-[#0e0e0f]'}>
-                  {hasFreeShipping ? 'FREE' : formatINR(99)}
+                  {hasFreeShipping ? 'FREE' : formatINR(standardFee)}
                 </span>
               </div>
               <div className="cx-cart-summary-row total">
                 <span>Total</span>
-                <span>{formatINR(cartSubtotal + (hasFreeShipping ? 0 : 99))}</span>
+                <span>{formatINR(estimatedTotal)}</span>
               </div>
             </div>
 

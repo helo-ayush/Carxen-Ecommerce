@@ -234,7 +234,62 @@ export async function POST(request: Request) {
     // When wholesale buyer selects COD, do not add GST; when Razorpay/Online, 18% GST is added
     const gstRate = isCod ? 0 : 0.18;
     const gstAmount = Math.round(discountedSubtotal * gstRate);
-    const totalOrderValue = discountedSubtotal + gstAmount;
+
+    // Calculate authoritative B2B Logistics & Commercial Freight from DB Store settings
+    const { storeId, factoryId } = await resolveStoreMeta();
+    let shippingAmount = 0;
+    try {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: storeRow } = await supabaseAdmin
+        .from('ecommerce_stores')
+        .select('settings')
+        .eq('id', storeId)
+        .maybeSingle();
+
+      const storeShipping = (storeRow?.settings as any)?.storefront?.shipping;
+      const b2b = storeShipping?.b2b;
+      const b2bMode = b2b?.mode || 'free_factory';
+      const flatFreightFee = typeof b2b?.flatFreightFee === 'number' ? b2b.flatFreightFee : 499;
+      const freeFreightThreshold = typeof b2b?.freeFreightThreshold === 'number' ? b2b.freeFreightThreshold : 15000;
+
+      const bulky = storeShipping?.bulky;
+      const bulkyEnabled = bulky?.enabled !== false;
+      const bulkyFee = typeof bulky?.fee === 'number' ? bulky.fee : 250;
+      const bulkyCategories: string[] = Array.isArray(bulky?.categories)
+        ? bulky.categories
+        : ['Seat Covers', '7D & All-Weather Floor Mats', 'Boot & Trunk Liners'];
+
+      const hasBulkyItems = bulkyEnabled && validatedItems.some((it) => {
+        const prod = catalog.find((x) => x.id === it.productId);
+        const cat = (prod?.c || '').trim().toLowerCase();
+        const name = (it.productName || '').trim().toLowerCase();
+        return bulkyCategories.some((bc) => {
+          const bcl = bc.trim().toLowerCase();
+          return (bcl && cat.includes(bcl)) || (bcl && bcl.includes(cat)) || (bcl && name.includes(bcl));
+        });
+      });
+      const bulkySurcharge = hasBulkyItems ? bulkyFee : 0;
+
+      let freight = 0;
+      if (b2bMode === 'flat_freight') {
+        if (freeFreightThreshold > 0 && discountedSubtotal >= freeFreightThreshold) {
+          freight = 0;
+        } else {
+          freight = flatFreightFee;
+        }
+      } else if (b2bMode === 'to_pay_delivery') {
+        freight = 0;
+      } else {
+        freight = 0;
+      }
+
+      shippingAmount = freight + bulkySurcharge;
+    } catch (e) {
+      console.warn('Could not authoritatively calculate B2B freight:', e);
+      shippingAmount = Number(body?.shippingAmount) || 0;
+    }
+
+    const totalOrderValue = discountedSubtotal + gstAmount + shippingAmount;
 
     // ACTION: Create Razorpay Order for B2B Checkout
     if (action === 'create-razorpay-order') {
@@ -418,7 +473,6 @@ export async function POST(request: Request) {
     ].filter(Boolean).join(' | ');
 
     // Insert authoritative wholesale order in ecommerce_orders with collision retry
-    const { storeId, factoryId } = await resolveStoreMeta();
     const MAX_ORDER_INSERT_RETRIES = 5;
     let orderInserted = false;
     let orderNumber = '';
@@ -449,7 +503,7 @@ export async function POST(request: Request) {
           subtotal,
           discountAmount: couponDiscount,
           taxAmount: gstAmount,
-          shippingAmount: 0,
+          shippingAmount,
           totalAmount: totalOrderValue,
           customerSnapshot,
           shippingAddressSnapshot: shippingSnapshot,
@@ -570,7 +624,7 @@ export async function POST(request: Request) {
         factoryId,
         shipmentNumber: `SHP-${orderNumber}`,
         status: 'CONFIRMED',
-        carrier: 'CarXen Factory Dedicated Line',
+        carrier: 'CarXen Dedicated Logistics Fleet',
         trackingNumber: `CX-B2B-EXP-${Math.floor(100000 + Math.random() * 900000)}`,
         shippingAddressSnapshot: shippingSnapshot,
         metadata: {

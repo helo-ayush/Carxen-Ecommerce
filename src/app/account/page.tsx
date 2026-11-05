@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
@@ -1662,7 +1662,7 @@ function AccountContent() {
                                      onClick={() => {
                                        openSupportModal({
                                          category: 'Order Cancellation Request',
-                                         initialMessage: `I would like to request cancellation for Order #${order.orderNumber} (Placed on ${order.placedAt ? new Date(order.placedAt).toLocaleDateString() : 'N/A'}, Total: ₹${order.totalAmount || 0}). The 6-hour relief window has elapsed. Please assist with cancellation in VEDA.`,
+                                         initialMessage: `I would like to request cancellation for Order #${order.orderNumber} (Placed on ${order.placedAt ? new Date(order.placedAt).toLocaleDateString() : 'N/A'}, Total: ₹${order.totalAmount || 0}). The 6-hour relief window has elapsed. Please assist with cancellation.`,
                                        });
                                      }}
                                      style={{
@@ -1679,7 +1679,7 @@ function AccountContent() {
                                        gap: '5px',
                                        cursor: 'pointer',
                                      }}
-                                     title="6-hour relief period has ended. Submit cancellation request directly to VEDA support."
+                                     title="6-hour relief period has ended. Submit cancellation request directly to CarXen support."
                                    >
                                      <HelpCircle size={13} />
                                      <span>Contact Support to Cancel</span>

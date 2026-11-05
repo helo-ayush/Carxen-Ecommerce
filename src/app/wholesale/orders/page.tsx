@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -424,7 +424,7 @@ export default function WholesaleOrdersPage() {
                               openSupportModal({
                                 category: 'Order Cancellation Request',
                                 businessName: b2bProfile?.businessName || b2bProfile?.tradeName || '',
-                                initialMessage: `I would like to request urgent cancellation for Consignment Order ${ord.orderNumber} (PO Reference: ${ord.poNumber || 'N/A'}, Total: ${formatINR(ord.totalAmount || 0)}). Please halt production scheduling and factory dispatch in VEDA.`,
+                                initialMessage: `I would like to request urgent cancellation for Consignment Order ${ord.orderNumber} (PO Reference: ${ord.poNumber || 'N/A'}, Total: ${formatINR(ord.totalAmount || 0)}). Please halt production scheduling and factory dispatch .`,
                               });
                             }}
                             className="ws-btn-secondary"
@@ -442,7 +442,7 @@ export default function WholesaleOrdersPage() {
                               cursor: 'pointer',
                               fontWeight: 600,
                             }}
-                            title="Transmit cancellation request directly to VEDA Factory Desk"
+                            title="Transmit cancellation request directly to CarXen Operations Desk"
                           >
                             <HelpCircle size={13} />
                             <span>Contact Support to Cancel</span>

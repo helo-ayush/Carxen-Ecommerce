@@ -90,6 +90,7 @@ export default function WholesaleOrderBasketPage() {
     saveOrderToHistory,
     showToast,
     coupons,
+    storefrontConfig,
   } = useApp();
 
   // Strict B2B verification gate
@@ -327,7 +328,56 @@ export default function WholesaleOrderBasketPage() {
   // When wholesale buyer selects COD, do not add GST; when Razorpay/Online, add 18% GST
   const isCod = paymentOption === 'cod';
   const gstAmount = isCod ? 0 : Math.round(discountedSubtotal * 0.18);
-  const totalOrderValue = discountedSubtotal + gstAmount;
+
+  // Dynamic B2B Logistics and Commercial Freight Rules
+  const shippingConfig = storefrontConfig?.shipping;
+  const b2bLogistics = shippingConfig?.b2b;
+  const b2bMode = b2bLogistics?.mode || 'free_factory'; // 'free_factory' | 'flat_freight' | 'to_pay_delivery'
+  const flatFreightFee = typeof b2bLogistics?.flatFreightFee === 'number' ? b2bLogistics.flatFreightFee : 499;
+  const freeFreightThreshold = typeof b2bLogistics?.freeFreightThreshold === 'number' ? b2bLogistics.freeFreightThreshold : 15000;
+  const estimatedDaysNotice = b2bLogistics?.estimatedDays || 'Within 3-5 Business Days across India via CarXen Dedicated Logistics Fleet';
+
+  // Bulky / Heavy Cargo Handling Surcharge
+  const bulkyConfig = shippingConfig?.bulky;
+  const bulkyEnabled = bulkyConfig?.enabled !== false;
+  const bulkyFee = typeof bulkyConfig?.fee === 'number' ? bulkyConfig.fee : 250;
+  const bulkyCategories: string[] = Array.isArray(bulkyConfig?.categories)
+    ? bulkyConfig.categories
+    : ['Seat Covers', '7D & All-Weather Floor Mats', 'Boot & Trunk Liners'];
+
+  const hasBulkyItems = bulkyEnabled && basketLineItems.some((item) => {
+    const cat = (item.product.c || '').trim().toLowerCase();
+    const name = (item.product.n || '').trim().toLowerCase();
+    return bulkyCategories.some((bc) => {
+      const bcl = bc.trim().toLowerCase();
+      return (bcl && cat.includes(bcl)) || (bcl && bcl.includes(cat)) || (bcl && name.includes(bcl));
+    });
+  });
+  const bulkySurcharge = hasBulkyItems ? bulkyFee : 0;
+
+  // Compute Freight according to Mode A, B, or C
+  let freightCost = 0;
+  let freightLabel = 'FREE (CarXen Factory Line)';
+
+  if (b2bMode === 'flat_freight') {
+    if (freeFreightThreshold > 0 && discountedSubtotal >= freeFreightThreshold) {
+      freightCost = 0;
+      freightLabel = 'FREE (Consignment Waiver)';
+    } else {
+      freightCost = flatFreightFee;
+      freightLabel = formatINR(flatFreightFee);
+    }
+  } else if (b2bMode === 'to_pay_delivery') {
+    freightCost = 0;
+    freightLabel = 'Billed on Delivery (To-Pay)';
+  } else {
+    // 'free_factory'
+    freightCost = 0;
+    freightLabel = 'FREE (CarXen Factory Dedicated Line)';
+  }
+
+  const totalLogisticsAmount = freightCost + bulkySurcharge;
+  const totalOrderValue = discountedSubtotal + gstAmount + totalLogisticsAmount;
 
   // Assigned coupon specifically for this buyer (from Veda promotions)
   const assignedCoupon: StorefrontCoupon | null = useMemo(() => {
@@ -409,6 +459,8 @@ export default function WholesaleOrderBasketPage() {
     discountAmount: couponDiscount,
     saveAddressToAccount,
     warehouseLabel: warehouseLabel.trim() || (addresses.length === 0 ? 'Central Workshop & Warehouse' : 'Regional Warehouse'),
+    shippingAmount: totalLogisticsAmount,
+    logisticsMode: b2bMode,
     ...extra,
   });
 
@@ -429,8 +481,8 @@ export default function WholesaleOrderBasketPage() {
           paymentStatus: placedOrder.paymentStatus === 'PAID' ? 'PAID' : 'PENDING',
           paymentMethod: methodLabel,
           trackingNumber: trackingNum,
-          carrier: 'CarXen Factory Dedicated Line',
-          trackingUrl: `https://www.delhivery.com/track/package/${trackingNum}`,
+          carrier: 'CarXen Dedicated Logistics Fleet',
+          trackingUrl: `/wholesale/orders`,
           estimatedDelivery: requestedDeliveryDate || 'Within 3-5 days',
           shippingAddress: {
             name: representativeName || businessName,
@@ -452,7 +504,7 @@ export default function WholesaleOrderBasketPage() {
           })),
           subtotal: totalSubtotal,
           discountAmount: couponDiscount,
-          shippingAmount: 0,
+          shippingAmount: totalLogisticsAmount,
           totalAmount: placedOrder.totalAmount || totalOrderValue,
           currency: 'INR',
           poNumber: poNumber.trim() || undefined,
@@ -1441,8 +1493,65 @@ export default function WholesaleOrderBasketPage() {
               <strong style={isCod ? { color: '#059669' } : undefined}>{isCod ? '₹0' : formatINR(gstAmount)}</strong>
             </div>
             <div className="ws-price-row">
-              <span>Factory Logistics</span>
-              <strong style={{ color: '#059669', fontSize: '12px' }}>FREE (Wholesale Partner)</strong>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Truck size={13} style={{ color: '#0284c7' }} /> Freight & Handling
+              </span>
+              <strong style={{ color: freightCost === 0 ? '#059669' : '#0f172a', fontSize: '12px' }}>
+                {freightLabel}
+              </strong>
+            </div>
+
+            {bulkySurcharge > 0 && (
+              <div className="ws-price-row" style={{ color: '#b45309' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Package size={13} /> Bulky Cargo Handling Surcharge
+                </span>
+                <strong>{formatINR(bulkySurcharge)}</strong>
+              </div>
+            )}
+
+            {/* Free Freight Motivational Hint for Option B */}
+            {b2bMode === 'flat_freight' && freeFreightThreshold > 0 && discountedSubtotal < freeFreightThreshold && (
+              <div
+                style={{
+                  margin: '10px 0',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  background: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  fontSize: '11px',
+                  color: '#0369a1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  lineHeight: 1.4,
+                }}
+              >
+                <Truck size={14} style={{ flexShrink: 0, color: '#0284c7' }} />
+                <span>
+                  Add <strong>{formatINR(freeFreightThreshold - discountedSubtotal)}</strong> more wholesale order value to qualify for <strong>FREE Commercial Freight</strong>!
+                </span>
+              </div>
+            )}
+
+            {/* CarXen Dedicated Logistics Fleet Notice */}
+            <div
+              style={{
+                margin: '8px 0 12px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: '11px',
+                color: '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                lineHeight: 1.4,
+              }}
+            >
+              <ShieldCheck size={14} style={{ flexShrink: 0, color: '#0284c7' }} />
+              <span><strong>Fleet Dispatch:</strong> {estimatedDaysNotice}</span>
             </div>
 
             {/* COUPON INPUT & ASSIGNED PROMOTIONS BOX */}

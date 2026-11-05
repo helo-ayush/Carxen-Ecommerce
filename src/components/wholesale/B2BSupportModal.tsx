@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -178,7 +178,7 @@ export function B2BSupportModal() {
                   Commercial Customer Support
                 </h3>
                 <span className="b2b-modal-sync-badge">
-                  VEDA Factory Operations Desk
+                  CarXen Operations Desk
                 </span>
               </div>
               <p className="b2b-modal-subtitle">

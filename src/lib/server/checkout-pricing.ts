@@ -19,6 +19,8 @@ export interface AuthoritativeTotalsResult {
   subtotal: number;
   couponDiscount: number;
   shippingCost: number;
+  baseShippingCost?: number;
+  bulkySurcharge?: number;
   finalTotal: number;
   amountInPaise: number;
   appliedCoupon: string | null;
@@ -80,18 +82,23 @@ export async function calculateAuthoritativeCartTotals(
     });
   }
 
-  // Fetch active store campaigns from DB if any
+  // Fetch active store campaigns and live shipping config from DB if any
   let dynamicCoupons: StorefrontCoupon[] = [];
+  let storeShippingConfig: any = null;
   try {
     const supabase = getSupabaseAdmin();
     const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
     const { data: store } = await supabase
       .from('ecommerce_stores')
-      .select('id')
+      .select('id, settings')
       .eq('slug', storeSlug)
       .maybeSingle();
 
     if (store) {
+      if (store.settings && typeof store.settings === 'object') {
+        storeShippingConfig = (store.settings as any)?.storefront?.shipping || null;
+      }
+
       const { data: campaigns } = await supabase
         .from('ecommerce_campaigns')
         .select('*')
@@ -148,22 +155,53 @@ export async function calculateAuthoritativeCartTotals(
     couponName = couponValidation.coupon?.name || code;
   }
 
-  // Authoritative Shipping Calculation
-  const isEligibleForFreeStandard = subtotal - couponDiscount >= 1499;
-  const shippingCost =
-    params.shippingSpeed === 'exp'
-      ? 199
+  // Authoritative Shipping & Bulky Surcharge Calculation
+  const b2c = storeShippingConfig?.b2c;
+  const standardFee = typeof b2c?.standardFee === 'number' ? b2c.standardFee : 99;
+  const freeThreshold = typeof b2c?.freeDeliveryThreshold === 'number' ? b2c.freeDeliveryThreshold : 1499;
+  const expressEnabled = b2c?.expressAirEnabled !== false;
+  const expressFee = typeof b2c?.expressAirFee === 'number' ? b2c.expressAirFee : 199;
+
+  const bulky = storeShippingConfig?.bulky;
+  const bulkyEnabled = bulky?.enabled !== false;
+  const bulkyFee = typeof bulky?.fee === 'number' ? bulky.fee : 250;
+  const bulkyCategories: string[] = Array.isArray(bulky?.categories)
+    ? bulky.categories
+    : ['Seat Covers', '7D & All-Weather Floor Mats', 'Boot & Trunk Liners'];
+
+  const hasBulkyItems = bulkyEnabled && lineItems.some((item) => {
+    const cat = (item.category || '').trim().toLowerCase();
+    const name = (item.name || '').trim().toLowerCase();
+    return bulkyCategories.some((bc) => {
+      const bcl = bc.trim().toLowerCase();
+      return (bcl && cat.includes(bcl)) || (bcl && bcl.includes(cat)) || (bcl && name.includes(bcl));
+    });
+  });
+  const bulkySurcharge = hasBulkyItems ? bulkyFee : 0;
+
+  const discountedProductSubtotal = Math.max(0, subtotal - couponDiscount);
+  const isEligibleForFreeStandard = freeThreshold > 0
+    ? discountedProductSubtotal >= freeThreshold
+    : false;
+
+  const requestedSpeed = expressEnabled && params.shippingSpeed === 'exp' ? 'exp' : 'std';
+  const baseShippingCost =
+    requestedSpeed === 'exp'
+      ? expressFee
       : isEligibleForFreeStandard
       ? 0
-      : 99;
+      : standardFee;
 
-  const finalTotal = Math.max(0, subtotal - couponDiscount + shippingCost);
+  const shippingCost = baseShippingCost + bulkySurcharge;
+  const finalTotal = Math.max(0, discountedProductSubtotal + shippingCost);
   const amountInPaise = Math.round(finalTotal * 100);
 
   return {
     subtotal,
     couponDiscount,
     shippingCost,
+    baseShippingCost,
+    bulkySurcharge,
     finalTotal,
     amountInPaise,
     appliedCoupon,

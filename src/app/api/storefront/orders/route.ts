@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         }
 
         const trackingNum = `CX-EXP-${Math.floor(100000 + Math.random() * 900000)}`;
-        const carrier = payload.shippingSpeed === 'exp' ? 'Blue Dart Air Express' : 'Delhivery Priority Express';
+        const carrier = payload.shippingSpeed === 'exp' ? 'CarXen Express Dedicated Line' : 'CarXen Dedicated Logistics Fleet';
         const now = new Date().toISOString();
 
         await supabaseAdmin.from('ecommerce_shipments').insert({
