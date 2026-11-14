@@ -67,6 +67,10 @@ export async function POST(request: Request) {
       // Unauthenticated / guest session fallback
     }
 
+    // Resolve store & factory context early so we can validate custom stock and attach DB productIds
+    const { storeId, factoryId } = await resolveStoreMeta();
+    const supabaseAdmin = getSupabaseAdmin();
+
     // Load catalog to get authoritative wholesale pricing & verify MOQs
     let catalog: Product[] = [];
     try {
@@ -74,11 +78,25 @@ export async function POST(request: Request) {
       catalog = catalogRes.products || [];
     } catch {}
 
+    const { data: dbProductRows } = await supabaseAdmin
+      .from('ecommerce_products')
+      .select('id, publicId, slug')
+      .eq('storeId', storeId);
+    const dbProductByPublicId = new Map<number, { id: string; slug: string }>();
+    for (const row of dbProductRows || []) {
+      const pubId = Number(row.publicId);
+      if (Number.isFinite(pubId)) {
+        dbProductByPublicId.set(pubId, { id: String(row.id), slug: String(row.slug || '') });
+      }
+    }
+
     let subtotal = 0;
     const validatedItems: {
       productId: number;
+      dbProductId: string | null;
       productName: string;
       sku: string;
+      productSlug: string | null;
       quantity: number;
       unitPrice: number;
       totalPrice: number;
@@ -100,6 +118,22 @@ export async function POST(request: Request) {
         );
       }
 
+      if (p.isCustomProduct && typeof p.stockCount === 'number') {
+        if (p.stockCount <= 0) {
+          return NextResponse.json(
+            { error: `Item "${p.n}" is currently out of stock.` },
+            { status: 409 }
+          );
+        }
+        if (qty > p.stockCount) {
+          return NextResponse.json(
+            { error: `Only ${p.stockCount} unit(s) of "${p.n}" are currently available.` },
+            { status: 409 }
+          );
+        }
+      }
+
+      const dbProd = dbProductByPublicId.get(p.id);
       const priceResult = calculateItemPriceWithOfferLimit(p, qty, true);
       const lineSubtotal = priceResult.totalPrice;
       const unitWholesalePrice = Math.round(lineSubtotal / qty);
@@ -107,8 +141,10 @@ export async function POST(request: Request) {
       subtotal += lineSubtotal;
       validatedItems.push({
         productId: p.id,
+        dbProductId: dbProd?.id || null,
         productName: p.n,
         sku: p.slug || `CX-SKU-${p.id}`,
+        productSlug: dbProd?.slug || p.slug || null,
         quantity: qty,
         unitPrice: unitWholesalePrice,
         totalPrice: lineSubtotal,
@@ -236,10 +272,8 @@ export async function POST(request: Request) {
     const gstAmount = Math.round(discountedSubtotal * gstRate);
 
     // Calculate authoritative B2B Logistics & Commercial Freight from DB Store settings
-    const { storeId, factoryId } = await resolveStoreMeta();
     let shippingAmount = 0;
     try {
-      const supabaseAdmin = getSupabaseAdmin();
       const { data: storeRow } = await supabaseAdmin
         .from('ecommerce_stores')
         .select('settings')
@@ -548,7 +582,9 @@ export async function POST(request: Request) {
       orderId,
       storeId,
       factoryId,
+      ...(it.dbProductId ? { productId: it.dbProductId } : {}),
       productPublicId: it.productId,
+      ...(it.productSlug ? { productSlug: it.productSlug } : {}),
       nameSnapshot: it.productName,
       skuSnapshot: it.sku,
       quantity: it.quantity,

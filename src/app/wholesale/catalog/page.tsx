@@ -190,7 +190,7 @@ export default function WholesaleCatalogPage() {
     });
   }, [products, selectedCategory, selectedBrand, selectedModel, search]);
 
-  const handleRowQtyChange = (productId: number, val: number, moq: number) => {
+  const handleRowQtyChange = (productId: number, val: number, moq: number, maxCustomQty: number | null = null) => {
     if (val <= 0) {
       setRowQuantities((prev) => {
         const copy = { ...prev };
@@ -199,40 +199,74 @@ export default function WholesaleCatalogPage() {
       });
       return;
     }
+    if (maxCustomQty !== null && maxCustomQty < moq) {
+      return;
+    }
+    const clamped = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(val, moq)) : Math.max(val, moq);
     setRowQuantities((prev) => ({
       ...prev,
-      [productId]: Math.max(val, moq),
+      [productId]: clamped,
     }));
   };
 
   const handleAddToBasket = (p: Product, customQty?: number) => {
     const moq = getProductMoq(p);
-    const qty = customQty || rowQuantities[p.id] || moq;
+    const maxCustomQty = p.isCustomProduct ? Math.max(0, Math.floor(p.stockCount ?? 0)) : null;
+    if (p.isCustomProduct && (p.inStock === false || (maxCustomQty ?? 0) <= 0)) {
+      showToast(`${p.n} is currently out of stock.`);
+      return;
+    }
+    if (maxCustomQty !== null && maxCustomQty < moq) {
+      showToast(`Only ${maxCustomQty} unit(s) available for ${p.n}, below MOQ (${moq}).`);
+      return;
+    }
+    const rawQty = customQty || rowQuantities[p.id] || moq;
+    const qty = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(moq, rawQty)) : Math.max(moq, rawQty);
     addToWholesaleBasket(p.id, qty);
-    showToast(`Added ${qty} units of "${p.n}" to Wholesale Order Basket.`);
   };
 
   const handleFillAllVisibleMoqs = () => {
     const next: Record<number, number> = { ...rowQuantities };
+    let filledCount = 0;
     filteredProducts.forEach((p) => {
       const moq = getProductMoq(p);
+      const maxCustomQty = p.isCustomProduct ? Math.max(0, Math.floor(p.stockCount ?? 0)) : null;
+      if (p.isCustomProduct && (p.inStock === false || (maxCustomQty ?? 0) < moq)) {
+        return;
+      }
       if (!next[p.id]) {
         next[p.id] = moq;
       }
+      filledCount++;
     });
     setRowQuantities(next);
-    showToast(`Filled MOQs for all ${filteredProducts.length} displayed items.`);
+    showToast(`Filled MOQs for ${filledCount} available displayed items.`);
   };
 
   const handleAddAllToBasket = () => {
     let addedCount = 0;
+    let skippedCount = 0;
     filteredProducts.forEach((p) => {
       const moq = getProductMoq(p);
-      const qty = rowQuantities[p.id] || moq;
+      const maxCustomQty = p.isCustomProduct ? Math.max(0, Math.floor(p.stockCount ?? 0)) : null;
+      if (p.isCustomProduct && (p.inStock === false || (maxCustomQty ?? 0) < moq)) {
+        skippedCount++;
+        return;
+      }
+      const rawQty = rowQuantities[p.id] || moq;
+      const qty = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(moq, rawQty)) : Math.max(moq, rawQty);
       addToWholesaleBasket(p.id, qty);
       addedCount++;
     });
-    showToast(`Added ${addedCount} wholesale products to your Order Basket.`);
+    if (addedCount === 0) {
+      showToast('No visible wholesale items currently meet stock & MOQ requirements.');
+      return;
+    }
+    showToast(
+      skippedCount > 0
+        ? `Added ${addedCount} available wholesale items to basket (skipped ${skippedCount} out-of-stock/below-MOQ).`
+        : `Added ${addedCount} wholesale products to your Order Basket.`
+    );
   };
 
   if (authLoading || !user || !isWholesaleApproved) {
@@ -512,7 +546,13 @@ export default function WholesaleCatalogPage() {
                 const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
                 const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
                 const fitmentStr = getFitmentString(p);
-                const currentQty = rowQuantities[p.id] || wholesaleBasket[p.id] || moq;
+                const isCustom = Boolean(p.isCustomProduct);
+                const maxCustomQty = isCustom ? Math.max(0, Math.floor(p.stockCount ?? 0)) : null;
+                const isOutOfStock = isCustom && (p.inStock === false || (maxCustomQty ?? 0) <= 0);
+                const insufficientForMoq = isCustom && !isOutOfStock && maxCustomQty !== null && maxCustomQty < moq;
+                const cannotOrder = isOutOfStock || insufficientForMoq;
+                const rawQty = rowQuantities[p.id] || wholesaleBasket[p.id] || moq;
+                const currentQty = maxCustomQty !== null && maxCustomQty >= moq ? Math.min(rawQty, maxCustomQty) : rawQty;
                 const isInBasket = Boolean(wholesaleBasket[p.id]);
                 const isDraftDifferent = isInBasket && rowQuantities[p.id] && rowQuantities[p.id] !== wholesaleBasket[p.id];
 
@@ -529,10 +569,32 @@ export default function WholesaleCatalogPage() {
                           </Link>
                           <div className="ws-prod-meta">
                             <span className="ws-prod-series-badge">{p.s} Series</span>
-                            <span className="ws-stock-pill">
-                              <span className="ws-stock-dot" />
-                              <span>Ready to Dispatch</span>
-                            </span>
+                            {isOutOfStock ? (
+                              <span
+                                className="ws-stock-pill"
+                                style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}
+                              >
+                                <span className="ws-stock-dot" style={{ background: '#dc2626' }} />
+                                <span>Out of Stock</span>
+                              </span>
+                            ) : insufficientForMoq ? (
+                              <span
+                                className="ws-stock-pill"
+                                style={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fed7aa' }}
+                              >
+                                <span className="ws-stock-dot" style={{ background: '#ea580c' }} />
+                                <span>Only {maxCustomQty} Left (Min MOQ {moq})</span>
+                              </span>
+                            ) : (
+                              <span className="ws-stock-pill">
+                                <span className="ws-stock-dot" />
+                                <span>
+                                  {isCustom && maxCustomQty !== null
+                                    ? `${maxCustomQty} In Stock`
+                                    : 'Ready to Dispatch'}
+                                </span>
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -569,7 +631,8 @@ export default function WholesaleCatalogPage() {
                         <button
                           type="button"
                           className="ws-stepper-btn"
-                          onClick={() => handleRowQtyChange(p.id, currentQty - 1, moq)}
+                          onClick={() => handleRowQtyChange(p.id, currentQty - 1, moq, maxCustomQty)}
+                          disabled={cannotOrder || currentQty <= moq}
                           aria-label="Decrease quantity"
                         >
                           <Minus size={13} />
@@ -577,12 +640,14 @@ export default function WholesaleCatalogPage() {
                         <input
                           type="number"
                           min={moq}
+                          max={maxCustomQty ?? undefined}
+                          disabled={cannotOrder}
                           className="ws-stepper-input"
                           value={currentQty}
                           onChange={(e) => {
                             const v = parseInt(e.target.value, 10);
                             if (!isNaN(v)) {
-                              handleRowQtyChange(p.id, v, moq);
+                              handleRowQtyChange(p.id, v, moq, maxCustomQty);
                             }
                           }}
                           aria-label={`Batch Quantity for ${p.n}`}
@@ -590,7 +655,8 @@ export default function WholesaleCatalogPage() {
                         <button
                           type="button"
                           className="ws-stepper-btn"
-                          onClick={() => handleRowQtyChange(p.id, currentQty + 1, moq)}
+                          onClick={() => handleRowQtyChange(p.id, currentQty + 1, moq, maxCustomQty)}
+                          disabled={cannotOrder || (maxCustomQty !== null && currentQty >= maxCustomQty)}
                           aria-label="Increase quantity"
                         >
                           <Plus size={13} />
@@ -599,7 +665,21 @@ export default function WholesaleCatalogPage() {
                     </td>
 
                     <td style={{ textAlign: 'right' }}>
-                      {isInBasket && !isDraftDifferent ? (
+                      {cannotOrder ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="ws-row-action-btn"
+                          style={{ opacity: 0.55, cursor: 'not-allowed', background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }}
+                          title={
+                            isOutOfStock
+                              ? 'Currently out of stock'
+                              : `Only ${maxCustomQty} unit(s) available, below MOQ (${moq})`
+                          }
+                        >
+                          <span>{isOutOfStock ? 'Out of Stock' : `Only ${maxCustomQty} Left (< MOQ)`}</span>
+                        </button>
+                      ) : isInBasket && !isDraftDifferent ? (
                         <button
                           type="button"
                           onClick={() => handleAddToBasket(p)}

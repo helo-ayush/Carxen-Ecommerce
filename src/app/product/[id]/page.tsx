@@ -475,7 +475,17 @@ function ProductDetailContent({ product }: { product: Product }) {
   const myCarLabel = `${activeCar.b} ${activeCar.m}`.replace(/\s+/g, ' ').trim();
   const fitTargetLabel = builtFor ?? myCarLabel;
 
+  const isOutOfStock = product.isCustomProduct === true && product.inStock === false;
+  const maxCustomQty =
+    product.isCustomProduct && typeof product.stockCount === 'number'
+      ? Math.max(0, product.stockCount)
+      : null;
+
   const handleBuyNow = () => {
+    if (isOutOfStock) {
+      showToast('This product is currently out of stock.');
+      return;
+    }
     addToCart(product.id, quantity);
     if (!user) {
       showToast('Please sign in to proceed with your order');
@@ -976,6 +986,20 @@ function ProductDetailContent({ product }: { product: Product }) {
               <div className="ps-tax-shipping-sub">
                 Inclusive of all taxes · Free express shipping over ₹1,499
               </div>
+              {product.isCustomProduct && maxCustomQty !== null && (isOutOfStock || maxCustomQty <= 5) && (
+                <div
+                  style={{
+                    marginTop: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: isOutOfStock ? '#dc2626' : '#d97706',
+                  }}
+                >
+                  {isOutOfStock
+                    ? 'Currently Out of Stock'
+                    : `Limited availability — only ${maxCustomQty} unit(s) left in stock`}
+                </div>
+              )}
 
               {/* Colour Swatches */}
               <div className="ps-swatches-section">
@@ -1021,6 +1045,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                     <button
                       type="button"
                       className="ps-stepper-btn"
+                      disabled={isOutOfStock || quantity <= 1}
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                       aria-label="Decrease quantity"
                     >
@@ -1030,7 +1055,10 @@ function ProductDetailContent({ product }: { product: Product }) {
                     <button
                       type="button"
                       className="ps-stepper-btn"
-                      onClick={() => setQuantity((q) => q + 1)}
+                      disabled={isOutOfStock || (maxCustomQty !== null && quantity >= maxCustomQty)}
+                      onClick={() =>
+                        setQuantity((q) => (maxCustomQty !== null && maxCustomQty > 0 ? Math.min(maxCustomQty, q + 1) : q + 1))
+                      }
                       aria-label="Increase quantity"
                     >
                       +
@@ -1040,15 +1068,20 @@ function ProductDetailContent({ product }: { product: Product }) {
                   {/* Add to Cart */}
                   <button
                     type="button"
+                    disabled={isOutOfStock}
                     className="ps-btn-add-cart"
+                    style={isOutOfStock ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
                     onClick={() => {
+                      if (isOutOfStock) return;
                       addToCart(product.id, quantity);
                       openCart();
                     }}
                   >
                     <ShoppingBag size={18} className="ps-btn-cart-icon" />
                     <span className="ps-btn-cart-text">
-                      {quantity > 1
+                      {isOutOfStock
+                        ? 'Out of Stock'
+                        : quantity > 1
                         ? `Add ${quantity} to Cart · ${formatINR(totalPrice)}`
                         : 'Add to Cart'}
                     </span>
@@ -1078,11 +1111,13 @@ function ProductDetailContent({ product }: { product: Product }) {
                 {/* Instant Buy Now Button */}
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   className="ps-btn-buy-now"
+                  style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                   onClick={handleBuyNow}
                 >
                   <Zap size={18} />
-                  <span>Buy it now · Instant Checkout</span>
+                  <span>{isOutOfStock ? 'Currently Out of Stock' : 'Buy it now · Instant Checkout'}</span>
                 </button>
               </div>
 
@@ -1978,14 +2013,16 @@ function ProductDetailContent({ product }: { product: Product }) {
                   View My Orders
                 </Button>
                 <Button
+                  disabled={isOutOfStock}
                   onClick={() => {
+                    if (isOutOfStock) return;
                     setShowNotOrderedModal(false);
                     addToCart(product.id, 1);
                     openCart();
                   }}
                   className="bg-[#e2231a] hover:bg-[#b91a12] text-white rounded-full"
                 >
-                  Order This Product
+                  {isOutOfStock ? 'Out of Stock' : 'Order This Product'}
                 </Button>
               </div>
             </div>
@@ -2038,24 +2075,29 @@ function ProductDetailContent({ product }: { product: Product }) {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             type="button"
+            disabled={isOutOfStock}
             onClick={() => {
+              if (isOutOfStock) return;
               addToCart(product.id, quantity);
               openCart();
             }}
             className="ps-btn-add-cart"
-            style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
+            style={{ height: '36px', padding: '0 14px', fontSize: '12px', ...(isOutOfStock ? { opacity: 0.55, cursor: 'not-allowed' } : {}) }}
           >
-            {quantity > 1
+            {isOutOfStock
+              ? 'Out of Stock'
+              : quantity > 1
               ? `Add ${quantity} · ${formatINR(totalPrice)}`
               : 'Add to Cart'}
           </button>
           <button
             type="button"
+            disabled={isOutOfStock}
             onClick={handleBuyNow}
             className="ps-btn-buy-now"
-            style={{ height: '36px', padding: '0 14px', fontSize: '12px' }}
+            style={{ height: '36px', padding: '0 14px', fontSize: '12px', ...(isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
           >
-            Buy it now
+            {isOutOfStock ? 'Unavailable' : 'Buy it now'}
           </button>
         </div>
       </div>

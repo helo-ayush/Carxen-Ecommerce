@@ -30,6 +30,7 @@ export interface EcommerceProductRow {
   id: string;
   publicId: number | string;
   storeId: StoreId;
+  itemMasterId?: string | null;
   slug: string;
   name: string;
   categoryKey: string;
@@ -89,6 +90,7 @@ const PRODUCT_COLUMNS = [
   'id',
   'publicId',
   'storeId',
+  'itemMasterId',
   'slug',
   'name',
   'categoryKey',
@@ -197,7 +199,19 @@ function asSpecifications(value: unknown): [string, string][] {
     }
     const specifications: [string, string][] = [];
     for (const [k, v] of Object.entries(value)) {
-      if (k === 'discountLimitQty' || k === 'packageDimensions' || k === 'items') continue;
+      if (
+        k === 'discountLimitQty' ||
+        k === 'packageDimensions' ||
+        k === 'items' ||
+        k === 'isCustomProduct' ||
+        k === 'manualStock' ||
+        k === 'manualReorderPoint' ||
+        k === 'wholesaleTier2Qty' ||
+        k === 'wholesaleTier2Discount' ||
+        k === 'wholesaleTier3Qty' ||
+        k === 'wholesaleTier3Discount'
+      )
+        continue;
       const key = asNonEmptyString(k);
       const label = asNonEmptyString(v);
       if (key && label) specifications.push([key, label]);
@@ -260,11 +274,40 @@ function asColors(value: unknown): ProductColor[] | undefined {
   return colors.length > 0 ? colors : undefined;
 }
 
+function resolveCustomProductAvailability(
+  row: EcommerceProductRow,
+  committedQty: number,
+): { isCustomProduct: boolean; stockCount: number | null; inStock: boolean } {
+  if (row.itemMasterId) {
+    return { isCustomProduct: false, stockCount: null, inStock: true };
+  }
+  const specs =
+    row.specifications && typeof row.specifications === 'object' && !Array.isArray(row.specifications)
+      ? (row.specifications as Record<string, unknown>)
+      : null;
+  const isCustom = Boolean(
+    specs && (specs.isCustomProduct === true || (specs.isCustomProduct !== false && specs.manualStock !== undefined)),
+  );
+  if (!isCustom || !specs) {
+    return { isCustomProduct: false, stockCount: null, inStock: true };
+  }
+  const rawStock = specs.manualStock;
+  const parsed = typeof rawStock === 'number' ? rawStock : typeof rawStock === 'string' ? parseInt(rawStock, 10) : 0;
+  const onHand = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+  const available = Math.max(0, onHand - Math.max(0, committedQty));
+  return {
+    isCustomProduct: true,
+    stockCount: available,
+    inStock: available > 0,
+  };
+}
+
 function mapProductRow(
   row: EcommerceProductRow,
   isWholesale?: boolean,
   wholesaleTier?: 'tier1' | 'tier2',
   reviewAggregate?: { sum: number; count: number },
+  customCommittedQty: number = 0,
 ): Product | null {
   const id = asFiniteNumber(row.publicId) ?? 1;
   const name = asNonEmptyString(row.name) || 'CarXen Accessory';
@@ -414,6 +457,7 @@ function mapProductRow(
         })()
       : undefined,
     wholesaleTier: isWholesale ? (wholesaleTier || 'tier1') : undefined,
+    ...resolveCustomProductAvailability(row, customCommittedQty),
   };
 }
 
@@ -457,9 +501,12 @@ export async function getStorefrontProducts(options?: {
   const rows = (productRows || []) as unknown as EcommerceProductRow[];
 
   const reviewAggregates = new Map<string, { sum: number; count: number }>();
+  const customCommittedByProduct = new Map<string, number>();
+
   if (rows.length > 0) {
     // Reviews are behind RLS for anon reads; aggregates need the service key.
-    const { data: reviewRows } = await getSupabaseAdmin()
+    const adminSupabase = getSupabaseAdmin();
+    const { data: reviewRows } = await adminSupabase
       .from('ecommerce_reviews')
       .select('productId, rating')
       .eq('storeId', store.id)
@@ -472,11 +519,74 @@ export async function getStorefrontProducts(options?: {
       entry.count += 1;
       reviewAggregates.set(key, entry);
     }
+
+    const customProductIds = rows
+      .filter((row) => resolveCustomProductAvailability(row, 0).isCustomProduct)
+      .map((row) => row.id);
+
+    if (customProductIds.length > 0) {
+      try {
+        const [{ data: reservationRows }, { data: openOrders }] = await Promise.all([
+          adminSupabase
+            .from('ecommerce_inventory_reservations')
+            .select('productId, orderItemId, quantity')
+            .eq('storeId', store.id)
+            .eq('status', 'ACTIVE')
+            .in('productId', customProductIds),
+          adminSupabase
+            .from('ecommerce_orders')
+            .select('id')
+            .eq('storeId', store.id)
+            .in('fulfillmentStatus', ['PENDING', 'CONFIRMED', 'PACKED'])
+            .neq('status', 'CANCELLED')
+            .neq('status', 'REFUNDED'),
+        ]);
+
+        const reservedByOrderItem = new Map<string, number>();
+        for (const resRow of reservationRows || []) {
+          const pid = String(resRow.productId);
+          const qty = Math.max(0, Math.floor(Number(resRow.quantity) || 0));
+          customCommittedByProduct.set(pid, (customCommittedByProduct.get(pid) ?? 0) + qty);
+          if (resRow.orderItemId) {
+            const oid = String(resRow.orderItemId);
+            reservedByOrderItem.set(oid, (reservedByOrderItem.get(oid) ?? 0) + qty);
+          }
+        }
+
+        const openOrderIds = (openOrders || []).map((o: any) => String(o.id)).filter(Boolean);
+        if (openOrderIds.length > 0) {
+          const { data: openOrderItems } = await adminSupabase
+            .from('ecommerce_order_items')
+            .select('id, productId, quantity')
+            .in('orderId', openOrderIds)
+            .in('productId', customProductIds);
+
+          for (const itemRow of openOrderItems || []) {
+            if (!itemRow.productId) continue;
+            const pid = String(itemRow.productId);
+            const qty = Math.max(0, Math.floor(Number(itemRow.quantity) || 0));
+            const alreadyReserved = reservedByOrderItem.get(String(itemRow.id)) ?? 0;
+            const unreservedOpen = Math.max(0, qty - alreadyReserved);
+            if (unreservedOpen > 0) {
+              customCommittedByProduct.set(pid, (customCommittedByProduct.get(pid) ?? 0) + unreservedOpen);
+            }
+          }
+        }
+      } catch (stockErr) {
+        console.warn('Could not load custom stock commitments for storefront catalog:', stockErr);
+      }
+    }
   }
 
   const products = rows
     .map((row) =>
-      mapProductRow(row, options?.isWholesale, options?.wholesaleTier, reviewAggregates.get(row.id)),
+      mapProductRow(
+        row,
+        options?.isWholesale,
+        options?.wholesaleTier,
+        reviewAggregates.get(row.id),
+        customCommittedByProduct.get(row.id) ?? 0,
+      ),
     )
     .filter((product): product is Product => product !== null);
 

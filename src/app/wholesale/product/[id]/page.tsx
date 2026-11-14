@@ -185,7 +185,13 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   } = useApp();
 
   const moq = Math.max(1, product.b2bMoq || 5);
-  const initialQty = wholesaleBasket[product.id] || moq;
+  const isCustom = Boolean(product.isCustomProduct);
+  const maxCustomQty = isCustom ? Math.max(0, Math.floor(product.stockCount ?? 0)) : null;
+  const isOutOfStock = isCustom && (product.inStock === false || (maxCustomQty ?? 0) <= 0);
+  const insufficientForMoq = isCustom && !isOutOfStock && maxCustomQty !== null && maxCustomQty < moq;
+  const cannotOrder = isOutOfStock || insufficientForMoq;
+  const rawInitialQty = wholesaleBasket[product.id] || moq;
+  const initialQty = maxCustomQty !== null && maxCustomQty >= moq ? Math.min(rawInitialQty, maxCustomQty) : rawInitialQty;
   const [quantity, setQuantity] = useState<number>(initialQty);
   const [selectedColorIdx, setSelectedColorIdx] = useState<number>(0);
   const [activeThumbIndex, setActiveThumbIndex] = useState<number>(0);
@@ -206,9 +212,12 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   // Keep stepper synced if basket updates externally
   useEffect(() => {
     if (wholesaleBasket[product.id] && wholesaleBasket[product.id] >= moq) {
-      setQuantity(wholesaleBasket[product.id]);
+      const next = maxCustomQty !== null && maxCustomQty >= moq
+        ? Math.min(wholesaleBasket[product.id], maxCustomQty)
+        : wholesaleBasket[product.id];
+      setQuantity(next);
     }
-  }, [wholesaleBasket, product.id, moq]);
+  }, [wholesaleBasket, product.id, moq, maxCustomQty]);
 
   const tiers = useMemo(() => getWholesaleTiers(product), [product]);
   const activeTier = useMemo(() => getActiveWholesaleTier(product, quantity), [product, quantity]);
@@ -338,13 +347,23 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
   }, [product]);
 
   const handleQtyChange = (val: number) => {
-    setQuantity(Math.max(moq, val));
+    if (cannotOrder) return;
+    const bounded = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(moq, val)) : Math.max(moq, val);
+    setQuantity(bounded);
   };
 
   const handleAddToBasket = () => {
+    if (isOutOfStock) {
+      showToast(`${product.n} is currently out of stock.`);
+      return;
+    }
+    if (insufficientForMoq) {
+      showToast(`Only ${maxCustomQty} unit(s) available for ${product.n}, below MOQ (${moq}).`);
+      return;
+    }
+    const safeQty = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(moq, quantity)) : Math.max(moq, quantity);
     setIsAdding(true);
-    addToWholesaleBasket(product.id, quantity);
-    showToast(`Added ${quantity} units of "${product.n}" to Wholesale Order Basket.`);
+    addToWholesaleBasket(product.id, safeQty);
     setTimeout(() => setIsAdding(false), 700);
   };
 
@@ -808,7 +827,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                       type="button"
                       className="ws-card-stepper-btn"
                       onClick={() => handleQtyChange(quantity - 1)}
-                      disabled={quantity <= moq}
+                      disabled={cannotOrder || quantity <= moq}
                       aria-label="Decrease quantity"
                       title={quantity <= moq ? `Minimum order quantity is ${moq}` : 'Decrease quantity'}
                     >
@@ -817,6 +836,8 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                     <input
                       type="number"
                       min={moq}
+                      max={maxCustomQty ?? undefined}
+                      disabled={cannotOrder}
                       className="ws-card-stepper-input"
                       style={{ fontSize: '15px', fontWeight: 700 }}
                       value={quantity}
@@ -832,6 +853,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                       type="button"
                       className="ws-card-stepper-btn"
                       onClick={() => handleQtyChange(quantity + 1)}
+                      disabled={cannotOrder || (maxCustomQty !== null && quantity >= maxCustomQty)}
                       aria-label="Increase quantity"
                     >
                       <Plus size={14} />
@@ -841,7 +863,18 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
 
                 <div className="ws-pdp-moq-hint">
                   <Info size={14} />
-                  <span>MOQ: {moq} units per batch</span>
+                  <span>
+                    MOQ: {moq} units per batch
+                    {isOutOfStock ? (
+                      <strong style={{ color: '#dc2626', marginLeft: 8 }}>· Out of Stock</strong>
+                    ) : insufficientForMoq ? (
+                      <strong style={{ color: '#c2410c', marginLeft: 8 }}>· Only {maxCustomQty} left (below MOQ)</strong>
+                    ) : isCustom && maxCustomQty !== null ? (
+                      <strong style={{ color: maxCustomQty <= 15 ? '#b45309' : '#059669', marginLeft: 8 }}>
+                        · {maxCustomQty} units in stock
+                      </strong>
+                    ) : null}
+                  </span>
                 </div>
               </div>
 
@@ -864,28 +897,43 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
 
             {/* Action Buttons */}
             <div className="ws-pdp-actions-row">
-              <button
-                type="button"
-                className={`ws-btn-primary ws-pdp-main-btn ${isInBasket && !isDraftDifferent ? 'in-basket' : 'ws-btn-brand'} ${isAdding ? 'animating' : ''}`}
-                onClick={handleAddToBasket}
-              >
-                {isInBasket && !isDraftDifferent ? (
-                  <>
-                    <Check size={17} />
-                    <span>In Basket ({currentInBasketQty} Units) · Update</span>
-                  </>
-                ) : isDraftDifferent ? (
-                  <>
-                    <Plus size={17} />
-                    <span>Update Basket to {quantity} Units</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={17} />
-                    <span>Add {quantity} Units to Order Basket</span>
-                  </>
-                )}
-              </button>
+              {cannotOrder ? (
+                <button
+                  type="button"
+                  disabled
+                  className="ws-btn-primary ws-pdp-main-btn"
+                  style={{ opacity: 0.6, cursor: 'not-allowed', background: '#cbd5e1', color: '#475569' }}
+                >
+                  <span>
+                    {isOutOfStock
+                      ? 'Currently Out of Stock'
+                      : `Insufficient Stock (${maxCustomQty} left · Min MOQ ${moq})`}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`ws-btn-primary ws-pdp-main-btn ${isInBasket && !isDraftDifferent ? 'in-basket' : 'ws-btn-brand'} ${isAdding ? 'animating' : ''}`}
+                  onClick={handleAddToBasket}
+                >
+                  {isInBasket && !isDraftDifferent ? (
+                    <>
+                      <Check size={17} />
+                      <span>In Basket ({currentInBasketQty} Units) · Update</span>
+                    </>
+                  ) : isDraftDifferent ? (
+                    <>
+                      <Plus size={17} />
+                      <span>Update Basket to {quantity} Units</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={17} />
+                      <span>Add {quantity} Units to Order Basket</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <Link href="/wholesale/order-basket" className="ws-btn-secondary" style={{ height: '48px', padding: '0 20px', fontWeight: 700 }}>
                 <span>Review Basket</span>
@@ -1288,7 +1336,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   type="button"
                   className="ws-card-stepper-btn"
                   onClick={() => handleQtyChange(quantity - 1)}
-                  disabled={quantity <= moq}
+                  disabled={cannotOrder || quantity <= moq}
                   aria-label="Decrease quantity"
                 >
                   <Minus size={13} />
@@ -1296,6 +1344,8 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                 <input
                   type="number"
                   min={moq}
+                  max={maxCustomQty ?? undefined}
+                  disabled={cannotOrder}
                   className="ws-card-stepper-input"
                   value={quantity}
                   onChange={(e) => {
@@ -1310,30 +1360,42 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   type="button"
                   className="ws-card-stepper-btn"
                   onClick={() => handleQtyChange(quantity + 1)}
+                  disabled={cannotOrder || (maxCustomQty !== null && quantity >= maxCustomQty)}
                   aria-label="Increase quantity"
                 >
                   <Plus size={13} />
                 </button>
               </div>
 
-              <button
-                type="button"
-                className={`ws-btn-primary ${isInBasket && !isDraftDifferent ? 'in-basket' : 'ws-btn-brand'}`}
-                onClick={handleAddToBasket}
-                style={{ height: '38px', fontSize: '13px', padding: '0 18px' }}
-              >
-                {isInBasket && !isDraftDifferent ? (
-                  <>
-                    <Check size={14} />
-                    <span>In Basket ({currentInBasketQty})</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={14} />
-                    <span>Add {quantity} Units ({formatINR(batchSubtotal)})</span>
-                  </>
-                )}
-              </button>
+              {cannotOrder ? (
+                <button
+                  type="button"
+                  disabled
+                  className="ws-btn-primary"
+                  style={{ height: '38px', fontSize: '13px', padding: '0 18px', opacity: 0.6, cursor: 'not-allowed', background: '#cbd5e1', color: '#475569' }}
+                >
+                  <span>{isOutOfStock ? 'Out of Stock' : `Only ${maxCustomQty} (< MOQ)`}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`ws-btn-primary ${isInBasket && !isDraftDifferent ? 'in-basket' : 'ws-btn-brand'}`}
+                  onClick={handleAddToBasket}
+                  style={{ height: '38px', fontSize: '13px', padding: '0 18px' }}
+                >
+                  {isInBasket && !isDraftDifferent ? (
+                    <>
+                      <Check size={14} />
+                      <span>In Basket ({currentInBasketQty})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} />
+                      <span>Add {quantity} Units ({formatINR(batchSubtotal)})</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <Link
                 href="/wholesale/order-basket"

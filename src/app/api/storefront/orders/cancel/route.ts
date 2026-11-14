@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Also update any related shipment records
+    // 7. Also update any related shipment records and release active stock reservations
     try {
       await supabase
         .from('ecommerce_shipments')
@@ -173,6 +173,20 @@ export async function POST(request: Request) {
         .eq('orderId', order.id);
     } catch (shipErr) {
       console.warn('Could not update shipment status to CANCELLED:', shipErr);
+    }
+
+    try {
+      await supabase
+        .from('ecommerce_inventory_reservations')
+        .update({
+          status: 'RELEASED',
+          releasedAt: now,
+          updatedAt: now,
+        })
+        .eq('orderId', order.id)
+        .eq('status', 'ACTIVE');
+    } catch (resErr) {
+      console.warn('Could not release active reservations during order cancellation:', resErr);
     }
 
     // 8. Record order cancellation event for audit trail

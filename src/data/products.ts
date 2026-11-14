@@ -66,6 +66,9 @@ export interface Product {
   };
   wholesaleTier?: 'tier1' | 'tier2';
   packageDimensions?: string | null;
+  isCustomProduct?: boolean;
+  stockCount?: number | null;
+  inStock?: boolean;
 }
 
 // Product records are loaded from the storefront API. The remaining values are

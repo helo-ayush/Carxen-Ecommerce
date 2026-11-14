@@ -11,8 +11,10 @@ export function QuickViewModal() {
   if (!quickViewProduct) return null;
 
   const p = quickViewProduct;
+  const isOutOfStock = p.isCustomProduct === true && p.inStock === false;
 
   const handleAdd = () => {
+    if (isOutOfStock) return;
     addToCart(p.id, 1);
     closeQuickView();
     openCart();
@@ -46,6 +48,18 @@ export function QuickViewModal() {
                 </s>
               ) : null}
             </span>
+            {p.isCustomProduct && typeof p.stockCount === 'number' && (p.stockCount <= 0 || p.stockCount <= 5) ? (
+              <p
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  marginTop: '4px',
+                  color: p.stockCount <= 0 ? '#dc2626' : '#d97706',
+                }}
+              >
+                {p.stockCount <= 0 ? 'Out of Stock' : `Only ${p.stockCount} left in stock`}
+              </p>
+            ) : null}
             <p id="qd">{p.d}</p>
             <ul id="qs">
               {p.sp.map(([key, val], idx) => (
@@ -55,11 +69,19 @@ export function QuickViewModal() {
                 </li>
               ))}
             </ul>
-            <button className="btn" id="qa" onClick={handleAdd}>
-              Add to cart
-              <svg viewBox="0 0 24 24">
-                <path d="M4 12h16M13 5l7 7-7 7" />
-              </svg>
+            <button
+              className="btn"
+              id="qa"
+              disabled={isOutOfStock}
+              style={isOutOfStock ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+              onClick={handleAdd}
+            >
+              {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+              {!isOutOfStock ? (
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 12h16M13 5l7 7-7 7" />
+                </svg>
+              ) : null}
             </button>
           </div>
         </div>

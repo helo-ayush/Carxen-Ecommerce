@@ -63,6 +63,15 @@ export async function calculateAuthoritativeCartTotals(
       throw new Error(`Product #${item.productId} was not found in the verified catalog.`);
     }
 
+    if (product.isCustomProduct && typeof product.stockCount === 'number') {
+      if (product.stockCount <= 0) {
+        throw new Error(`"${product.n}" is currently out of stock.`);
+      }
+      if (qty > product.stockCount) {
+        throw new Error(`Only ${product.stockCount} unit(s) of "${product.n}" are currently available.`);
+      }
+    }
+
     const priceCalc = calculateItemPriceWithOfferLimit(
       product,
       qty,

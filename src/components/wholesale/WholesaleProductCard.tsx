@@ -32,7 +32,13 @@ export function WholesaleProductCard({
   const [isAdding, setIsAdding] = useState(false);
 
   const moq = Math.max(1, product.b2bMoq || 5);
-  const currentQty = quantity !== undefined ? quantity : (inBasketQty > 0 ? inBasketQty : moq);
+  const isCustom = Boolean(product.isCustomProduct);
+  const maxCustomQty = isCustom ? Math.max(0, Math.floor(product.stockCount ?? 0)) : null;
+  const isOutOfStock = isCustom && (product.inStock === false || (maxCustomQty ?? 0) <= 0);
+  const insufficientForMoq = isCustom && !isOutOfStock && maxCustomQty !== null && maxCustomQty < moq;
+  const cannotOrder = isOutOfStock || insufficientForMoq;
+  const rawQty = quantity !== undefined ? quantity : (inBasketQty > 0 ? inBasketQty : moq);
+  const currentQty = maxCustomQty !== null && maxCustomQty >= moq ? Math.min(rawQty, maxCustomQty) : rawQty;
 
   const tiers = useMemo(() => getWholesaleTiers(product), [product]);
   const t1 = tiers[0]?.unitPrice || Math.round(product.p * 0.85);
@@ -70,14 +76,16 @@ export function WholesaleProductCard({
   };
 
   const handleQtyChange = (val: number) => {
-    const nextVal = Math.max(moq, val);
+    if (cannotOrder) return;
+    const bounded = maxCustomQty !== null ? Math.min(maxCustomQty, Math.max(moq, val)) : Math.max(moq, val);
     if (onQuantityChange) {
-      onQuantityChange(product.id, nextVal);
+      onQuantityChange(product.id, bounded);
     }
   };
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock || insufficientForMoq) return;
     setIsAdding(true);
     if (onAddToBasket) {
       onAddToBasket(product, currentQty);
@@ -115,6 +123,31 @@ export function WholesaleProductCard({
             <span className="ws-card-badge-dot" />
             <span>MOQ: {moq}</span>
           </span>
+          {isOutOfStock ? (
+            <span
+              className="ws-card-badge"
+              style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}
+            >
+              <span className="ws-card-badge-dot" style={{ background: '#dc2626' }} />
+              <span>Out of Stock</span>
+            </span>
+          ) : insufficientForMoq ? (
+            <span
+              className="ws-card-badge"
+              style={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fed7aa' }}
+            >
+              <span className="ws-card-badge-dot" style={{ background: '#ea580c' }} />
+              <span>Only {maxCustomQty} Left</span>
+            </span>
+          ) : isCustom && maxCustomQty !== null && maxCustomQty <= 15 ? (
+            <span
+              className="ws-card-badge"
+              style={{ background: '#fffbeb', color: '#b45309', borderColor: '#fde68a' }}
+            >
+              <span className="ws-card-badge-dot" style={{ background: '#d97706' }} />
+              <span>Only {maxCustomQty} Left</span>
+            </span>
+          ) : null}
         </div>
 
         {/* Artwork */}
@@ -227,7 +260,7 @@ export function WholesaleProductCard({
                 type="button"
                 className="ws-card-stepper-btn"
                 onClick={() => handleQtyChange(currentQty - 1)}
-                disabled={currentQty <= moq}
+                disabled={cannotOrder || currentQty <= moq}
                 aria-label="Decrease batch quantity"
                 title={currentQty <= moq ? `Minimum Order Quantity is ${moq}` : 'Decrease quantity'}
               >
@@ -236,6 +269,8 @@ export function WholesaleProductCard({
               <input
                 type="number"
                 min={moq}
+                max={maxCustomQty ?? undefined}
+                disabled={cannotOrder}
                 className="ws-card-stepper-input"
                 value={currentQty}
                 onChange={(e) => {
@@ -250,35 +285,52 @@ export function WholesaleProductCard({
                 type="button"
                 className="ws-card-stepper-btn"
                 onClick={() => handleQtyChange(currentQty + 1)}
+                disabled={cannotOrder || (maxCustomQty !== null && currentQty >= maxCustomQty)}
                 aria-label="Increase batch quantity"
               >
                 <Plus size={13} />
               </button>
             </div>
 
-            <button
-              type="button"
-              className={`ws-card-add-btn ${isInBasket ? 'in-basket' : ''} ${isAdding ? 'animating' : ''}`}
-              onClick={handleAdd}
-              title={isInBasket ? 'Currently in Order Basket' : 'Add batch to wholesale order basket'}
-            >
-              {isInBasket ? (
-                <>
-                  <Check size={14} className="ws-btn-check-icon" />
-                  <span>In Basket ({inBasketQty})</span>
-                </>
-              ) : isDraftDifferent ? (
-                <>
-                  <Plus size={14} />
-                  <span>Update ({currentQty})</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={14} />
-                  <span>Add ({currentQty})</span>
-                </>
-              )}
-            </button>
+            {cannotOrder ? (
+              <button
+                type="button"
+                disabled
+                className="ws-card-add-btn"
+                style={{ opacity: 0.55, cursor: 'not-allowed', background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }}
+                title={
+                  isOutOfStock
+                    ? 'Currently out of stock'
+                    : `Only ${maxCustomQty} unit(s) available, below MOQ (${moq})`
+                }
+              >
+                <span>{isOutOfStock ? 'Out of Stock' : `Only ${maxCustomQty} (< MOQ)`}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`ws-card-add-btn ${isInBasket ? 'in-basket' : ''} ${isAdding ? 'animating' : ''}`}
+                onClick={handleAdd}
+                title={isInBasket ? 'Currently in Order Basket' : 'Add batch to wholesale order basket'}
+              >
+                {isInBasket ? (
+                  <>
+                    <Check size={14} className="ws-btn-check-icon" />
+                    <span>In Basket ({inBasketQty})</span>
+                  </>
+                ) : isDraftDifferent ? (
+                  <>
+                    <Plus size={14} />
+                    <span>Update ({currentQty})</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={14} />
+                    <span>Add ({currentQty})</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

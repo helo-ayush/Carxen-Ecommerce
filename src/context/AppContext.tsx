@@ -1345,13 +1345,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const p = products.find((x) => x.id === productId);
     const moq = (isWholesaleApproved && p?.b2bMoq) ? p.b2bMoq : 1;
 
+    if (p?.isCustomProduct && typeof p.stockCount === 'number') {
+      if (p.stockCount <= 0 || p.inStock === false) {
+        showToast(`${p.n} is currently out of stock.`);
+        return;
+      }
+      if (moq > p.stockCount) {
+        showToast(`Only ${p.stockCount} unit(s) of ${p.n} available.`);
+        return;
+      }
+    }
+
+    let cappedAtMax = false;
     setCart((prev) => {
       const current = prev[productId] || 0;
-      const initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      let initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      if (p?.isCustomProduct && typeof p.stockCount === 'number' && initialQty > p.stockCount) {
+        initialQty = p.stockCount;
+        cappedAtMax = true;
+      }
       return { ...prev, [productId]: initialQty };
     });
     if (p) {
-      showToast(`Added to cart — ${p.n}${isWholesaleApproved ? ` (Min. ${moq} units)` : ''}`);
+      if (cappedAtMax && typeof p.stockCount === 'number') {
+        showToast(`Only ${p.stockCount} unit(s) available for ${p.n}.`);
+      } else {
+        showToast(`Added to cart — ${p.n}${isWholesaleApproved ? ` (Min. ${moq} units)` : ''}`);
+      }
     }
   };
 
@@ -1359,16 +1379,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const p = products.find((x) => x.id === productId);
     const moq = (isWholesaleApproved && p?.b2bMoq) ? p.b2bMoq : 1;
 
+    let hitStockLimit = false;
     setCart((prev) => {
       const current = prev[productId] || 0;
-      const next = current + delta;
+      let next = current + delta;
       if (next <= 0 || (isWholesaleApproved && next < moq && delta < 0)) {
         const copy = { ...prev };
         delete copy[productId];
         return copy;
       }
+      if (delta > 0 && p?.isCustomProduct && typeof p.stockCount === 'number' && next > p.stockCount) {
+        next = Math.max(0, p.stockCount);
+        hitStockLimit = true;
+        if (next <= 0) {
+          const copy = { ...prev };
+          delete copy[productId];
+          return copy;
+        }
+      }
       return { ...prev, [productId]: Math.max(next, moq) };
     });
+    if (hitStockLimit && p && typeof p.stockCount === 'number') {
+      showToast(`Only ${p.stockCount} unit(s) available for ${p.n}.`);
+    }
   };
 
   const removeFromCart = (productId: number) => {
@@ -1396,9 +1429,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const p = products.find((x) => x.id === productId);
     const moq = p?.b2bMoq || 5;
 
+    if (p?.isCustomProduct && typeof p.stockCount === 'number') {
+      if (p.stockCount <= 0 || p.inStock === false) {
+        showToast(`${p.n} is currently out of stock.`);
+        return;
+      }
+      if (p.stockCount < moq) {
+        showToast(`Only ${p.stockCount} unit(s) available (below MOQ of ${moq}).`);
+        return;
+      }
+    }
+
+    let cappedAtMax = false;
     setWholesaleBasket((prev) => {
       const current = prev[productId] || 0;
-      const initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      let initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
+      if (p?.isCustomProduct && typeof p.stockCount === 'number' && initialQty > p.stockCount) {
+        initialQty = p.stockCount;
+        cappedAtMax = true;
+      }
       const next = { ...prev, [productId]: initialQty };
       try {
         localStorage.setItem('cx_wholesale_basket', JSON.stringify(next));
@@ -1406,24 +1455,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     if (p) {
-      showToast(`Added to Wholesale Order Basket — ${p.n} (${qty} units)`);
+      if (cappedAtMax && typeof p.stockCount === 'number') {
+        showToast(`Capped at ${p.stockCount} available unit(s) for ${p.n}.`);
+      } else {
+        showToast(`Added to Wholesale Order Basket — ${p.n} (${qty} units)`);
+      }
     }
   }, [products]);
 
   const updateWholesaleBasketQty = useCallback((productId: number, qty: number) => {
+    const p = products.find((x) => x.id === productId);
+    const cappedQty =
+      p?.isCustomProduct && typeof p.stockCount === 'number' && qty > p.stockCount
+        ? Math.max(0, p.stockCount)
+        : qty;
+    if (p?.isCustomProduct && typeof p.stockCount === 'number' && qty > p.stockCount) {
+      showToast(`Only ${p.stockCount} unit(s) available for ${p.n}.`);
+    }
     setWholesaleBasket((prev) => {
       const copy = { ...prev };
-      if (qty <= 0) {
+      if (cappedQty <= 0) {
         delete copy[productId];
       } else {
-        copy[productId] = qty;
+        copy[productId] = cappedQty;
       }
       try {
         localStorage.setItem('cx_wholesale_basket', JSON.stringify(copy));
       } catch {}
       return copy;
     });
-  }, []);
+  }, [products]);
 
   const removeFromWholesaleBasket = useCallback((productId: number) => {
     setWholesaleBasket((prev) => {

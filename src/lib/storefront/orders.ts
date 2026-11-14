@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { getStorefrontProducts } from './catalog';
 import { isOrderAccessToken } from './order-access';
 import type {
   StorefrontCheckoutRequest,
@@ -523,6 +524,32 @@ export function validateOrderNumber(value: unknown): string {
 export async function placeStorefrontOrder(
   payload: StorefrontCheckoutRequest,
 ): Promise<StorefrontOrderPlacement> {
+  try {
+    const { products } = await getStorefrontProducts();
+    const requestedByProduct = new Map<number, number>();
+    for (const item of payload.items) {
+      requestedByProduct.set(item.productId, (requestedByProduct.get(item.productId) ?? 0) + item.quantity);
+    }
+    for (const [productId, requestedQty] of requestedByProduct.entries()) {
+      const prod = products.find((p) => p.id === productId);
+      if (prod?.isCustomProduct && typeof prod.stockCount === 'number') {
+        if (prod.stockCount <= 0) {
+          throw new StorefrontOrderError(`"${prod.n}" is currently out of stock.`, 409, 'out_of_stock');
+        }
+        if (requestedQty > prod.stockCount) {
+          throw new StorefrontOrderError(
+            `Only ${prod.stockCount} unit(s) of "${prod.n}" are currently available.`,
+            409,
+            'insufficient_stock',
+          );
+        }
+      }
+    }
+  } catch (err) {
+    if (err instanceof StorefrontOrderError) throw err;
+    console.warn('Skipped custom product pre-order stock verification:', err);
+  }
+
   const { storeSlug } = getOrderConfig();
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.rpc('place_ecommerce_order', {

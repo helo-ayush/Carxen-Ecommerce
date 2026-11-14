@@ -74,8 +74,11 @@ export function ProductCard({
     router.push(`/product/${product.id}`);
   };
 
+  const isOutOfStock = product.isCustomProduct === true && product.inStock === false;
+
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     setIsAdding(true);
     onAddToCart(product.id, 1);
     if (onOpenCart) {
@@ -128,6 +131,7 @@ export function ProductCard({
 
   // Single subtle luxury tag matching clean UI
   const badge = (() => {
+    if (isOutOfStock) return { type: 'sale', label: 'Out of Stock' };
     if (isCustomFitBadge && fitText && isMats && (product.id === 2 || !product.o)) {
       return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     }
@@ -262,11 +266,19 @@ export function ProductCard({
           {/* Primary Action Button */}
           <button
             type="button"
+            disabled={isOutOfStock}
             className={`ref-btn ref-btn-primary ${isAdding ? 'ok' : ''}`}
+            style={
+              isOutOfStock
+                ? { opacity: 0.6, cursor: 'not-allowed', background: '#e4e4e7', color: '#52525b', borderColor: '#d4d4d8' }
+                : undefined
+            }
             onClick={handleAddClick}
-            aria-label={`Add ${product.n} to cart`}
+            aria-label={isOutOfStock ? `${product.n} is out of stock` : `Add ${product.n} to cart`}
           >
-            {isAdding ? (
+            {isOutOfStock ? (
+              <span>Out of Stock</span>
+            ) : isAdding ? (
               <>
                 <svg viewBox="0 0 24 24" className="ref-btn-svg" strokeWidth="2.4" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
