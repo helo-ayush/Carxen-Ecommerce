@@ -35,8 +35,8 @@ export function Preloader() {
     window.scrollTo(0, 0);
 
     const startTime = Date.now();
-    // Minimum presentation time (1600ms) for a premium, calm brand introduction
-    const MIN_LOADING_TIME = 1600;
+    // Brief brand presentation floor so the hero video / frames buffer smoothly behind the curtain
+    const MIN_LOADING_TIME = 900;
     let currentProgress = 0;
     let completed = false;
 
@@ -49,7 +49,7 @@ export function Preloader() {
       if (!dataReady) {
         // While waiting for Supabase catalog and storefront config, smoothly advance to 88%
         if (currentProgress < 88) {
-          const increment = Math.max(1, (88 - currentProgress) * 0.12);
+          const increment = Math.max(1, (88 - currentProgress) * 0.14);
           currentProgress = Math.min(88, currentProgress + increment);
           setProgress(Math.floor(currentProgress));
         }
@@ -57,12 +57,12 @@ export function Preloader() {
         // Data is ready! Ensure minimum brand presentation time has elapsed
         if (elapsed < MIN_LOADING_TIME) {
           if (currentProgress < 92) {
-            currentProgress = Math.min(92, currentProgress + 2.5);
+            currentProgress = Math.min(92, currentProgress + 3.5);
             setProgress(Math.floor(currentProgress));
           }
         } else {
           // Both data and time are ready: charge to 100%
-          currentProgress = Math.min(100, currentProgress + 5);
+          currentProgress = Math.min(100, currentProgress + 7);
           setProgress(Math.floor(currentProgress));
 
           if (currentProgress >= 100) {
@@ -79,7 +79,7 @@ export function Preloader() {
               setTimeout(() => {
                 setIsUnmounted(true);
               }, 1050);
-            }, 220);
+            }, 100);
           }
         }
       }
@@ -96,7 +96,7 @@ export function Preloader() {
         setIsExiting(true);
         setTimeout(() => setIsUnmounted(true), 1050);
       }
-    }, 4500);
+    }, 3000);
 
     return () => {
       clearInterval(interval);

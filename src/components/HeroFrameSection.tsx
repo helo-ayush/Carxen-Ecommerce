@@ -1,7 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HERO_FRAME_FPS, HERO_FRAMES } from '@/data/heroFrames';
+
+const HERO_MOBILE_VIDEO = '/hero-mobile.mp4';
+const ANCHOR_STEP = 16;
+const MAX_CONCURRENT_FETCHES = 6;
+const MAX_ACTIVE_BITMAPS = 72;
 
 const DEFAULT_SCENES = [
   {
@@ -68,6 +73,45 @@ export type HeroSectionProps = {
   };
 };
 
+type CachedFrame = ImageBitmap | HTMLImageElement;
+
+function getFrameDimensions(frame: CachedFrame): { w: number; h: number } {
+  if ('naturalWidth' in frame) {
+    return { w: frame.naturalWidth || 1, h: frame.naturalHeight || 1 };
+  }
+  return { w: frame.width || 1, h: frame.height || 1 };
+}
+
+function releaseFrame(frame: CachedFrame) {
+  if ('close' in frame && typeof frame.close === 'function') {
+    try {
+      frame.close();
+    } catch {}
+  }
+}
+
+function buildProgressiveFrameOrder(total: number): number[] {
+  const order: number[] = [];
+  const seen = new Set<number>();
+  const push = (idx: number) => {
+    if (idx >= 0 && idx < total && !seen.has(idx)) {
+      seen.add(idx);
+      order.push(idx);
+    }
+  };
+
+  push(0);
+  push(1);
+  push(total - 1);
+
+  for (const step of [ANCHOR_STEP, 8, 4, 2, 1]) {
+    for (let i = 0; i < total; i += step) {
+      push(i);
+    }
+  }
+  return order;
+}
+
 export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
   const activeScenes = (heroConfig?.scenes && heroConfig.scenes.length > 0)
     ? heroConfig.scenes.map((s, idx) => {
@@ -80,36 +124,43 @@ export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
         };
       })
     : DEFAULT_SCENES;
+
+  const activeScenesRef = useRef(activeScenes);
+  activeScenesRef.current = activeScenes;
+
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const sceneRefs = useRef<(HTMLDivElement | null)[]>([]);
   const finaleRef = useRef<HTMLDivElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
 
+  const [isMobileMode, setIsMobileMode] = useState(false);
+  const [mobileVideoFailed, setMobileVideoFailed] = useState(false);
+
+  const useNativeMobileVideo = isMobileMode && !mobileVideoFailed;
+
+  // Keep mobile media query synced cleanly after hydration
+  useEffect(() => {
+    const mobileMedia = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+    const syncMode = () => {
+      setIsMobileMode(mobileMedia.matches);
+    };
+    syncMode();
+    if (typeof mobileMedia.addEventListener === 'function') {
+      mobileMedia.addEventListener('change', syncMode);
+      return () => mobileMedia.removeEventListener('change', syncMode);
+    }
+    mobileMedia.addListener(syncMode);
+    return () => mobileMedia.removeListener(syncMode);
+  }, []);
+
+  // Toggle mobile section class and keep header offset / scroll visibility synced
   useEffect(() => {
     const section = sectionRef.current;
-    const canvas = canvasRef.current;
-    const sticky = canvas?.parentElement;
-    const ctx = canvas?.getContext('2d', { alpha: false });
-    if (!section || !canvas || !sticky || !ctx) return;
+    if (!section) return;
 
-    const mobileMedia = window.matchMedia('(max-width: 768px), (pointer: coarse)');
-    let isMobileHero = mobileMedia.matches;
-    let mobileHeroVisible = true;
-    let targetProgress = 0;
-    let currentProgress = 0;
-    let mobileProgress = 0;
-    let mobileStartedAt = 0;
-    let animationFrameId = 0;
-    let mobileAnimationFrameId: number | null = null;
-    let lastRequestedFrame = -1;
-    let frameRequestId = 0;
-    const loadedFrames = new Map<number, HTMLImageElement>();
-    const loadingFrames = new Map<number, Promise<HTMLImageElement>>();
-    const smoothingTime = 180;
-    const mobileDuration = Math.max(1, ((HERO_FRAMES.length - 1) / HERO_FRAME_FPS) * 1000);
-
-    section.classList.toggle('hero-video-mobile', isMobileHero);
+    section.classList.toggle('hero-video-mobile', isMobileMode);
 
     const syncHeroOffset = () => {
       const announcement = document.querySelector<HTMLElement>('.ann');
@@ -121,240 +172,624 @@ export function HeroFrameSection({ heroConfig }: HeroSectionProps = {}) {
       section.style.setProperty('--hero-header-offset', `${offset}px`);
     };
 
-    const syncCanvasSize = () => {
-      const rect = sticky.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(1, Math.round(rect.width * dpr));
-      const height = Math.max(1, Math.round(rect.height * dpr));
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-      }
-    };
-
-    const loadFrame = (index: number) => {
-      const frameIndex = Math.max(0, Math.min(HERO_FRAMES.length - 1, index));
-      const loaded = loadedFrames.get(frameIndex);
-      if (loaded) return Promise.resolve(loaded);
-      const pending = loadingFrames.get(frameIndex);
-      if (pending) return pending;
-
-      const image = new Image();
-      image.decoding = 'async';
-      const promise = new Promise<HTMLImageElement>((resolve, reject) => {
-        image.onload = () => {
-          loadedFrames.set(frameIndex, image);
-          resolve(image);
-        };
-        image.onerror = () => reject(new Error(`Unable to load hero frame ${frameIndex + 1}`));
-      });
-      loadingFrames.set(frameIndex, promise);
-      image.src = HERO_FRAMES[frameIndex];
-      promise.finally(() => loadingFrames.delete(frameIndex)).catch(() => undefined);
-      return promise;
-    };
-
-    const preloadAround = (center: number, radius: number) => {
-      for (
-        let index = Math.max(0, center - radius);
-        index <= Math.min(HERO_FRAMES.length - 1, center + radius);
-        index += 1
-      ) {
-        loadFrame(index).catch(() => undefined);
-      }
-    };
-
-    const updateOverlays = (progress: number) => {
-      activeScenes.forEach((scene, index) => {
-        const element = sceneRefs.current[index];
-        if (!element) return;
-
-        let opacity = 0;
-        let translateY = 24;
-        if (progress < scene.start) {
-          opacity = 0;
-        } else if (progress > scene.end) {
-          translateY = -24;
-        } else if (progress >= scene.peakStart && progress <= scene.peakEnd) {
-          opacity = 1;
-          translateY = 0;
-        } else if (progress < scene.peakStart) {
-          const range = Math.max(0.001, scene.peakStart - scene.start);
-          const t = Math.max(0, Math.min(1, (progress - scene.start) / range));
-          const ease = t * (2 - t);
-          opacity = ease;
-          translateY = (1 - ease) * 24;
-        } else {
-          const range = Math.max(0.001, scene.end - scene.peakEnd);
-          const t = Math.max(0, Math.min(1, (scene.end - progress) / range));
-          const ease = t * (2 - t);
-          opacity = ease;
-          translateY = -(1 - ease) * 24;
-        }
-
-        element.style.opacity = opacity.toFixed(3);
-        element.style.transform = `translate3d(0, ${translateY.toFixed(2)}px, 0)`;
-        element.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
-      });
-
-      const finale = finaleRef.current;
-      if (finale) {
-        const finaleProgress = Math.max(0, Math.min(1, (progress - 0.96) / 0.035));
-        const ease = finaleProgress * (2 - finaleProgress);
-        finale.style.opacity = ease.toFixed(3);
-        finale.style.pointerEvents = ease > 0.5 ? 'auto' : 'none';
-      }
-
-      const hint = scrollHintRef.current;
-      if (hint) hint.style.opacity = Math.max(0, 1 - progress / 0.04).toFixed(3);
-    };
-
-    const paintFrame = (index: number) => {
-      const image = loadedFrames.get(index);
-      if (!image) return;
-      syncCanvasSize();
-      const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
-      const width = image.naturalWidth * scale;
-      const height = image.naturalHeight * scale;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-      updateOverlays(index / (HERO_FRAMES.length - 1));
-    };
-
-    const requestFrame = (progress: number, force = false) => {
-      const clamped = Math.max(0, Math.min(1, progress));
-      const index = Math.round(clamped * (HERO_FRAMES.length - 1));
-      if (!force && index === lastRequestedFrame) return;
-      lastRequestedFrame = index;
-      const requestId = ++frameRequestId;
-      preloadAround(index, isMobileHero ? 8 : 3);
-      if (loadedFrames.has(index)) {
-        paintFrame(index);
-        return;
-      }
-      loadFrame(index).then(() => {
-        if (requestId === frameRequestId) paintFrame(index);
-      }).catch(() => undefined);
-    };
-
-    const stopMobilePlayback = () => {
-      if (mobileAnimationFrameId !== null) {
-        cancelAnimationFrame(mobileAnimationFrameId);
-        mobileAnimationFrameId = null;
-      }
-      if (mobileStartedAt) {
-        mobileProgress = Math.max(
-          mobileProgress,
-          Math.min(1, (performance.now() - mobileStartedAt) / mobileDuration)
-        );
-      }
-    };
-
-    const mobileTick = (now: number) => {
-      mobileAnimationFrameId = null;
-      if (!isMobileHero || !mobileHeroVisible) return;
-      mobileProgress = Math.min(1, (now - mobileStartedAt) / mobileDuration);
-      targetProgress = mobileProgress;
-      currentProgress = mobileProgress;
-      requestFrame(mobileProgress);
-      if (mobileProgress < 1) mobileAnimationFrameId = requestAnimationFrame(mobileTick);
-    };
-
-    const startMobilePlayback = () => {
-      if (!isMobileHero || !mobileHeroVisible || mobileProgress >= 1 || mobileAnimationFrameId !== null) return;
-      mobileStartedAt = performance.now() - mobileProgress * mobileDuration;
-      mobileAnimationFrameId = requestAnimationFrame(mobileTick);
-    };
-
-    const onScroll = () => {
+    const dispatchHeroVisibility = () => {
       const rect = section.getBoundingClientRect();
       const sectionHeight = Math.max(1, section.offsetHeight - window.innerHeight);
       const scrolled = -rect.top;
-      if (!isMobileHero) targetProgress = Math.max(0, Math.min(1, scrolled / sectionHeight));
       window.dispatchEvent(new CustomEvent('hero-scroll', {
         detail: {
-          inHero: isMobileHero
+          inHero: isMobileMode
             ? rect.bottom > 0 && rect.top < window.innerHeight
             : scrolled >= 0 && scrolled < sectionHeight,
         },
       }));
     };
 
-    const tick = () => {
-      if (!isMobileHero) {
-        const difference = targetProgress - currentProgress;
-        const amount = 1 - Math.exp(-16.67 / smoothingTime);
-        currentProgress = Math.abs(difference) < 0.0001
-          ? targetProgress
-          : currentProgress + difference * amount;
-        requestFrame(currentProgress);
+    syncHeroOffset();
+    dispatchHeroVisibility();
+    window.addEventListener('scroll', dispatchHeroVisibility, { passive: true });
+    window.addEventListener('resize', syncHeroOffset, { passive: true });
+    window.addEventListener('resize', dispatchHeroVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', dispatchHeroVisibility);
+      window.removeEventListener('resize', syncHeroOffset);
+      window.removeEventListener('resize', dispatchHeroVisibility);
+      section.style.removeProperty('--hero-header-offset');
+    };
+  }, [isMobileMode]);
+
+  const updateOverlays = (progress: number) => {
+    activeScenesRef.current.forEach((scene, index) => {
+      const element = sceneRefs.current[index];
+      if (!element) return;
+
+      let opacity = 0;
+      let translateY = 24;
+      if (progress < scene.start) {
+        opacity = 0;
+      } else if (progress > scene.end) {
+        translateY = -24;
+      } else if (progress >= scene.peakStart && progress <= scene.peakEnd) {
+        opacity = 1;
+        translateY = 0;
+      } else if (progress < scene.peakStart) {
+        const range = Math.max(0.001, scene.peakStart - scene.start);
+        const t = Math.max(0, Math.min(1, (progress - scene.start) / range));
+        const ease = t * (2 - t);
+        opacity = ease;
+        translateY = (1 - ease) * 24;
+      } else {
+        const range = Math.max(0.001, scene.end - scene.peakEnd);
+        const t = Math.max(0, Math.min(1, (scene.end - progress) / range));
+        const ease = t * (2 - t);
+        opacity = ease;
+        translateY = -(1 - ease) * 24;
       }
-      animationFrameId = requestAnimationFrame(tick);
+
+      element.style.opacity = opacity.toFixed(3);
+      element.style.transform = `translate3d(0, ${translateY.toFixed(2)}px, 0)`;
+      element.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
+    });
+
+    const finale = finaleRef.current;
+    if (finale) {
+      const finaleProgress = Math.max(0, Math.min(1, (progress - 0.96) / 0.035));
+      const ease = finaleProgress * (2 - finaleProgress);
+      finale.style.opacity = ease.toFixed(3);
+      finale.style.pointerEvents = ease > 0.5 ? 'auto' : 'none';
+    }
+
+    const hint = scrollHintRef.current;
+    if (hint) hint.style.opacity = Math.max(0, 1 - progress / 0.04).toFixed(3);
+  };
+
+  // Mode 1: Hardware-accelerated streaming MP4 playback on mobile
+  useEffect(() => {
+    if (!useNativeMobileVideo) return;
+    const section = sectionRef.current;
+    const video = videoRef.current;
+    if (!section || !video) return;
+
+    let heroVisible = true;
+    let disposed = false;
+    let overlayRafId = 0;
+
+    const isPreloaderDone = () =>
+      document.body.classList.contains('ready') || !document.getElementById('pre');
+
+    const syncFromVideo = () => {
+      overlayRafId = 0;
+      if (disposed || !video) return;
+      const progress = video.duration > 0 ? Math.min(1, video.currentTime / video.duration) : 0;
+      updateOverlays(video.ended ? 1 : progress);
+      if (!video.paused && !video.ended && heroVisible) {
+        overlayRafId = requestAnimationFrame(syncFromVideo);
+      }
     };
 
-    const applyHeroMode = () => {
-      const nextIsMobile = mobileMedia.matches;
-      if (nextIsMobile === isMobileHero) return;
-      isMobileHero = nextIsMobile;
-      section.classList.toggle('hero-video-mobile', isMobileHero);
-      lastRequestedFrame = -1;
-      frameRequestId += 1;
-      if (isMobileHero) {
-        targetProgress = mobileProgress;
-        currentProgress = mobileProgress;
-        requestFrame(mobileProgress, true);
-        startMobilePlayback();
-      } else {
-        stopMobilePlayback();
-        onScroll();
-        requestFrame(currentProgress, true);
+    const startSyncLoop = () => {
+      if (!overlayRafId && !disposed) {
+        overlayRafId = requestAnimationFrame(syncFromVideo);
       }
     };
+
+    const tryPlay = () => {
+      if (disposed || !heroVisible || video.ended || !isPreloaderDone()) return;
+      if (!video.paused) {
+        startSyncLoop();
+        return;
+      }
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch((err: unknown) => {
+          if (disposed) return;
+          const name = err && typeof err === 'object' && 'name' in err ? String((err as { name?: string }).name) : '';
+          if (name !== 'AbortError') {
+            setMobileVideoFailed(true);
+          }
+        });
+      }
+    };
+
+    const onPlay = () => startSyncLoop();
+    const onTimeUpdate = () => {
+      const progress = video.duration > 0 ? Math.min(1, video.currentTime / video.duration) : 0;
+      updateOverlays(video.ended ? 1 : progress);
+    };
+    const onEnded = () => {
+      updateOverlays(1);
+      if (overlayRafId) {
+        cancelAnimationFrame(overlayRafId);
+        overlayRafId = 0;
+      }
+    };
+    const onError = () => {
+      if (!disposed) setMobileVideoFailed(true);
+    };
+
+    updateOverlays(0);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('error', onError);
 
     const visibilityObserver = new IntersectionObserver(([entry]) => {
-      mobileHeroVisible = entry.isIntersecting;
-      if (!isMobileHero) return;
-      if (mobileHeroVisible) startMobilePlayback();
-      else stopMobilePlayback();
+      heroVisible = entry.isIntersecting;
+      if (heroVisible) {
+        tryPlay();
+      } else if (!video.paused) {
+        video.pause();
+      }
     }, { threshold: 0.1 });
     visibilityObserver.observe(section);
 
-    const onResize = () => {
-      syncHeroOffset();
-      requestFrame(isMobileHero ? mobileProgress : currentProgress, true);
-    };
+    // Wait for Preloader exit ('ready') so mobile doesn't waste playback behind the curtain
+    const bodyObserver = new MutationObserver(() => {
+      if (isPreloaderDone()) {
+        tryPlay();
+      }
+    });
+    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-    syncHeroOffset();
-    onScroll();
-    syncCanvasSize();
-    updateOverlays(0);
-    requestFrame(0, true);
-    startMobilePlayback();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize, { passive: true });
-    if (typeof mobileMedia.addEventListener === 'function') mobileMedia.addEventListener('change', applyHeroMode);
-    else mobileMedia.addListener(applyHeroMode);
-    animationFrameId = requestAnimationFrame(tick);
+    const readySafetyTimer = window.setTimeout(() => {
+      tryPlay();
+    }, 3200);
+
+    tryPlay();
 
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
-      if (typeof mobileMedia.removeEventListener === 'function') mobileMedia.removeEventListener('change', applyHeroMode);
-      else mobileMedia.removeListener(applyHeroMode);
+      disposed = true;
+      window.clearTimeout(readySafetyTimer);
+      bodyObserver.disconnect();
       visibilityObserver.disconnect();
-      stopMobilePlayback();
-      cancelAnimationFrame(animationFrameId);
-      section.style.removeProperty('--hero-header-offset');
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('error', onError);
+      if (overlayRafId) cancelAnimationFrame(overlayRafId);
     };
-  }, []);
+  }, [useNativeMobileVideo]);
+
+  // Mode 2: Desktop scroll-scrubbing (and fallback mobile player) via off-thread decoded WebP cache
+  useEffect(() => {
+    if (useNativeMobileVideo) return;
+
+    const section = sectionRef.current;
+    const canvas = canvasRef.current;
+    const sticky = canvas?.parentElement;
+    const ctx = canvas?.getContext('2d', { alpha: false });
+    if (!section || !canvas || !sticky || !ctx) return;
+
+    let disposed = false;
+    let heroVisible = true;
+    let targetProgress = 0;
+    let currentProgress = 0;
+    let desiredIndex = 0;
+    let paintedIndex = -1;
+    let desktopRafId = 0;
+
+    // Fallback mobile player timing (only runs when mobile & video element fallback triggered)
+    let mobileRafId = 0;
+    let mobileProgress = 0;
+    let mobileLastTickAt = 0;
+    const mobileDuration = Math.max(1, ((HERO_FRAMES.length - 1) / HERO_FRAME_FPS) * 1000);
+
+    const blobCache = new Map<number, Blob>();
+    const activeFetches = new Map<number, Promise<Blob | null>>();
+    const decodedBitmaps = new Map<number, CachedFrame>();
+    const anchorBitmaps = new Map<number, CachedFrame>();
+    const decodePromises = new Map<number, Promise<CachedFrame | null>>();
+    const fetchAbort = new AbortController();
+
+    const orderedQueue = buildProgressiveFrameOrder(HERO_FRAMES.length);
+    const pendingQueue: number[] = [...orderedQueue];
+    const pendingSet = new Set<number>(orderedQueue);
+    let inFlightCount = 0;
+    let canvasSize = { width: 0, height: 0 };
+
+    const isPreloaderDone = () =>
+      document.body.classList.contains('ready') || !document.getElementById('pre');
+
+    const syncCanvasSize = (rect?: DOMRectReadOnly | DOMRect) => {
+      const box = rect ?? sticky.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const width = Math.max(1, Math.round(box.width * dpr));
+      const height = Math.max(1, Math.round(box.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        canvasSize = { width, height };
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        return true;
+      }
+      return false;
+    };
+
+    const getCachedFrame = (idx: number): CachedFrame | undefined =>
+      decodedBitmaps.get(idx) ?? anchorBitmaps.get(idx);
+
+    const findNearestCachedIndex = (targetIdx: number): number => {
+      if (getCachedFrame(targetIdx)) return targetIdx;
+      for (let delta = 1; delta < HERO_FRAMES.length; delta += 1) {
+        if (targetIdx - delta >= 0 && getCachedFrame(targetIdx - delta)) return targetIdx - delta;
+        if (targetIdx + delta < HERO_FRAMES.length && getCachedFrame(targetIdx + delta)) return targetIdx + delta;
+      }
+      return -1;
+    };
+
+    const drawIndex = (idx: number): boolean => {
+      const frame = getCachedFrame(idx);
+      if (!frame || canvasSize.width === 0 || canvasSize.height === 0) return false;
+
+      const { w: natW, h: natH } = getFrameDimensions(frame);
+      const scale = Math.max(canvasSize.width / natW, canvasSize.height / natH);
+      const drawW = natW * scale;
+      const drawH = natH * scale;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
+      ctx.drawImage(frame, (canvasSize.width - drawW) / 2, (canvasSize.height - drawH) / 2, drawW, drawH);
+
+      if (paintedIndex === -1) {
+        canvas.style.opacity = '1';
+      }
+      paintedIndex = idx;
+      return true;
+    };
+
+    const evictFurthestBitmapIfNeeded = () => {
+      while (decodedBitmaps.size > MAX_ACTIVE_BITMAPS) {
+        let furthestKey = -1;
+        let maxDist = -1;
+        for (const key of decodedBitmaps.keys()) {
+          if (key === paintedIndex || key === desiredIndex) continue;
+          const dist = Math.abs(key - desiredIndex);
+          if (dist > maxDist) {
+            maxDist = dist;
+            furthestKey = key;
+          }
+        }
+        if (furthestKey === -1) break;
+        const evicted = decodedBitmaps.get(furthestKey);
+        decodedBitmaps.delete(furthestKey);
+        if (evicted && !anchorBitmaps.has(furthestKey)) {
+          releaseFrame(evicted);
+        }
+      }
+    };
+
+    const fetchFrameBlob = (idx: number): Promise<Blob | null> => {
+      const cachedBlob = blobCache.get(idx);
+      if (cachedBlob) return Promise.resolve(cachedBlob);
+      const existing = activeFetches.get(idx);
+      if (existing) return existing;
+
+      const p = fetch(HERO_FRAMES[idx], { cache: 'force-cache', signal: fetchAbort.signal })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (blob && !disposed) {
+            blobCache.set(idx, blob);
+          }
+          return blob;
+        })
+        .catch(() => null)
+        .finally(() => {
+          activeFetches.delete(idx);
+        });
+
+      activeFetches.set(idx, p);
+      return p;
+    };
+
+    const decodeFrame = (idx: number): Promise<CachedFrame | null> => {
+      const ready = getCachedFrame(idx);
+      if (ready) return Promise.resolve(ready);
+      const inDecode = decodePromises.get(idx);
+      if (inDecode) return inDecode;
+
+      const p = fetchFrameBlob(idx)
+        .then(async (blob): Promise<CachedFrame | null> => {
+          if (!blob || disposed) return null;
+          if (typeof createImageBitmap === 'function') {
+            return await createImageBitmap(blob);
+          }
+          const img = new Image();
+          const url = URL.createObjectURL(blob);
+          img.decoding = 'async';
+          img.src = url;
+          try {
+            if (typeof img.decode === 'function') await img.decode();
+            else {
+              await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject();
+              });
+            }
+            return img;
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        })
+        .then((bitmap) => {
+          if (!bitmap) return null;
+          if (disposed) {
+            releaseFrame(bitmap);
+            return null;
+          }
+          if (idx % ANCHOR_STEP === 0 || idx === 0 || idx === HERO_FRAMES.length - 1) {
+            anchorBitmaps.set(idx, bitmap);
+          } else {
+            decodedBitmaps.set(idx, bitmap);
+            evictFurthestBitmapIfNeeded();
+          }
+
+          if (
+            idx === desiredIndex ||
+            paintedIndex === -1 ||
+            Math.abs(idx - desiredIndex) < Math.abs(paintedIndex - desiredIndex)
+          ) {
+            drawIndex(idx);
+          }
+          return bitmap;
+        })
+        .catch(() => null)
+        .finally(() => {
+          decodePromises.delete(idx);
+        });
+
+      decodePromises.set(idx, p);
+      return p;
+    };
+
+    const pumpNetworkQueue = () => {
+      while (!disposed && inFlightCount < MAX_CONCURRENT_FETCHES && pendingQueue.length > 0) {
+        const nextIdx = pendingQueue.shift()!;
+        pendingSet.delete(nextIdx);
+        if (blobCache.has(nextIdx)) continue;
+
+        inFlightCount += 1;
+        fetchFrameBlob(nextIdx)
+          .then((blob) => {
+            if (!blob || disposed) return;
+            const isAnchor = nextIdx % ANCHOR_STEP === 0 || nextIdx === 0 || nextIdx === HERO_FRAMES.length - 1;
+            if (isAnchor || Math.abs(nextIdx - desiredIndex) <= 18) {
+              void decodeFrame(nextIdx);
+            }
+          })
+          .finally(() => {
+            inFlightCount -= 1;
+            if (!disposed) pumpNetworkQueue();
+          });
+      }
+    };
+
+    const prioritizeWindow = (center: number, prevCenter: number) => {
+      const dir = center >= prevCenter ? 1 : -1;
+      const priorityTargets: number[] = [];
+      for (let d = 14; d >= 0; d -= 1) {
+        const forward = center + dir * d;
+        if (forward >= 0 && forward < HERO_FRAMES.length) priorityTargets.push(forward);
+      }
+      for (let d = 1; d <= 4; d += 1) {
+        const backward = center - dir * d;
+        if (backward >= 0 && backward < HERO_FRAMES.length) priorityTargets.push(backward);
+      }
+
+      for (const idx of priorityTargets) {
+        if (!blobCache.has(idx)) {
+          if (pendingSet.has(idx)) {
+            const pos = pendingQueue.indexOf(idx);
+            if (pos > -1) pendingQueue.splice(pos, 1);
+          } else {
+            pendingSet.add(idx);
+          }
+          pendingQueue.unshift(idx);
+        }
+      }
+      pumpNetworkQueue();
+    };
+
+    const warmDecodeAround = (center: number) => {
+      const start = Math.max(0, center - 8);
+      const end = Math.min(HERO_FRAMES.length - 1, center + 16);
+      for (let i = start; i <= end; i += 1) {
+        if (blobCache.has(i) && !getCachedFrame(i)) {
+          void decodeFrame(i);
+        }
+      }
+    };
+
+    const renderAtProgress = (progress: number, force = false) => {
+      const clamped = Math.max(0, Math.min(1, progress));
+      updateOverlays(clamped);
+
+      const nextIndex = Math.round(clamped * (HERO_FRAMES.length - 1));
+      const prevDesired = desiredIndex;
+      desiredIndex = nextIndex;
+
+      prioritizeWindow(nextIndex, prevDesired);
+      warmDecodeAround(nextIndex);
+
+      if (getCachedFrame(nextIndex)) {
+        if (force || paintedIndex !== nextIndex) {
+          drawIndex(nextIndex);
+        }
+        return;
+      }
+
+      const nearestIdx = findNearestCachedIndex(nextIndex);
+      if (
+        nearestIdx !== -1 &&
+        (paintedIndex === -1 || Math.abs(nearestIdx - nextIndex) < Math.abs(paintedIndex - nextIndex))
+      ) {
+        drawIndex(nearestIdx);
+      }
+      void decodeFrame(nextIndex);
+    };
+
+    const smoothingTime = 160;
+    const desktopTick = () => {
+      desktopRafId = 0;
+      if (disposed || isMobileMode) return;
+      const difference = targetProgress - currentProgress;
+      const amount = 1 - Math.exp(-16.67 / smoothingTime);
+      if (Math.abs(difference) < 0.0002) {
+        currentProgress = targetProgress;
+        renderAtProgress(currentProgress);
+        return;
+      }
+      currentProgress += difference * amount;
+      renderAtProgress(currentProgress);
+      desktopRafId = requestAnimationFrame(desktopTick);
+    };
+
+    const scheduleDesktopTick = () => {
+      if (!desktopRafId && !disposed && !isMobileMode) {
+        desktopRafId = requestAnimationFrame(desktopTick);
+      }
+    };
+
+    const onScroll = () => {
+      if (isMobileMode) return;
+      const rect = section.getBoundingClientRect();
+      const sectionHeight = Math.max(1, section.offsetHeight - window.innerHeight);
+      const scrolled = -rect.top;
+      const nextTarget = Math.max(0, Math.min(1, scrolled / sectionHeight));
+      if (Math.abs(nextTarget - targetProgress) > 0.0001) {
+        targetProgress = nextTarget;
+        scheduleDesktopTick();
+      }
+    };
+
+    const mobileFallbackTick = (now: number) => {
+      mobileRafId = 0;
+      if (disposed || !isMobileMode || !heroVisible || mobileProgress >= 1) return;
+      if (!isPreloaderDone()) {
+        mobileLastTickAt = now;
+        mobileRafId = requestAnimationFrame(mobileFallbackTick);
+        return;
+      }
+      const nextIdxCandidate = Math.round(mobileProgress * (HERO_FRAMES.length - 1));
+      // Hold playhead briefly if exact target and neighbors are still downloading so mobile never skips blindly
+      const targetReady = getCachedFrame(nextIdxCandidate) || blobCache.has(nextIdxCandidate);
+      if (!targetReady && paintedIndex === -1) {
+        mobileLastTickAt = now;
+        mobileRafId = requestAnimationFrame(mobileFallbackTick);
+        return;
+      }
+      const dt = Math.min(50, Math.max(0, now - mobileLastTickAt));
+      mobileLastTickAt = now;
+      if (targetReady || Math.abs(nextIdxCandidate - paintedIndex) <= 3) {
+        mobileProgress = Math.min(1, mobileProgress + dt / mobileDuration);
+      }
+      currentProgress = mobileProgress;
+      targetProgress = mobileProgress;
+      renderAtProgress(mobileProgress);
+      if (mobileProgress < 1) {
+        mobileRafId = requestAnimationFrame(mobileFallbackTick);
+      }
+    };
+
+    const startMobileFallback = () => {
+      if (!isMobileMode || !heroVisible || mobileProgress >= 1 || mobileRafId || disposed) return;
+      mobileLastTickAt = performance.now();
+      mobileRafId = requestAnimationFrame(mobileFallbackTick);
+    };
+
+    const stopMobileFallback = () => {
+      if (mobileRafId) {
+        cancelAnimationFrame(mobileRafId);
+        mobileRafId = 0;
+      }
+    };
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (syncCanvasSize(rect ? new DOMRect(0, 0, rect.width, rect.height) : undefined)) {
+        // Resizing canvas clears its backing store, so reset paintedIndex before redrawing
+        paintedIndex = -1;
+        renderAtProgress(isMobileMode ? mobileProgress : currentProgress, true);
+      }
+    });
+    resizeObserver.observe(sticky);
+
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      heroVisible = entry.isIntersecting;
+      if (!isMobileMode) return;
+      if (heroVisible) startMobileFallback();
+      else stopMobileFallback();
+    }, { threshold: 0.1 });
+    visibilityObserver.observe(section);
+
+    canvas.style.transition = 'opacity 0.12s ease';
+    canvas.style.opacity = '0';
+    syncCanvasSize();
+    updateOverlays(0);
+    // Start progressive prefill immediately while Preloader is up
+    pumpNetworkQueue();
+    if (!isMobileMode) {
+      onScroll();
+      currentProgress = targetProgress;
+      renderAtProgress(currentProgress, true);
+    } else {
+      renderAtProgress(0, true);
+      startMobileFallback();
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      disposed = true;
+      fetchAbort.abort();
+      window.removeEventListener('scroll', onScroll);
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      stopMobileFallback();
+      if (desktopRafId) cancelAnimationFrame(desktopRafId);
+
+      for (const bmp of decodedBitmaps.values()) releaseFrame(bmp);
+      for (const bmp of anchorBitmaps.values()) releaseFrame(bmp);
+      decodedBitmaps.clear();
+      anchorBitmaps.clear();
+      blobCache.clear();
+      activeFetches.clear();
+      decodePromises.clear();
+    };
+  }, [useNativeMobileVideo, isMobileMode]);
 
   return (
     <section className="hero-video-section" ref={sectionRef} aria-label="Hero">
       <div className="hero-video-sticky">
-        <canvas ref={canvasRef} className="hero-video-canvas" aria-hidden="true" />
+        {/* Immediate crisp first-frame fallback (never flashes black while canvas/video buffers) */}
+        <img
+          src={HERO_FRAMES[0]}
+          alt=""
+          aria-hidden="true"
+          className="hero-video-canvas"
+          fetchPriority="high"
+          decoding="sync"
+        />
+
+        {useNativeMobileVideo ? (
+          <video
+            ref={videoRef}
+            className="hero-video-canvas"
+            src={HERO_MOBILE_VIDEO}
+            poster={HERO_FRAMES[0]}
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          />
+        ) : (
+          <canvas
+            ref={canvasRef}
+            className="hero-video-canvas"
+            aria-hidden="true"
+          />
+        )}
+
         <div className="hero-video-vignette" />
 
         {activeScenes.map((scene, index) => (

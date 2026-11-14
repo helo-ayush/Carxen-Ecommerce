@@ -20,6 +20,24 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/hero-frames/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=604800, stale-while-revalidate=2592000',
+          },
+        ],
+      },
+      {
+        source: '/hero-mobile.mp4',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=604800, stale-while-revalidate=2592000',
+          },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },

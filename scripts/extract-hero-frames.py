@@ -1,16 +1,20 @@
-"""Extract full-resolution hero frames from the source video.
+"""Extract web-optimized hero frames (and a fast-start mobile clip) from the source video.
 
-The default WebP quality is 100 and frames keep the source video's native
-dimensions. OpenCV is used only by this build-time utility; the app serves the
-generated files as ordinary static assets from ``public/hero-frames``.
+Uses Pillow's high-effort WebP encoder (method=6) scaled to a crisp 1440px max
+width by default so the full 24fps frame sequence stays under ~10 MB instead of
+70+ MB, and optionally produces a compact +faststart H.264 MP4 for mobile playback.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
+import shutil
+import subprocess
 from pathlib import Path
 
 import cv2
+from PIL import Image
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,18 +32,30 @@ def parse_args() -> argparse.Namespace:
         help="Output directory (default: public/hero-frames)",
     )
     parser.add_argument(
+        "--mobile-video",
+        type=Path,
+        default=Path("public/hero-mobile.mp4"),
+        help="Compact fast-start MP4 path for mobile playback (default: public/hero-mobile.mp4)",
+    )
+    parser.add_argument(
         "--manifest",
         type=Path,
         default=Path("src/data/heroFrames.ts"),
         help="Generated TypeScript frame manifest path",
     )
     parser.add_argument(
+        "--max-width",
+        type=int,
+        default=1440,
+        help="Maximum width in pixels for extracted WebP frames (default: 1440)",
+    )
+    parser.add_argument(
         "--quality",
         type=int,
-        default=100,
+        default=78,
         choices=range(1, 101),
         metavar="1-100",
-        help="WebP quality; 100 preserves the highest practical quality",
+        help="WebP quality (default: 78)",
     )
     return parser.parse_args()
 
@@ -57,11 +73,19 @@ def main() -> None:
     for old_frame in args.output.glob("frame-*.webp"):
         old_frame.unlink()
 
-    fps = capture.get(cv2.CAP_PROP_FPS) or 0
-    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    fps = capture.get(cv2.CAP_PROP_FPS) or 24
+    src_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    src_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    if args.max_width > 0 and src_width > args.max_width:
+        width = args.max_width
+        height = round(src_height * (width / src_width) / 2) * 2
+    else:
+        width = src_width
+        height = src_height
+
     frame_paths: list[str] = []
     frame_number = 0
+    total_bytes = 0
 
     try:
         while True:
@@ -71,15 +95,16 @@ def main() -> None:
 
             frame_number += 1
             filename = f"frame-{frame_number:03d}.webp"
-            encoded_success, encoded = cv2.imencode(
-                ".webp",
-                frame,
-                [cv2.IMWRITE_WEBP_QUALITY, args.quality],
-            )
-            if not encoded_success:
-                raise SystemExit(f"Unable to encode frame {frame_number}")
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(rgb)
+            if width != src_width or height != src_height:
+                img = img.resize((width, height), Image.Resampling.LANCZOS)
 
-            (args.output / filename).write_bytes(encoded.tobytes())
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=args.quality, method=6)
+            data = buf.getvalue()
+            total_bytes += len(data)
+            (args.output / filename).write_bytes(data)
             frame_paths.append(f"/hero-frames/{filename}")
     finally:
         capture.release()
@@ -99,8 +124,44 @@ def main() -> None:
 
     print(
         f"Extracted {len(frame_paths)} frames at {width}x{height} "
-        f"({fps:g} fps) to {args.output}"
+        f"({fps:g} fps), total={total_bytes / (1024 * 1024):.2f} MB to {args.output}"
     )
+
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if ffmpeg_bin and args.mobile_video:
+        args.mobile_video.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                ffmpeg_bin,
+                "-y",
+                "-i",
+                str(args.input),
+                "-vf",
+                "scale=1280:720:flags=lanczos",
+                "-c:v",
+                "libx264",
+                "-profile:v",
+                "main",
+                "-level",
+                "3.1",
+                "-pix_fmt",
+                "yuv420p",
+                "-crf",
+                "24",
+                "-preset",
+                "slow",
+                "-g",
+                "24",
+                "-movflags",
+                "+faststart",
+                "-an",
+                str(args.mobile_video),
+            ],
+            check=True,
+        )
+        print(
+            f"Generated {args.mobile_video} ({args.mobile_video.stat().st_size / (1024 * 1024):.2f} MB)"
+        )
 
 
 if __name__ == "__main__":
