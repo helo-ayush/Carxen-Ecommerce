@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { noindexMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Order Basket',
+  title: 'Procurement Basket',
   ...noindexMetadata(),
 };
 
