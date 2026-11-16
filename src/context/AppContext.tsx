@@ -82,6 +82,7 @@ export interface B2BProfile {
   appliedAt?: string;
   reviewedAt?: string;
   referenceNumber?: string;
+  b2bDocuments?: any[];
 }
 
 export interface SupportModalOptions {
@@ -467,6 +468,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               appliedAt: data.profile.b2bAppliedAt || undefined,
               reviewedAt: data.profile.b2bReviewedAt || undefined,
               referenceNumber: data.profile.referenceNumber || undefined,
+              b2bDocuments: Array.isArray(data.profile.b2bDocuments) ? data.profile.b2bDocuments : undefined,
             };
             setB2bProfile(nextB2b);
             try {
@@ -1724,6 +1726,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               expectedMonthlyVolume: applicationData.expectedMonthlyVolume,
               wholesaleTier: 'tier1',
               appliedAt: new Date().toISOString(),
+              b2bDocuments: applicationData.b2bDocuments || undefined,
               referenceNumber:
                 data.referenceNumber ||
                 (applicationData.gstin

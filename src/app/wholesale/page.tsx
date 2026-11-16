@@ -22,7 +22,14 @@ import {
   XCircle,
   RotateCcw,
   Edit3,
-  HelpCircle
+  HelpCircle,
+  CreditCard,
+  UploadCloud,
+  Trash2,
+  Eye,
+  Camera,
+  X,
+  FileText
 } from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -55,6 +62,90 @@ const isValidPhone = (val: string) => {
   const digits = val.replace(/\D/g, '');
   return digits.length === 10 || (digits.length === 12 && digits.startsWith('91'));
 };
+
+function extractVisitingCard(b2bDocuments: unknown): { url: string; name: string; size?: number } | null {
+  if (!b2bDocuments) return null;
+  if (typeof b2bDocuments === 'string') {
+    if (b2bDocuments.startsWith('data:image/') || b2bDocuments.startsWith('http://') || b2bDocuments.startsWith('https://')) {
+      return { url: b2bDocuments, name: 'visiting-card.webp' };
+    }
+    try {
+      return extractVisitingCard(JSON.parse(b2bDocuments));
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(b2bDocuments)) {
+    const cardDoc = b2bDocuments.find((d: any) => d && (d.type === 'visiting_card' || d.category === 'visiting_card' || d.type === 'business_card'));
+    if (cardDoc && (cardDoc.url || cardDoc.dataUrl)) {
+      return { url: cardDoc.url || cardDoc.dataUrl, name: cardDoc.name || 'visiting-card.webp', size: cardDoc.size };
+    }
+    const anyImg = b2bDocuments.find((d: any) => d && (d.url || d.dataUrl) && typeof (d.url || d.dataUrl) === 'string' && ((d.url || d.dataUrl).startsWith('data:image/') || (d.url || d.dataUrl).startsWith('http')));
+    if (anyImg) {
+      return { url: anyImg.url || anyImg.dataUrl, name: anyImg.name || 'visiting-card.webp', size: anyImg.size };
+    }
+  } else if (typeof b2bDocuments === 'object') {
+    const obj = b2bDocuments as any;
+    if (obj.url || obj.dataUrl) {
+      return { url: obj.url || obj.dataUrl, name: obj.name || 'visiting-card.webp', size: obj.size };
+    }
+  }
+  return null;
+}
+
+function compressVisitingCardImage(file: File): Promise<{ url: string; name: string; size: number }> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('Please select an image file (JPG, PNG, or WebP).'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file.'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image preview.'));
+      img.onload = () => {
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({ url: e.target?.result as string, name: file.name, size: file.size });
+          return;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let dataUrl = canvas.toDataURL('image/webp', 0.85);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        }
+        const approximateSize = Math.round((dataUrl.length * 3) / 4);
+        resolve({ url: dataUrl, name: file.name, size: approximateSize });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function WholesaleDashboardPage() {
   const router = useRouter();
@@ -96,8 +187,26 @@ export default function WholesaleDashboardPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isEditingApplication, setIsEditingApplication] = useState(false);
 
+  // Business / Visiting Card Upload State
+  const [visitingCard, setVisitingCard] = useState<{
+    url: string;
+    name: string;
+    size?: number;
+  } | null>(null);
+  const [cardUploadLoading, setCardUploadLoading] = useState(false);
+  const [cardUploadError, setCardUploadError] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [previewLightboxOpen, setPreviewLightboxOpen] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (b2bProfile) {
+      if (b2bProfile.b2bDocuments) {
+        const existingCard = extractVisitingCard(b2bProfile.b2bDocuments);
+        if (existingCard) {
+          setVisitingCard((prev) => prev || existingCard);
+        }
+      }
       setFormData((prev) => ({
         ...prev,
         businessName: b2bProfile.businessName || prev.businessName,
@@ -179,6 +288,16 @@ export default function WholesaleDashboardPage() {
       return;
     }
 
+    // 7. Compulsory Visiting Card
+    if (!visitingCard?.url) {
+      setErrorMessage('Please upload a clear photo or copy of your business or visiting card (compulsory).');
+      const uploadAnchor = document.getElementById('ws-card-upload-anchor');
+      if (uploadAnchor) {
+        uploadAnchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
     setSubmitting(true);
     const result = await applyForWholesale({
       ...formData,
@@ -187,7 +306,16 @@ export default function WholesaleDashboardPage() {
       pan: formData.pan.trim().toUpperCase(),
       gstin: formData.gstin.trim().toUpperCase(),
       pincode: formData.pincode.trim(),
-      b2bDocuments: [],
+      b2bDocuments: [
+        {
+          type: 'visiting_card',
+          category: 'visiting_card',
+          name: visitingCard.name || 'visiting-card.webp',
+          url: visitingCard.url,
+          size: visitingCard.size,
+          uploadedAt: new Date().toISOString(),
+        },
+      ],
     });
 
     setSubmitting(false);
@@ -261,31 +389,55 @@ export default function WholesaleDashboardPage() {
           </div>
         )}
 
-        <div className="ws-basket-layout">
+        <div className="ws-apply-layout">
           {/* Form Card */}
-          <div className="ws-table-card" style={{ padding: '28px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px', color: '#0f172a' }}>
-              Business Registration Details
-            </h2>
+          <div className="ws-form-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 4px 0', color: '#0f172a' }}>
+                  Business Registration Details
+                </h2>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  Enter verified commercial details for CarXen dealership onboarding.
+                </p>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
+                Fields with * are mandatory
+              </span>
+            </div>
 
-            <form onSubmit={handleApply}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Legal Business Name *</label>
+            <form onSubmit={handleApply} style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+              {/* Section 1: Business Profile */}
+              <div className="ws-form-section-title">
+                <Building2 size={15} />
+                <span>1. Business Entity Details</span>
+              </div>
+
+              <div className="ws-responsive-grid-2">
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      Legal Business Name <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    className="ws-input-text"
                     placeholder="e.g. Apex Auto Accessories LLP"
                     value={formData.businessName}
                     onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Trade / Store Name</label>
+
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">Trade / Store Front Name</label>
+                    <span className="ws-field-subtext">(Optional)</span>
+                  </div>
                   <input
                     type="text"
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    className="ws-input-text"
                     placeholder="e.g. Apex Car Studio"
                     value={formData.tradeName}
                     onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
@@ -293,14 +445,65 @@ export default function WholesaleDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                      GSTIN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional — for ITC)</span>
+              {/* Section 2: Business Type & Expected Volume */}
+              <div className="ws-responsive-grid-2">
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      Business Type <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
+                  <select
+                    className="ws-input-text"
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="Authorized Dealership">Authorized Dealership / Showroom</option>
+                    <option value="Car Accessories Retailer">Car Accessories &amp; Audio Retailer</option>
+                    <option value="Multi-Brand Workshop">Multi-Brand Workshop / Garage</option>
+                    <option value="Auto Parts Wholesaler">Auto Parts Wholesaler / Distributor</option>
+                    <option value="Detailing Studio">Car Detailing / PPF Studio</option>
+                    <option value="Fleet Operator">Fleet Operator / Commercial Transport</option>
+                    <option value="Other Commercial Partner">Other Commercial Automotive Business</option>
+                  </select>
+                </div>
+
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      Expected Monthly Volume <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
+                  <select
+                    className="ws-input-text"
+                    value={formData.expectedMonthlyVolume}
+                    onChange={(e) => setFormData({ ...formData, expectedMonthlyVolume: e.target.value })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="₹25k–₹50k">₹25,000 – ₹50,000 / month</option>
+                    <option value="₹50k–₹2L">₹50,000 – ₹2,00,000 / month</option>
+                    <option value="₹2L–₹5L">₹2,00,000 – ₹5,00,000 / month</option>
+                    <option value="₹5L–₹10L">₹5,00,000 – ₹10,00,000 / month</option>
+                    <option value="₹10L+">₹10,00,000+ / month (Enterprise)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Section 3: Tax Identification */}
+              <div className="ws-form-section-title">
+                <FileText size={15} />
+                <span>2. Tax &amp; Compliance Identifiers</span>
+              </div>
+
+              <div className="ws-responsive-grid-2">
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      GSTIN Number <span className="ws-field-subtext">(Optional — for Tax Invoice &amp; ITC)</span>
                     </label>
                     {formData.gstin ? (
-                      <span style={{ fontSize: '11px', color: formData.gstin.length === 15 ? '#059669' : '#64748b', fontWeight: 600 }}>
+                      <span style={{ fontSize: '11px', color: formData.gstin.length === 15 ? '#059669' : '#d97706', fontWeight: 600 }}>
                         {formData.gstin.length}/15
                       </span>
                     ) : null}
@@ -308,16 +511,11 @@ export default function WholesaleDashboardPage() {
                   <input
                     type="text"
                     maxLength={15}
+                    className="ws-input-text mono"
                     style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: formData.gstin && formData.gstin.length > 0 && formData.gstin.length < 15 ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                      padding: '0 12px',
-                      fontSize: '13.5px',
-                      fontFamily: 'monospace',
+                      border: formData.gstin && formData.gstin.length > 0 && formData.gstin.length < 15 ? '1px solid #f59e0b' : undefined,
                     }}
-                    placeholder="e.g. 07AAAAA0000A1Z5 (optional)"
+                    placeholder="e.g. 07AAAAA0000A1Z5"
                     value={formData.gstin}
                     onChange={(e) => {
                       const clean = sanitizeGstin(e.target.value);
@@ -341,18 +539,18 @@ export default function WholesaleDashboardPage() {
                   )}
                   {formData.gstin.length === 15 && (
                     <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
-                      ✓ 15-character GSTIN entered
+                      ✓ 15-character GSTIN verified format
                     </span>
                   )}
                 </div>
 
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                      PAN Number <span style={{ fontWeight: 400, color: '#64748b' }}>(Optional)</span>
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      PAN Number <span className="ws-field-subtext">(Optional)</span>
                     </label>
                     {formData.pan ? (
-                      <span style={{ fontSize: '11px', color: formData.pan.length === 10 && PAN_REGEX.test(formData.pan) ? '#059669' : '#64748b', fontWeight: 600 }}>
+                      <span style={{ fontSize: '11px', color: formData.pan.length === 10 && PAN_REGEX.test(formData.pan) ? '#059669' : '#d97706', fontWeight: 600 }}>
                         {formData.pan.length}/10
                       </span>
                     ) : null}
@@ -360,14 +558,9 @@ export default function WholesaleDashboardPage() {
                   <input
                     type="text"
                     maxLength={10}
+                    className="ws-input-text mono"
                     style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: formData.pan && formData.pan.length > 0 && (formData.pan.length < 10 || !PAN_REGEX.test(formData.pan)) ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                      padding: '0 12px',
-                      fontSize: '13.5px',
-                      fontFamily: 'monospace',
+                      border: formData.pan && formData.pan.length > 0 && (formData.pan.length < 10 || !PAN_REGEX.test(formData.pan)) ? '1px solid #f59e0b' : undefined,
                     }}
                     placeholder="ABCDE1234F"
                     value={formData.pan}
@@ -391,22 +584,36 @@ export default function WholesaleDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Contact Person Name *</label>
+              {/* Section 4: Authorized Contact */}
+              <div className="ws-form-section-title">
+                <WholesaleIcon name="account" size={15} />
+                <span>3. Authorized Representative Contact</span>
+              </div>
+
+              <div className="ws-responsive-grid-2">
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      Contact Person Full Name <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    className="ws-input-text"
+                    placeholder="e.g. Ramesh Kumar"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>Business Phone / WhatsApp *</label>
+
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      Business Phone / WhatsApp <span className="ws-field-req">*</span>
+                    </label>
                     {formData.phone ? (
-                      <span style={{ fontSize: '11px', color: isValidPhone(formData.phone) ? '#059669' : '#64748b', fontWeight: 600 }}>
+                      <span style={{ fontSize: '11px', color: isValidPhone(formData.phone) ? '#059669' : '#d97706', fontWeight: 600 }}>
                         {formData.phone.replace(/\D/g, '').length} digits
                       </span>
                     ) : null}
@@ -415,13 +622,9 @@ export default function WholesaleDashboardPage() {
                     type="tel"
                     required
                     maxLength={14}
+                    className="ws-input-text"
                     style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: formData.phone && !isValidPhone(formData.phone) ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                      padding: '0 12px',
-                      fontSize: '13.5px',
+                      border: formData.phone && !isValidPhone(formData.phone) ? '1px solid #f59e0b' : undefined,
                     }}
                     placeholder="+91 9876543210 or 9876543210"
                     value={formData.phone}
@@ -440,44 +643,68 @@ export default function WholesaleDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Registered Business Address *</label>
+              {/* Section 5: Workshop / Registered Location */}
+              <div className="ws-form-section-title">
+                <WholesaleIcon name="warehouse" size={15} />
+                <span>4. Commercial Workshop / Delivery Address</span>
+              </div>
+
+              <div className="ws-field-group">
+                <div className="ws-field-header">
+                  <label className="ws-field-label">
+                    Registered Business Address <span className="ws-field-req">*</span>
+                  </label>
+                </div>
                 <input
                   type="text"
                   required
-                  style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
-                  placeholder="Street, Industrial Area, Landmark"
+                  className="ws-input-text"
+                  placeholder="Plot/Shop No., Street, Industrial Area, Landmark"
                   value={formData.businessAddress}
                   onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>City *</label>
+              <div className="ws-responsive-grid-3">
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      City <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    className="ws-input-text"
+                    placeholder="e.g. New Delhi"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>State *</label>
+
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      State <span className="ws-field-req">*</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     required
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13.5px' }}
+                    className="ws-input-text"
+                    placeholder="e.g. Delhi"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                   />
                 </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>PIN Code *</label>
+
+                <div className="ws-field-group">
+                  <div className="ws-field-header">
+                    <label className="ws-field-label">
+                      PIN Code <span className="ws-field-req">*</span>
+                    </label>
                     {formData.pincode ? (
-                      <span style={{ fontSize: '11px', color: formData.pincode.length === 6 ? '#059669' : '#64748b', fontWeight: 600 }}>
+                      <span style={{ fontSize: '11px', color: formData.pincode.length === 6 ? '#059669' : '#d97706', fontWeight: 600 }}>
                         {formData.pincode.length}/6
                       </span>
                     ) : null}
@@ -486,13 +713,9 @@ export default function WholesaleDashboardPage() {
                     type="text"
                     required
                     maxLength={6}
+                    className="ws-input-text mono"
                     style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: formData.pincode && formData.pincode.length < 6 ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                      padding: '0 12px',
-                      fontSize: '13.5px',
+                      border: formData.pincode && formData.pincode.length < 6 ? '1px solid #f59e0b' : undefined,
                     }}
                     placeholder="110001"
                     value={formData.pincode}
@@ -510,15 +733,209 @@ export default function WholesaleDashboardPage() {
                   )}
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="ws-btn-primary ws-btn-brand"
-                style={{ width: '100%', height: '44px', fontSize: '14px' }}
-              >
-                <Send size={16} />
-                <span>{submitting ? 'Submitting Application…' : 'Submit Wholesale Application'}</span>
-              </button>
+
+              {/* Section 6: Business / Visiting Card Upload (COMPULSORY) */}
+              <div id="ws-card-upload-anchor" className="ws-form-section-title" style={{ marginTop: '26px' }}>
+                <CreditCard size={15} color="#e2231a" />
+                <span style={{ color: '#0f172a' }}>5. Business / Visiting Card Document</span>
+                <span style={{ marginLeft: 'auto', fontSize: '10.5px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
+                  Compulsory *
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '22px' }}>
+                {/* Hidden File Input with camera / gallery picker */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      setCardUploadLoading(true);
+                      setCardUploadError(null);
+                      compressVisitingCardImage(file)
+                        .then((res) => {
+                          setVisitingCard(res);
+                          setErrorMessage(null);
+                        })
+                        .catch((err) => {
+                          setCardUploadError(err.message || 'Failed to process card image');
+                        })
+                        .finally(() => {
+                          setCardUploadLoading(false);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        });
+                    }
+                  }}
+                />
+
+                {!visitingCard ? (
+                  <div
+                    className={`ws-card-upload-container ${isDraggingOver ? 'drag-over' : ''} ${errorMessage && !visitingCard ? 'has-error' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingOver(true);
+                    }}
+                    onDragLeave={() => setIsDraggingOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingOver(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        const file = e.dataTransfer.files[0];
+                        setCardUploadLoading(true);
+                        setCardUploadError(null);
+                        compressVisitingCardImage(file)
+                          .then((res) => {
+                            setVisitingCard(res);
+                            setErrorMessage(null);
+                          })
+                          .catch((err) => {
+                            setCardUploadError(err.message || 'Failed to process card image');
+                          })
+                          .finally(() => {
+                            setCardUploadLoading(false);
+                          });
+                      }
+                    }}
+                  >
+                    <div className="ws-card-upload-inner">
+                      <div className="ws-card-upload-icon">
+                        {cardUploadLoading ? (
+                          <div style={{ width: '22px', height: '22px', border: '2px solid #cbd5e1', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                        ) : (
+                          <UploadCloud size={26} color="#0f172a" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="ws-card-upload-title">
+                          {cardUploadLoading ? 'Optimizing & Compressing Card Photo…' : 'Upload Business / Visiting Card'}
+                        </p>
+                        <p className="ws-card-upload-desc">
+                          Tap to take a photo with your mobile camera or browse from gallery/files. Clear photo of your business visiting card or workshop sign board is required for desk verification.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          className="ws-btn-secondary"
+                          style={{ pointerEvents: 'none', fontSize: '12.5px', padding: '6px 14px' }}
+                        >
+                          <Camera size={14} />
+                          <span>Select Card Photo (JPG, PNG, WebP)</span>
+                        </button>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>Max 10MB · Auto-compressed</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="ws-card-preview-card">
+                    {/* Thumbnail with Zoom overlay */}
+                    <div
+                      className="ws-card-thumb-wrap"
+                      onClick={() => setPreviewLightboxOpen(true)}
+                      title="Click to zoom visiting card"
+                    >
+                      <img src={visitingCard.url} alt="Business visiting card" />
+                      <div className="ws-card-thumb-zoom-badge">
+                        <Eye size={14} />
+                        <span>Zoom</span>
+                      </div>
+                    </div>
+
+                    {/* File Details */}
+                    <div className="ws-card-preview-details">
+                      <div className="ws-card-preview-badges">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
+                          <CheckCircle2 size={12} /> Card Attached &amp; Validated
+                        </span>
+                        {visitingCard.size ? (
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                            ~{Math.round(visitingCard.size / 1024)} KB
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <h4 className="ws-card-preview-name" title={visitingCard.name}>
+                        {visitingCard.name || 'visiting-card.webp'}
+                      </h4>
+                      <p className="ws-card-preview-size">
+                        Ready for CarXen desk review. Tap thumbnail or &ldquo;View Full Card&rdquo; to preview details.
+                      </p>
+
+                      <div className="ws-card-preview-actions" style={{ marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          className="ws-btn-secondary"
+                          onClick={() => setPreviewLightboxOpen(true)}
+                          style={{ fontSize: '12px', padding: '5px 12px', minHeight: '32px' }}
+                        >
+                          <Eye size={13} />
+                          <span>View Full Card</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="ws-btn-secondary"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{ fontSize: '12px', padding: '5px 12px', minHeight: '32px' }}
+                        >
+                          <Camera size={13} />
+                          <span>Replace</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="ws-btn-secondary"
+                          onClick={() => setVisitingCard(null)}
+                          style={{ fontSize: '12px', padding: '5px 12px', minHeight: '32px', color: '#dc2626', borderColor: '#fecaca' }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {cardUploadError && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertCircle size={14} />
+                    <span>{cardUploadError}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div style={{ marginTop: '28px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="ws-btn-primary ws-btn-brand"
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    minHeight: '46px',
+                    height: 'auto',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    whiteSpace: 'normal',
+                    boxSizing: 'border-box',
+                    textAlign: 'center',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  <Send size={17} style={{ flexShrink: 0 }} />
+                  <span>{submitting ? 'Verifying & Submitting Application…' : 'Submit Wholesale Application'}</span>
+                </button>
+                <p style={{ textAlign: 'center', fontSize: '11.5px', color: '#64748b', marginTop: '10px', marginBottom: 0 }}>
+                  By submitting, you confirm that the entered trade details and visiting card are authentic representations of your automotive business.
+                </p>
+              </div>
             </form>
           </div>
 
@@ -565,6 +982,33 @@ export default function WholesaleDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Visiting Card Lightbox Modal */}
+        {previewLightboxOpen && visitingCard && (
+          <div className="ws-card-lightbox-overlay" onClick={() => setPreviewLightboxOpen(false)}>
+            <div className="ws-card-lightbox-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ws-card-lightbox-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CreditCard size={18} color="#e2231a" />
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                    Business / Visiting Card Preview
+                  </strong>
+                </div>
+                <button
+                  type="button"
+                  className="ws-btn-ghost"
+                  onClick={() => setPreviewLightboxOpen(false)}
+                  style={{ padding: '4px 8px' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="ws-card-lightbox-body">
+                <img src={visitingCard.url} alt={visitingCard.name || 'Visiting card'} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -894,6 +1338,55 @@ export default function WholesaleDashboardPage() {
                       )}
                     </span>
                   </div>
+
+                  {/* Business / Visiting Card Dossier Tile */}
+                  {(() => {
+                    const dossierCard = extractVisitingCard(b2bProfile?.b2bDocuments) || visitingCard;
+                    return (
+                      <div className="ws-data-tile" style={{ gridColumn: 'span 2' }}>
+                        <span className="ws-data-tile-label">Verified Business / Visiting Card</span>
+                        {dossierCard ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <img
+                                src={dossierCard.url}
+                                alt="Visiting card"
+                                style={{ width: '56px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#0f172a' }}
+                                onClick={() => {
+                                  setVisitingCard(dossierCard);
+                                  setPreviewLightboxOpen(true);
+                                }}
+                              />
+                              <div>
+                                <span style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#059669' }}>
+                                  ✓ Business Card on File
+                                </span>
+                                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                                  {dossierCard.name || 'visiting-card.webp'}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="ws-btn-secondary"
+                              style={{ fontSize: '11.5px', padding: '4px 12px', minHeight: '30px' }}
+                              onClick={() => {
+                                setVisitingCard(dossierCard);
+                                setPreviewLightboxOpen(true);
+                              }}
+                            >
+                              <Eye size={13} />
+                              <span>View Card</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
+                            No card attached
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -985,6 +1478,33 @@ export default function WholesaleDashboardPage() {
           </div>
 
         </div>
+
+        {/* Visiting Card Lightbox Modal */}
+        {previewLightboxOpen && visitingCard && (
+          <div className="ws-card-lightbox-overlay" onClick={() => setPreviewLightboxOpen(false)}>
+            <div className="ws-card-lightbox-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ws-card-lightbox-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CreditCard size={18} color="#e2231a" />
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                    Business / Visiting Card Preview
+                  </strong>
+                </div>
+                <button
+                  type="button"
+                  className="ws-btn-ghost"
+                  onClick={() => setPreviewLightboxOpen(false)}
+                  style={{ padding: '4px 8px' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="ws-card-lightbox-body">
+                <img src={visitingCard.url} alt={visitingCard.name || 'Visiting card'} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

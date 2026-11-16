@@ -132,10 +132,30 @@ export async function POST(request: Request) {
         : Array.isArray(documents) && documents.length > 0
         ? documents
         : b2bDocuments && typeof b2bDocuments === 'object'
-        ? b2bDocuments
+        ? [b2bDocuments]
         : typeof notes === 'string' && notes.trim().length > 0
         ? [{ type: 'applicant_note', text: notes.trim(), date: now }]
         : [];
+
+    const hasVisitingCard =
+      Array.isArray(safeDocuments) &&
+      safeDocuments.some(
+        (doc: any) =>
+          doc &&
+          typeof doc === 'object' &&
+          (doc.type === 'visiting_card' ||
+            doc.category === 'visiting_card' ||
+            doc.type === 'business_card' ||
+            (typeof doc.url === 'string' && doc.url.trim().length > 0) ||
+            (typeof doc.dataUrl === 'string' && doc.dataUrl.trim().length > 0))
+      );
+
+    if (!hasVisitingCard) {
+      return NextResponse.json(
+        { error: 'Business or visiting card upload is compulsory. Please upload a clear photo of your business card.' },
+        { status: 400 }
+      );
+    }
 
     const referenceNumber = normalizedGstin
       ? `CX-B2B-${normalizedGstin.replace(/[^A-Za-z0-9]/g, '').slice(-4)}`
