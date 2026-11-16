@@ -441,7 +441,7 @@ export default function WholesaleDashboardPage() {
                 </div>
                 <div>
                   <strong>Looking for accessories for your personal car?</strong>
-                  <p>Individual consumer purchases are fulfilled with instant free delivery via our standard Retail Store.</p>
+                  <p>Individual consumer orders can be placed directly through our standard Retail Store.</p>
                 </div>
               </div>
               <button
