@@ -5960,9 +5960,9 @@ textarea.ws-form-control {
              Orders Pipeline Stepper & Line Item Squeezing.
    ========================================================================== */
 @media (max-width: 900px) {
-  /* 1. Page Container Bottom Clearance for Bottom Nav & Floating Dock */
+  /* 1. Page Container Bottom Clearance for Bottom Nav */
   body:has(.cx-bottom-nav) .ws-page-container {
-    padding-bottom: calc(190px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
   }
 
   /* 2. Hero Welcome Black Card on Mobile */
@@ -7155,7 +7155,7 @@ textarea.ws-form-control {
   /* Comprehensive Mobile Overflow Protections */
   body:has(.wholesale-sidebar) .ws-page-container,
   .ws-page-container {
-    padding: 14px 12px 100px !important;
+    padding: 14px 12px calc(24px + env(safe-area-inset-bottom)) !important;
     max-width: 100% !important;
     width: 100% !important;
     overflow-x: hidden !important;
@@ -7883,7 +7883,7 @@ textarea.ws-form-control {
    ========================================================================== */
 .ws-gate-wrapper {
   max-width: 680px;
-  margin: 30px auto 80px;
+  margin: 24px auto 20px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -8297,7 +8297,7 @@ textarea.ws-form-control {
 
 @media (max-width: 640px) {
   .ws-gate-wrapper {
-    margin: 16px auto 40px;
+    margin: 10px auto 14px;
   }
   .ws-gate-card {
     padding: 24px 18px 20px;
