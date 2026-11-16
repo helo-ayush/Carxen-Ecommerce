@@ -7898,25 +7898,6 @@ textarea.ws-form-control {
   gap: 12px;
 }
 
-.ws-gate-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ws-gate-logo-img {
-  height: 28px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
-.ws-gate-brand-divider {
-  width: 1px;
-  height: 18px;
-  background: #cbd5e1;
-}
-
 .ws-gate-badge {
   display: inline-flex;
   align-items: center;

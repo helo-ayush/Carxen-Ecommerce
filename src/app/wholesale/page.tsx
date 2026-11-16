@@ -349,17 +349,11 @@ export default function WholesaleDashboardPage() {
     return (
       <div className="ws-page-container">
         <div className="ws-gate-wrapper">
-          {/* Header Bar with Logo and Sign Out */}
+          {/* Header Bar with Commercial Badge and Sign Out */}
           <div className="ws-gate-topbar">
-            <div className="ws-gate-brand-row">
-              <Link href="/" className="logo-link" aria-label="CARXEN Homepage">
-                <img src="/logo.png" alt="CARXEN" className="ws-gate-logo-img" />
-              </Link>
-              <span className="ws-gate-brand-divider" />
-              <div className="ws-gate-badge">
-                <ShieldCheck size={13} color="#e2231a" />
-                <span>COMMERCIAL DEALER NETWORK</span>
-              </div>
+            <div className="ws-gate-badge">
+              <ShieldCheck size={13} color="#e2231a" />
+              <span>CARXEN COMMERCIAL PARTNER NETWORK</span>
             </div>
 
             <button
