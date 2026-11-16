@@ -47,8 +47,8 @@ export function MobileMenu() {
 
   const isWholesaleMode = pathname.startsWith('/wholesale') || pathname.startsWith('/b2b');
 
-  const partnerName = b2bProfile?.businessName || user?.name || 'Verified Wholesale Partner';
-  const tierName = 'Verified Wholesale Partner';
+  const partnerName = b2bProfile?.businessName || user?.name || 'Verified Dealer Partner';
+  const tierName = 'Verified Dealer Partner';
 
   return (
     <div className={`menu ${isWholesaleMode ? 'b2b-mobile-drawer' : ''} ${isMobileMenuOpen ? 'on' : ''}`} id="menu">
@@ -63,7 +63,7 @@ export function MobileMenu() {
         </Link>
         {isWholesaleMode && (
           <span className="wholesale-brand-tag" style={{ marginLeft: '6px' }}>
-            B2B PORTAL
+            DEALER PORTAL
           </span>
         )}
         <button className="xb" id="menuX" onClick={closeMobileMenu} aria-label="Close menu">
@@ -96,7 +96,7 @@ export function MobileMenu() {
                   ? tierName
                   : isWholesalePending
                   ? 'Verification Under Review'
-                  : 'Wholesale Application Required'}
+                  : 'Dealer Application Required'}
               </span>
             </div>
 
@@ -121,7 +121,7 @@ export function MobileMenu() {
 
           {/* Section 1: Procurement Matrix */}
           <div className="b2b-drawer-section">
-            <div className="b2b-drawer-section-label">Procurement Workspace</div>
+            <div className="b2b-drawer-section-label">Dealer Workspace</div>
 
             <Link
               href="/wholesale"
@@ -147,7 +147,7 @@ export function MobileMenu() {
                 <Grid size={18} />
               </div>
               <div className="b2b-drawer-item-text">
-                <strong>Wholesale Catalogue</strong>
+                <strong>Dealer Catalogue</strong>
                 <span>All vehicle fitments & bulk MOQ prices</span>
               </div>
               <ChevronRight size={16} className="b2b-drawer-arrow" />
@@ -177,7 +177,7 @@ export function MobileMenu() {
                 <ShoppingBag size={18} />
               </div>
               <div className="b2b-drawer-item-text">
-                <strong>Order Basket</strong>
+                <strong>Procurement Basket</strong>
                 <span>Review drafted lines & confirm PO</span>
               </div>
               {wholesaleBasketSkuCount > 0 ? (
@@ -190,7 +190,7 @@ export function MobileMenu() {
 
           {/* Section 2: Management & Commercial */}
           <div className="b2b-drawer-section">
-            <div className="b2b-drawer-section-label">Management & Pipeline</div>
+            <div className="b2b-drawer-section-label">Dealership Management</div>
 
             <Link
               href="/wholesale/orders"
@@ -201,7 +201,7 @@ export function MobileMenu() {
                 <Package size={18} />
               </div>
               <div className="b2b-drawer-item-text">
-                <strong>Wholesale Orders</strong>
+                <strong>Commercial Orders</strong>
                 <span>Factory pipeline milestones & dispatch tracking</span>
               </div>
               <ChevronRight size={16} className="b2b-drawer-arrow" />
@@ -231,7 +231,7 @@ export function MobileMenu() {
                 <Building2 size={18} />
               </div>
               <div className="b2b-drawer-item-text">
-                <strong>Business Account</strong>
+                <strong>Dealer Account</strong>
                 <span>Warehouse addresses, GSTIN & commercial terms</span>
               </div>
               <ChevronRight size={16} className="b2b-drawer-arrow" />
@@ -240,15 +240,15 @@ export function MobileMenu() {
 
           {/* Section 3: Commercial Assistance */}
           <div className="b2b-drawer-section">
-            <div className="b2b-drawer-section-label">Commercial Support Desk</div>
+            <div className="b2b-drawer-section-label">Dealer Support Desk</div>
 
             <button
               type="button"
               onClick={() => {
                 closeMobileMenu();
                 openSupportModal({
-                  category: 'Wholesale Verification & Fast-Track Approval',
-                  initialMessage: 'Commercial inquiry from wholesale mobile workspace.',
+                  category: 'Dealer Verification & Fast-Track Approval',
+                  initialMessage: 'Commercial inquiry from dealer mobile workspace.',
                 });
               }}
               className="b2b-drawer-support-card"
@@ -258,7 +258,7 @@ export function MobileMenu() {
                 <Building2 size={18} />
               </div>
               <div className="b2b-drawer-support-text">
-                <strong>Commercial Support Desk</strong>
+                <strong>Dealer Support Desk</strong>
                 <span>Direct inquiry channel with CARXEN team</span>
               </div>
               <ChevronRight size={15} />
@@ -310,7 +310,7 @@ export function MobileMenu() {
                 <i>05</i>Reviews
               </Link>
               <Link href="/wholesale" onClick={closeMobileMenu} style={{ transitionDelay: '.45s' }}>
-                <i>06</i>Wholesale Portal
+                <i>06</i>Dealer Portal (B2B Trade)
               </Link>
               <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.52s' }}>
                 <i>07</i>Shop now

@@ -53,7 +53,7 @@ function HeaderContent() {
       await refreshCustomerProfile();
       const st = b2bProfile?.status;
       if (st === 'APPROVED') {
-        showToast('Congratulations! Your wholesale account is approved & active.');
+        showToast('Congratulations! Your dealer account is approved & active.');
       } else if (st === 'INQUIRY') {
         showToast('Action Required: Commercial desk requested additional information.');
       } else if (st === 'REJECTED') {
@@ -226,15 +226,15 @@ function HeaderContent() {
     return (
       <>
         {/* Mobile Header (Hidden on Desktop, only shown on screens <= 900px) */}
-        <header className="wholesale-mobile-header" aria-label="Wholesale Navigation">
+        <header className="wholesale-mobile-header" aria-label="Dealer Navigation">
           <div className="wholesale-mobile-header-left">
             <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="logo-img" />
             </Link>
-            <span className="wholesale-brand-tag">B2B PORTAL</span>
+            <span className="wholesale-brand-tag">DEALER PORTAL</span>
             {isWholesaleApproved && (
               <span className="wholesale-mobile-tier-badge">
-                B2B Partner
+                Authorized Dealer
               </span>
             )}
           </div>
@@ -243,8 +243,8 @@ function HeaderContent() {
               <Link
                 href="/wholesale/catalog"
                 className="wholesale-mobile-search-btn"
-                aria-label="Search wholesale catalogue"
-                title="Search wholesale catalogue"
+                aria-label="Search dealer catalogue"
+                title="Search dealer catalogue"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="7" />
@@ -264,7 +264,7 @@ function HeaderContent() {
                 )}
               </Link>
             )}
-            <button className="tool burger wholesale-mobile-burger" id="burger" onClick={openMobileMenu} aria-label="Open B2B Menu">
+            <button className="tool burger wholesale-mobile-burger" id="burger" onClick={openMobileMenu} aria-label="Open Dealer Menu">
               <svg viewBox="0 0 24 24">
                 <path d="M3 7h18M3 12h18M3 17h18" />
               </svg>
@@ -273,13 +273,13 @@ function HeaderContent() {
         </header>
 
         {/* Full-Height Left Rail Sidebar (top: 0 to bottom: 0) */}
-        <aside className="wholesale-sidebar" aria-label="Wholesale workspace navigation">
+        <aside className="wholesale-sidebar" aria-label="Dealer workspace navigation">
           {/* Brand Area with ORIGINAL CARXEN LOGO */}
           <div className="wholesale-sidebar-brand">
             <Link href="/" className="wholesale-sidebar-brand-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="wholesale-sidebar-logo-img" />
             </Link>
-            <span className="wholesale-sidebar-b2b-badge">B2B PORTAL</span>
+            <span className="wholesale-sidebar-b2b-badge">DEALER PORTAL</span>
           </div>
 
           {(() => {
@@ -287,16 +287,16 @@ function HeaderContent() {
             let statusText = 'Registration Required';
             if (isWholesaleApproved) {
               statusClass = 'status-approved';
-              statusText = 'Verified Wholesale Partner';
+              statusText = 'Verified Dealer Partner';
             } else if (isWholesaleInquiry) {
               statusClass = 'status-inquiry';
               statusText = 'Action Required · Inquiry';
             } else if (isWholesaleRejected) {
               statusClass = 'status-rejected';
-              statusText = 'Application Declined';
+              statusText = 'Dealership Declined';
             } else if (isWholesalePending) {
               statusClass = 'status-pending';
-              statusText = 'Verification Pending';
+              statusText = 'Dealership Review Pending';
             }
 
             return (
@@ -313,7 +313,7 @@ function HeaderContent() {
               className="wholesale-sidebar-check-status-btn"
               disabled={checkingWholesaleStatus}
               onClick={handleCheckWholesaleStatus}
-              title="Check wholesale verification status"
+              title="Check dealer verification status"
             >
               <RefreshCw size={13} className={checkingWholesaleStatus ? 'ws-spin' : ''} />
               <span>{checkingWholesaleStatus ? 'Checking Status...' : 'Check Status'}</span>
@@ -321,12 +321,12 @@ function HeaderContent() {
           )}
 
           <div className="wholesale-nav-group">
-            <div className="wholesale-sidebar-label">Procurement</div>
+            <div className="wholesale-sidebar-label">Dealer Procurement</div>
             {[
-              ['/wholesale', 'Overview', 'warehouse'],
-              ['/wholesale/catalog', 'Catalogue', 'catalogue'],
+              ['/wholesale', 'Dealer Dashboard', 'warehouse'],
+              ['/wholesale/catalog', 'Dealer Catalogue', 'catalogue'],
               ['/wholesale/quick-order', 'Quick Order Matrix', 'quick-order'],
-              ['/wholesale/order-basket', 'Order Basket', 'basket'],
+              ['/wholesale/order-basket', 'Procurement Basket', 'basket'],
             ].map(([href, label, icon]) => {
               const active = href === '/wholesale' ? pathname === href : pathname.startsWith(href);
               const isLocked = !isWholesaleApproved && href !== '/wholesale';
@@ -338,10 +338,10 @@ function HeaderContent() {
                     key={href}
                     onClick={() => {
                       router.push('/wholesale');
-                      showToast('Wholesale procurement is strictly restricted to verified commercial partners.');
+                      showToast('Procurement is strictly restricted to authorized dealers.');
                     }}
                     className="wholesale-sidebar-link locked"
-                    title="Commercial partner verification required"
+                    title="Authorized dealer verification required"
                   >
                     <WholesaleIcon name={icon as any} size={18} />
                     <span>{label}</span>
@@ -363,11 +363,11 @@ function HeaderContent() {
           </div>
 
           <div className="wholesale-nav-group">
-            <div className="wholesale-sidebar-label">Management</div>
+            <div className="wholesale-sidebar-label">Dealership Management</div>
             {[
-              ['/wholesale/orders', 'Wholesale Orders', 'orders'],
+              ['/wholesale/orders', 'Commercial Orders', 'orders'],
               ['/wholesale/quotes', 'Saved Assortments', 'lists'],
-              ['/wholesale/account', 'Business Account', 'account'],
+              ['/wholesale/account', 'Dealer Account', 'account'],
             ].map(([href, label, icon]) => {
               const active = pathname.startsWith(href);
               const isLocked = !isWholesaleApproved;
@@ -379,10 +379,10 @@ function HeaderContent() {
                     key={href}
                     onClick={() => {
                       router.push('/wholesale');
-                      showToast('Wholesale management is strictly restricted to verified commercial partners.');
+                      showToast('Dealer management is strictly restricted to authorized partners.');
                     }}
                     className="wholesale-sidebar-link locked"
-                    title="Commercial partner verification required"
+                    title="Authorized dealer verification required"
                   >
                     <WholesaleIcon name={icon as any} size={18} />
                     <span>{label}</span>
@@ -407,21 +407,21 @@ function HeaderContent() {
           <div className="wholesale-sidebar-card ws-sidebar-commercial-desk">
             <div className="ws-sidebar-card-header">
               <WholesaleIcon name="phone" size={14} />
-              <span>Customer Support Desk</span>
+              <span>Dealer Desk &amp; Support</span>
             </div>
             <p className="ws-sidebar-desk-desc">
-              Direct support desk for order queries, bulk pricing &amp; allocations
+              Direct support desk for dealer allocations, volume orders &amp; dispatches
             </p>
             <button
               type="button"
               onClick={() => openSupportModal({
                 category: 'General Commercial Support',
-                initialMessage: 'Customer support inquiry regarding wholesale operations.',
+                initialMessage: 'Commercial inquiry regarding CarXen dealership operations.',
               })}
               className="ws-sidebar-desk-wa-btn"
               style={{ width: '100%', cursor: 'pointer', border: 'none', textAlign: 'center', justifyContent: 'center' }}
             >
-              <span>Customer Support</span>
+              <span>Contact Dealer Desk</span>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
@@ -429,7 +429,7 @@ function HeaderContent() {
             </button>
           </div>
 
-          {/* Clean Logout button replacing Personal Shopping */}
+          {/* Clean Logout button */}
           <button
             type="button"
             className="wholesale-sidebar-logout-btn"
@@ -437,7 +437,7 @@ function HeaderContent() {
               await logout();
               router.push('/login');
             }}
-            aria-label="Sign out of Wholesale Workspace"
+            aria-label="Sign out of Dealer Portal"
           >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -538,30 +538,38 @@ function HeaderContent() {
 
             {/* Retail Tools */}
             <div className="hd-tools" style={isLandingPage ? { marginLeft: 'auto' } : undefined}>
-              {/* Workspace Switcher to Wholesale - only on landing page */}
+              {/* Workspace Switcher to Dealer Portal - only on landing page */}
               {isLandingPage && (
                 <Link
                   href="/wholesale"
                   className={`wholesale-workspace-switch-btn ${
-                    isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : ''
+                    isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : 'guest-link'
                   }`}
-                  title="Switch to Wholesale Partner Workspace"
+                  title={
+                    isWholesaleApproved
+                      ? 'Switch to Authorized Dealer Workspace'
+                      : isWholesalePending
+                      ? 'Dealership Application Under Review'
+                      : 'Authorized Dealer Portal (Trade & B2B Commercial Only)'
+                  }
                   onClick={() => setWorkspaceMode('wholesale')}
                 >
-                  <span
-                    className={
-                      isWholesaleApproved
-                        ? 'wholesale-badge-dot'
-                        : isWholesalePending
-                        ? 'wholesale-badge-amber-dot'
-                        : 'wholesale-badge-neutral-dot'
-                    }
-                  />
-                  <span className="wholesale-switch-text">Wholesale Portal</span>
-                  {isWholesaleApproved && (
-                    <span className="wholesale-micro-tier">
-                      B2B
-                    </span>
+                  {isWholesaleApproved ? (
+                    <>
+                      <span className="wholesale-badge-dot" />
+                      <span className="wholesale-switch-text">Dealer Workspace</span>
+                      <span className="wholesale-micro-tier">B2B</span>
+                    </>
+                  ) : isWholesalePending ? (
+                    <>
+                      <span className="wholesale-badge-amber-dot" />
+                      <span className="wholesale-switch-text">Dealer Review</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="wholesale-switch-text">Dealer Portal</span>
+                      <span className="wholesale-switch-arrow" aria-hidden="true">↗</span>
+                    </>
                   )}
                 </Link>
               )}

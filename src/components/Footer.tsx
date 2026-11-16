@@ -58,6 +58,7 @@ export function Footer() {
             <Link href="/#fitment">Fitment guide</Link>
             <Link href="/#top">Shipping</Link>
             <Link href="/#top">Warranty</Link>
+            <Link href="/wholesale">Authorized Dealer Portal</Link>
           </div>
           <div>
             <h6>Legal & Policy</h6>

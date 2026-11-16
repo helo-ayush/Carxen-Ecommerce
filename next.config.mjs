@@ -55,6 +55,18 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/dealer',
+        destination: '/wholesale',
+      },
+      {
+        source: '/dealer/:path*',
+        destination: '/wholesale/:path*',
+      },
+    ];
+  },
 };
 
 export default (phase) => ({

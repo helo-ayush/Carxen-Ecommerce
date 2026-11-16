@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Wholesale Catalog',
+  title: 'Dealer Catalogue',
   description:
-    'Browse the Carxen wholesale catalog: premium seat covers, all-weather floor mats, steering wheel covers and cabin accessories at bulk pricing.',
+    'Browse the Carxen dealer catalogue: premium seat covers, all-weather floor mats, steering wheel covers and cabin accessories at commercial pricing.',
   alternates: { canonical: '/wholesale/catalog' },
 };
 

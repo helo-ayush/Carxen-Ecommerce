@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Wholesale Car Accessories for Dealerships & Garages',
+  title: 'Authorized Dealer Portal | CarXen Commercial Automotive',
   description:
-    'Wholesale premium car accessories for dealerships, garages and resellers: seat covers, floor mats and steering covers at tiered bulk pricing.',
+    'CarXen Authorized Dealer Portal: premium seat covers, 7D floor mats and steering covers for registered dealerships, garages and automotive retailers at commercial trade pricing.',
   alternates: { canonical: '/wholesale' },
   openGraph: {
-    title: 'Wholesale Car Accessories | Carxen',
+    title: 'Authorized Dealer Portal | CarXen',
     description:
-      'Tiered bulk pricing on premium car accessories for dealerships, garages and resellers.',
+      'Commercial trade pricing on premium car accessories for registered automotive dealerships, workshops and distributors.',
     url: '/wholesale',
   },
 };

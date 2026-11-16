@@ -29,7 +29,8 @@ import {
   Eye,
   Camera,
   X,
-  FileText
+  FileText,
+  ShoppingBag
 } from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -186,6 +187,7 @@ export default function WholesaleDashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isEditingApplication, setIsEditingApplication] = useState(false);
+  const [hasConfirmedTradeEligibility, setHasConfirmedTradeEligibility] = useState(false);
 
   // Business / Visiting Card Upload State
   const [visitingCard, setVisitingCard] = useState<{
@@ -323,7 +325,7 @@ export default function WholesaleDashboardPage() {
       setErrorMessage(formatUserFriendlyB2BError(result.error));
     } else {
       setIsEditingApplication(false);
-      showToast('Wholesale application submitted for CarXen verification.');
+      showToast('Dealership application submitted for CarXen verification.');
     }
   };
 
@@ -333,6 +335,115 @@ export default function WholesaleDashboardPage() {
   const isUnderInquiry = isWholesaleInquiry && !isEditingApplication;
   const isDeclined = isWholesaleRejected && !isEditingApplication;
 
+  // 1.5 Pre-Screening Commercial Trade Qualification Gate
+  if (
+    !isWholesaleApproved &&
+    !isWholesalePending &&
+    !isUnderInquiry &&
+    !isDeclined &&
+    !hasConfirmedTradeEligibility &&
+    !isEditingApplication
+  ) {
+    return (
+      <div className="ws-page-container">
+        <div className="ws-gate-wrapper">
+          <div className="ws-gate-topbar">
+            <span className="ws-gate-badge">
+              <ShieldCheck size={14} color="#e2231a" />
+              <span>CARXEN COMMERCIAL PARTNER NETWORK</span>
+            </span>
+            <button
+              type="button"
+              className="ws-btn-secondary"
+              onClick={async () => {
+                await logout();
+                router.push('/login');
+              }}
+              style={{ fontSize: '12px', padding: '5px 12px' }}
+            >
+              Sign out
+            </button>
+          </div>
+
+          <div className="ws-gate-card">
+            <div className="ws-gate-header">
+              <div className="ws-gate-icon">
+                <Building2 size={26} />
+              </div>
+              <div>
+                <span className="ws-gate-kicker">Trade Access Restricted</span>
+                <h1>Authorized Dealership Application</h1>
+                <p>
+                  This portal is exclusively reserved for registered automotive businesses, workshops, retailers, and distributors.
+                </p>
+              </div>
+            </div>
+
+            <div className="ws-gate-requirements">
+              <div className="ws-gate-req-item">
+                <div className="ws-gate-req-icon" style={{ color: '#059669', background: '#ecfdf5' }}>
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <strong>Strictly Registered Businesses Only</strong>
+                  <p>Open only to licensed automotive retailers, spare parts dealers, car detailing studios, and multi-brand workshops.</p>
+                </div>
+              </div>
+
+              <div className="ws-gate-req-item">
+                <div className="ws-gate-req-icon" style={{ color: '#d97706', background: '#fffbeb' }}>
+                  <ShoppingBag size={18} />
+                </div>
+                <div>
+                  <strong>Minimum Order Volume (MOQ) Applies</strong>
+                  <p>Minimum order consignment is ₹25,000 / 10 Master Cartons. Single-piece retail orders are not fulfilled through this portal.</p>
+                </div>
+              </div>
+
+              <div className="ws-gate-req-item">
+                <div className="ws-gate-req-icon" style={{ color: '#2563eb', background: '#eff6ff' }}>
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <strong>Mandatory Business Documentation</strong>
+                  <p>Active GSTIN identification and valid Visiting / Business Card are required for desk underwriting and billing.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="ws-gate-consumer-callout">
+              <AlertCircle size={18} className="ws-gate-consumer-icon" />
+              <div>
+                <strong>Looking for accessories for your personal car?</strong>
+                <p>
+                  Please shop our retail store. Individual consumer orders placed through the dealer portal cannot be fulfilled.
+                </p>
+              </div>
+            </div>
+
+            <div className="ws-gate-actions">
+              <button
+                type="button"
+                className="ws-gate-confirm-btn"
+                onClick={() => setHasConfirmedTradeEligibility(true)}
+              >
+                <span>✓ I am an Automotive Business Owner / Dealer — Continue</span>
+              </button>
+
+              <button
+                type="button"
+                className="ws-gate-retail-btn"
+                onClick={() => router.push('/shop')}
+              >
+                <span>← I am shopping for my personal car — Shop Retail Store</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 2. Application Gate: Unregistered Partner Onboarding or Editing
   if ((!isWholesaleApproved && !isWholesalePending && !isUnderInquiry && !isDeclined) || isEditingApplication) {
     return (
@@ -341,14 +452,14 @@ export default function WholesaleDashboardPage() {
           <div className="ws-header-titles">
             <div className="ws-breadcrumb-kicker">
               <WholesaleIcon name="account" size={14} />
-              <span>Partner Program / Registration</span>
+              <span>Dealer Program / Commercial Registration</span>
             </div>
             <h1>
               <WholesaleIcon name="warehouse" size={26} />
-              Wholesale Partner Onboarding
+              Authorized Dealership Registration
             </h1>
             <p>
-              Unlock factory-direct procurement, wholesale pricing, and zero-website-payment commercial billing through CarXen.
+              Unlock factory-direct procurement, dealer pricing, and zero-website-payment commercial billing through CarXen.
             </p>
           </div>
           <div className="ws-header-actions">
@@ -368,7 +479,7 @@ export default function WholesaleDashboardPage() {
         {isEditingApplication && (
           <div className="ws-editing-alert-banner">
             <div>
-              <strong>Updating Wholesale Application ({b2bProfile?.referenceNumber || 'Revision'})</strong>
+              <strong>Updating Dealership Application ({b2bProfile?.referenceNumber || 'Revision'})</strong>
               <p>Make necessary revisions to your trade name, GSTIN, business type, or address and submit to update your desk review.</p>
             </div>
             <button
@@ -930,7 +1041,7 @@ export default function WholesaleDashboardPage() {
                   }}
                 >
                   <Send size={17} style={{ flexShrink: 0 }} />
-                  <span>{submitting ? 'Verifying & Submitting Application…' : 'Submit Wholesale Application'}</span>
+                  <span>{submitting ? 'Verifying & Submitting Application…' : 'Submit Dealership Application'}</span>
                 </button>
                 <p style={{ textAlign: 'center', fontSize: '11.5px', color: '#64748b', marginTop: '10px', marginBottom: 0 }}>
                   By submitting, you confirm that the entered trade details and visiting card are authentic representations of your automotive business.
@@ -941,7 +1052,7 @@ export default function WholesaleDashboardPage() {
 
           {/* Right Trust Column */}
           <div className="ws-checkout-card">
-            <h3>B2B Wholesale Privileges</h3>
+            <h3>Authorized Dealer Privileges</h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -961,9 +1072,9 @@ export default function WholesaleDashboardPage() {
                   <WholesaleIcon name="tier" size={20} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Wholesale Pricing</strong>
+                  <strong style={{ fontSize: '13.5px', display: 'block', color: '#0f172a' }}>Dealer Pricing</strong>
                   <span style={{ fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
-                    Direct wholesale bulk rates applied across all catalogue SKUs once approved.
+                    Direct dealer bulk rates applied across all catalogue SKUs once approved.
                   </span>
                 </div>
               </div>
@@ -1046,17 +1157,17 @@ export default function WholesaleDashboardPage() {
 
               <h1>
                 {isUnderInquiry
-                  ? 'Wholesale Application Under Commercial Inquiry'
+                  ? 'Dealer Application Under Commercial Inquiry'
                   : isDeclined
-                    ? 'Wholesale Application Declined by Commercial Desk'
-                    : 'Wholesale Partner Application Under Active Review'}
+                    ? 'Dealership Application Declined by Commercial Desk'
+                    : 'Authorized Dealership Application Under Active Review'}
               </h1>
               <p>
                 {isUnderInquiry
-                  ? `The CarXen commercial underwriting desk has reviewed the application for ${applicantName} and requested additional details before commercial privileges can be activated.`
+                  ? `The CarXen commercial underwriting desk has reviewed the application for ${applicantName} and requested additional details before dealership privileges can be activated.`
                   : isDeclined
-                    ? `Your commercial partnership application for ${applicantName} could not be approved with the submitted details. You may revise and re-apply or submit an appeal.`
-                    : `Your CarXen commercial partnership application for ${applicantName} has been logged in our enterprise registry and assigned to our underwriting desk.`}
+                    ? `Your dealership application for ${applicantName} could not be approved with the submitted details. You may revise and re-apply or submit an appeal.`
+                    : `Your CarXen authorized dealership application for ${applicantName} has been logged in our enterprise registry and assigned to our underwriting desk.`}
               </p>
             </div>
             <div className="ws-review-header-right">
@@ -1106,7 +1217,7 @@ export default function WholesaleDashboardPage() {
                   type="button"
                   className="ws-btn-secondary"
                   onClick={() => openSupportModal({
-                    category: 'Wholesale Application Inquiry Response',
+                    category: 'Dealer Application Inquiry Response',
                     businessName: applicantName,
                     initialMessage: `Response regarding Inquiry on Application ${refCode} (${applicantName}): `,
                   })}
@@ -1127,7 +1238,7 @@ export default function WholesaleDashboardPage() {
                   <XCircle size={20} />
                 </div>
                 <div>
-                  <h4>Wholesale Application Declined</h4>
+                  <h4>Dealership Application Declined</h4>
                   <span className="ws-rejected-meta">Reference: {refCode} · Underwriting Decision</span>
                 </div>
               </div>
@@ -1151,7 +1262,7 @@ export default function WholesaleDashboardPage() {
                   type="button"
                   className="ws-btn-secondary"
                   onClick={() => openSupportModal({
-                    category: 'Wholesale Application Appeal',
+                    category: 'Dealer Application Appeal',
                     businessName: applicantName,
                     initialMessage: `Requesting review / appeal for declined Application ${refCode} (${applicantName}). Reason given: "${declineReason}".`,
                   })}
@@ -1252,7 +1363,7 @@ export default function WholesaleDashboardPage() {
                 </div>
                 <div className="ws-review-step-content">
                   <h4>Commercial Access Setup</h4>
-                  <p>Configuring direct wholesale procurement and commercial catalogue access.</p>
+                  <p>Configuring direct dealer procurement and commercial catalogue access.</p>
                 </div>
               </div>
 
@@ -1282,7 +1393,7 @@ export default function WholesaleDashboardPage() {
                     <Building2 size={20} />
                   </div>
                   <div>
-                    <h3>Partner Application Dossier</h3>
+                    <h3>Dealer Application Dossier</h3>
                     <p className="ws-dossier-subtext">Enterprise registry details submitted for underwriting</p>
                   </div>
                 </div>
@@ -1327,7 +1438,7 @@ export default function WholesaleDashboardPage() {
                   </div>
 
                   <div className="ws-data-tile">
-                    <span className="ws-data-tile-label">Wholesale Access</span>
+                    <span className="ws-data-tile-label">Dealer Access</span>
                     <span className="ws-data-tile-value">
                       {isUnderInquiry ? (
                         <span style={{ color: '#0284c7', fontWeight: 600 }}>Clarification Required</span>
@@ -1393,7 +1504,7 @@ export default function WholesaleDashboardPage() {
               <div className="ws-dossier-footer-note">
                 <ShieldCheck size={16} className="ws-footer-note-icon" />
                 <p>
-                  <strong>Automated Live Transition:</strong> When approved, your account instantly elevates to <em>Verified Wholesale Partner</em> with no re-login required.
+                  <strong>Automated Live Transition:</strong> When approved, your account instantly elevates to <em>Verified Dealer Partner</em> with no re-login required.
                 </p>
               </div>
             </div>
@@ -1408,7 +1519,7 @@ export default function WholesaleDashboardPage() {
                   </div>
                   <div>
                     <h4>Privileges Unlocking on Approval</h4>
-                    <p className="ws-perks-subtext">Wholesale benefits activated immediately upon approval</p>
+                    <p className="ws-perks-subtext">Dealer benefits activated immediately upon approval</p>
                   </div>
                 </div>
 
@@ -1418,8 +1529,8 @@ export default function WholesaleDashboardPage() {
                       <CheckCircle2 size={16} />
                     </div>
                     <div>
-                      <strong>Direct Wholesale Pricing</strong>
-                      <span>Guaranteed bulk wholesale pricing on 7D mats, custom seat covers & wraps.</span>
+                      <strong>Direct Dealer Pricing</strong>
+                      <span>Guaranteed commercial pricing on 7D mats, custom seat covers & wraps.</span>
                     </div>
                   </div>
 
@@ -1429,7 +1540,7 @@ export default function WholesaleDashboardPage() {
                     </div>
                     <div>
                       <strong>Online Payment &amp; COD Checkout</strong>
-                      <span>Checkout seamlessly online via Razorpay (UPI/Cards) or Cash on Delivery for all wholesale orders.</span>
+                      <span>Checkout seamlessly online via Razorpay (UPI/Cards) or Cash on Delivery for all dealer commercial orders.</span>
                     </div>
                   </div>
 
@@ -1461,7 +1572,7 @@ export default function WholesaleDashboardPage() {
                   <button
                     type="button"
                     onClick={() => openSupportModal({
-                      category: 'Wholesale Verification & Fast-Track Approval',
+                      category: 'Dealer Verification & Fast-Track Approval',
                       businessName: applicantName,
                       initialMessage: `Requesting expedited verification for applicant ${applicantName} (GSTIN: ${applicantGstin || 'Pending'}). Urgent showroom order pending review.`,
                     })}
