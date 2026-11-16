@@ -411,10 +411,10 @@ export default function WholesaleDashboardPage() {
                 </div>
                 <div className="ws-gate-req-text">
                   <div className="ws-gate-req-header">
-                    <strong>Commercial Minimum Order Volume (MOQ)</strong>
-                    <span className="ws-req-chip amber">Min. ₹25,000 / 10 Cartons</span>
+                    <strong>Per-Item Minimum Order Quantities (MOQ)</strong>
+                    <span className="ws-req-chip amber">Trade Packs Only</span>
                   </div>
-                  <p>Commercial dispatches require a minimum consignment value of ₹25,000 / 10 Master Cartons. Single-piece retail orders are not accepted.</p>
+                  <p>All items carry wholesale pack minimums (MOQ per SKU). Single-piece retail purchases are not accepted in the dealer portal.</p>
                 </div>
               </div>
 
