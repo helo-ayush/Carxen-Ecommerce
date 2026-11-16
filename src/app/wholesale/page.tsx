@@ -850,7 +850,7 @@ export default function WholesaleDashboardPage() {
                     <div className="ws-card-preview-details">
                       <div className="ws-card-preview-badges">
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
-                          <CheckCircle2 size={12} /> Card Attached &amp; Validated
+                          <CheckCircle2 size={12} /> Card Attached
                         </span>
                         {visitingCard.size ? (
                           <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
