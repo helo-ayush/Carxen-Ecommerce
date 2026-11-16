@@ -30,7 +30,9 @@ import {
   Camera,
   X,
   FileText,
-  ShoppingBag
+  ShoppingBag,
+  Store,
+  ChevronRight
 } from 'lucide-react';
 import './wholesale.css';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
@@ -347,87 +349,131 @@ export default function WholesaleDashboardPage() {
     return (
       <div className="ws-page-container">
         <div className="ws-gate-wrapper">
+          {/* Header Bar with Logo and Sign Out */}
           <div className="ws-gate-topbar">
-            <span className="ws-gate-badge">
-              <ShieldCheck size={14} color="#e2231a" />
-              <span>CARXEN COMMERCIAL PARTNER NETWORK</span>
-            </span>
+            <div className="ws-gate-brand-row">
+              <Link href="/" className="logo-link" aria-label="CARXEN Homepage">
+                <img src="/logo.png" alt="CARXEN" className="ws-gate-logo-img" />
+              </Link>
+              <span className="ws-gate-brand-divider" />
+              <div className="ws-gate-badge">
+                <ShieldCheck size={13} color="#e2231a" />
+                <span>COMMERCIAL DEALER NETWORK</span>
+              </div>
+            </div>
+
             <button
               type="button"
-              className="ws-btn-secondary"
+              className="ws-gate-signout-btn"
               onClick={async () => {
                 await logout();
                 router.push('/login');
               }}
-              style={{ fontSize: '12px', padding: '5px 12px' }}
+              title="Sign out of account"
             >
-              Sign out
+              <span>Sign out</span>
             </button>
           </div>
 
+          {/* Main Elevated Glass Card */}
           <div className="ws-gate-card">
+            <div className="ws-gate-card-stripe" />
+
             <div className="ws-gate-header">
-              <div className="ws-gate-icon">
-                <Building2 size={26} />
+              <div className="ws-gate-badge-row">
+                <span className="ws-gate-kicker">
+                  <span className="ws-gate-kicker-dot" />
+                  Commercial Access Gate
+                </span>
+                <span className="ws-gate-tag">B2B Trade Only</span>
               </div>
-              <div>
-                <span className="ws-gate-kicker">Trade Access Restricted</span>
-                <h1>Authorized Dealership Application</h1>
-                <p>
-                  This portal is exclusively reserved for registered automotive businesses, workshops, retailers, and distributors.
-                </p>
-              </div>
+
+              <h1>Authorized Dealership Application</h1>
+              <p>
+                This commercial procurement portal is strictly reserved for verified automotive retail shops, distributors, detailing studios, and workshop owners.
+              </p>
             </div>
 
+            {/* Structured Criteria Checklist */}
             <div className="ws-gate-requirements">
+              {/* Req 1: Business Type */}
               <div className="ws-gate-req-item">
-                <div className="ws-gate-req-icon" style={{ color: '#059669', background: '#ecfdf5' }}>
+                <div className="ws-gate-req-icon-wrap emerald">
                   <Building2 size={18} />
                 </div>
-                <div>
-                  <strong>Strictly Registered Businesses Only</strong>
-                  <p>Open only to licensed automotive retailers, spare parts dealers, car detailing studios, and multi-brand workshops.</p>
+                <div className="ws-gate-req-text">
+                  <div className="ws-gate-req-header">
+                    <strong>Registered Automotive Businesses Only</strong>
+                    <span className="ws-req-chip emerald">Verified Trade</span>
+                  </div>
+                  <p>Open strictly to automotive accessory retailers, multi-brand garages, detailing studios, and spare parts distributors.</p>
                 </div>
               </div>
 
+              {/* Req 2: MOQ */}
               <div className="ws-gate-req-item">
-                <div className="ws-gate-req-icon" style={{ color: '#d97706', background: '#fffbeb' }}>
+                <div className="ws-gate-req-icon-wrap amber">
                   <ShoppingBag size={18} />
                 </div>
-                <div>
-                  <strong>Minimum Order Volume (MOQ) Applies</strong>
-                  <p>Minimum order consignment is ₹25,000 / 10 Master Cartons. Single-piece retail orders are not fulfilled through this portal.</p>
+                <div className="ws-gate-req-text">
+                  <div className="ws-gate-req-header">
+                    <strong>Commercial Minimum Order Volume (MOQ)</strong>
+                    <span className="ws-req-chip amber">Min. ₹25,000 / 10 Cartons</span>
+                  </div>
+                  <p>Commercial dispatches require a minimum consignment value of ₹25,000 / 10 Master Cartons. Single-piece retail orders are not accepted.</p>
                 </div>
               </div>
 
+              {/* Req 3: Documents */}
               <div className="ws-gate-req-item">
-                <div className="ws-gate-req-icon" style={{ color: '#2563eb', background: '#eff6ff' }}>
+                <div className="ws-gate-req-icon-wrap blue">
                   <CreditCard size={18} />
                 </div>
-                <div>
-                  <strong>Mandatory Business Documentation</strong>
-                  <p>Active GSTIN identification and valid Visiting / Business Card are required for desk underwriting and billing.</p>
+                <div className="ws-gate-req-text">
+                  <div className="ws-gate-req-header">
+                    <strong>Mandatory Business Documentation</strong>
+                    <span className="ws-req-chip blue">Active GSTIN + Card</span>
+                  </div>
+                  <p>Active GSTIN identification and a genuine Visiting / Business Card upload are compulsory for trade underwriting approval.</p>
                 </div>
               </div>
             </div>
 
+            {/* Consumer Redirection Callout */}
             <div className="ws-gate-consumer-callout">
-              <AlertCircle size={18} className="ws-gate-consumer-icon" />
-              <div>
-                <strong>Looking for accessories for your personal car?</strong>
-                <p>
-                  Please shop our retail store. Individual consumer orders placed through the dealer portal cannot be fulfilled.
-                </p>
+              <div className="ws-gate-consumer-left">
+                <div className="ws-gate-consumer-icon">
+                  <Store size={18} />
+                </div>
+                <div>
+                  <strong>Looking for accessories for your personal car?</strong>
+                  <p>Individual consumer purchases are fulfilled with instant free delivery via our standard Retail Store.</p>
+                </div>
               </div>
+              <button
+                type="button"
+                className="ws-gate-consumer-pill-btn"
+                onClick={() => router.push('/shop')}
+              >
+                <span>Shop Retail</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
 
+            {/* Primary Action Button */}
             <div className="ws-gate-actions">
               <button
                 type="button"
                 className="ws-gate-confirm-btn"
                 onClick={() => setHasConfirmedTradeEligibility(true)}
               >
-                <span>✓ I am an Automotive Business Owner / Dealer — Continue</span>
+                <div className="ws-gate-btn-left">
+                  <CheckCircle2 size={18} className="ws-gate-btn-check" />
+                  <span>I am an Automotive Business Owner / Dealer</span>
+                </div>
+                <span className="ws-gate-btn-arrow">
+                  Continue to Application <ArrowRight size={15} />
+                </span>
               </button>
 
               <button
@@ -435,8 +481,27 @@ export default function WholesaleDashboardPage() {
                 className="ws-gate-retail-btn"
                 onClick={() => router.push('/shop')}
               >
-                <span>← I am shopping for my personal car — Shop Retail Store</span>
+                <span>I am shopping for my personal vehicle — Browse Retail Store</span>
+                <ExternalLink size={13} style={{ opacity: 0.6 }} />
               </button>
+            </div>
+
+            {/* Discrete Trust Micro-Footer */}
+            <div className="ws-gate-footer-trust">
+              <div className="ws-gate-trust-item">
+                <Lock size={12} />
+                <span>256-Bit Encrypted Review</span>
+              </div>
+              <span className="ws-gate-trust-sep">•</span>
+              <div className="ws-gate-trust-item">
+                <Clock size={12} />
+                <span>&lt; 4-Hour SLA</span>
+              </div>
+              <span className="ws-gate-trust-sep">•</span>
+              <div className="ws-gate-trust-item">
+                <FileText size={12} />
+                <span>Direct GST Input Invoicing</span>
+              </div>
             </div>
           </div>
         </div>

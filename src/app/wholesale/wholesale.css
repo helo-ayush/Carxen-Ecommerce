@@ -7883,7 +7883,7 @@ textarea.ws-form-control {
    ========================================================================== */
 .ws-gate-wrapper {
   max-width: 680px;
-  margin: 20px auto 60px;
+  margin: 30px auto 80px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -7893,83 +7893,153 @@ textarea.ws-form-control {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  padding: 0 4px;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.ws-gate-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ws-gate-logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.ws-gate-brand-divider {
+  width: 1px;
+  height: 18px;
+  background: #cbd5e1;
 }
 
 .ws-gate-badge {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-family: var(--mono, monospace);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: #334155;
+  text-transform: uppercase;
+}
+
+.ws-gate-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ws-gate-signout-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 .ws-gate-card {
+  position: relative;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 34px 32px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 20px;
+  padding: 36px 36px 30px;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ws-gate-card-stripe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #e2231a 0%, #ef4444 45%, #0f172a 100%);
 }
 
 .ws-gate-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid #f1f5f9;
   margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.ws-gate-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: #0f172a;
-  color: #ffffff;
+.ws-gate-badge-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .ws-gate-kicker {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono, monospace);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: #e2231a;
-  margin-bottom: 4px;
+}
+
+.ws-gate-kicker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e2231a;
+  box-shadow: 0 0 8px rgba(226, 35, 26, 0.5);
+}
+
+.ws-gate-tag {
+  font-family: var(--mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: 6px;
 }
 
 .ws-gate-header h1 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .ws-gate-header p {
   margin: 0;
   font-size: 13.5px;
   color: #64748b;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .ws-gate-requirements {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
   margin-bottom: 22px;
 }
 
@@ -7977,30 +8047,94 @@ textarea.ws-form-control {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 13px 16px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
-  border-radius: 12px;
+  border-radius: 14px;
+  transition: all 0.2s ease;
 }
 
-.ws-gate-req-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+.ws-gate-req-item:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.ws-gate-req-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
-.ws-gate-req-item strong {
-  display: block;
-  font-size: 13.5px;
-  color: #0f172a;
+.ws-gate-req-icon-wrap.emerald {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid rgba(167, 243, 208, 0.7);
+}
+
+.ws-gate-req-icon-wrap.amber {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid rgba(253, 230, 138, 0.7);
+}
+
+.ws-gate-req-icon-wrap.blue {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid rgba(191, 219, 254, 0.7);
+}
+
+.ws-gate-req-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ws-gate-req-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 3px;
+  flex-wrap: wrap;
 }
 
-.ws-gate-req-item p {
+.ws-gate-req-header strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ws-req-chip {
+  font-family: var(--mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ws-req-chip.emerald {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.ws-req-chip.amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ws-req-chip.blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.ws-gate-req-text p {
   margin: 0;
   font-size: 12.5px;
   color: #64748b;
@@ -8009,33 +8143,73 @@ textarea.ws-form-control {
 
 .ws-gate-consumer-callout {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 16px;
+  background: #fffcf0;
+  border: 1px solid #fef08a;
+  border-radius: 14px;
+  margin-bottom: 22px;
+}
+
+.ws-gate-consumer-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  border-radius: 12px;
-  margin-bottom: 24px;
+  min-width: 0;
+  flex: 1;
 }
 
 .ws-gate-consumer-icon {
-  color: #d97706;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.ws-gate-consumer-callout strong {
-  display: block;
-  font-size: 13px;
-  color: #92400e;
-  margin-bottom: 2px;
-}
-
-.ws-gate-consumer-callout p {
-  margin: 0;
-  font-size: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #fef3c7;
   color: #b45309;
-  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ws-gate-consumer-left strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #854d0e;
+  margin-bottom: 1px;
+}
+
+.ws-gate-consumer-left p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #a16207;
+  line-height: 1.4;
+}
+
+.ws-gate-consumer-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #fde047;
+  color: #854d0e;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(133, 77, 14, 0.08);
+}
+
+.ws-gate-consumer-pill-btn:hover {
+  background: #fef08a;
+  color: #713f12;
+  transform: translateY(-1px);
 }
 
 .ws-gate-actions {
@@ -8048,22 +8222,52 @@ textarea.ws-form-control {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #0f172a;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(135deg, #090d16 0%, #1e293b 100%);
   color: #ffffff;
   border: none;
-  padding: 14px 20px;
-  border-radius: 12px;
-  font-size: 13.5px;
-  font-weight: 700;
+  padding: 15px 22px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
 }
 
 .ws-gate-confirm-btn:hover {
-  background: #1e293b;
+  background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
   transform: translateY(-1px);
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.35);
+}
+
+.ws-gate-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.ws-gate-btn-check {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.ws-gate-btn-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.ws-gate-confirm-btn:hover .ws-gate-btn-arrow {
+  color: #ffffff;
+  transform: translateX(3px);
 }
 
 .ws-gate-retail-btn {
@@ -8072,12 +8276,12 @@ textarea.ws-form-control {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-  padding: 12px 20px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 12px 18px;
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -8085,22 +8289,61 @@ textarea.ws-form-control {
 
 .ws-gate-retail-btn:hover {
   background: #f8fafc;
+  border-color: #cbd5e1;
   color: #0f172a;
-  border-color: #94a3b8;
+}
+
+.ws-gate-footer-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.ws-gate-trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ws-gate-trust-sep {
+  opacity: 0.4;
 }
 
 @media (max-width: 640px) {
+  .ws-gate-wrapper {
+    margin: 16px auto 40px;
+  }
   .ws-gate-card {
-    padding: 22px 18px;
+    padding: 24px 18px 20px;
+    border-radius: 16px;
   }
-  .ws-gate-header {
+  .ws-gate-header h1 {
+    font-size: 20px;
+  }
+  .ws-gate-consumer-callout {
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 10px;
   }
-  .ws-gate-confirm-btn,
-  .ws-gate-retail-btn {
-    font-size: 12px;
-    padding: 12px 14px;
-    text-align: center;
+  .ws-gate-consumer-pill-btn {
+    align-self: flex-start;
+  }
+  .ws-gate-confirm-btn {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .ws-gate-btn-arrow {
+    align-self: flex-end;
+  }
+  .ws-gate-footer-trust {
+    font-size: 10px;
+    gap: 6px;
   }
 }
