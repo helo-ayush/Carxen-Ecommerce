@@ -97,6 +97,8 @@ interface AppContextType {
   products: Product[];
   storeSettings: Record<string, any> | null;
   storefrontConfig: any | null;
+  isPreviewMode: boolean;
+  setLivePreviewConfig: (config: any) => void;
   catalogStatus: CatalogStatus;
   catalogError: string | null;
   retryCatalog: () => void;
@@ -191,6 +193,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<Record<string, any> | null>(null);
+  const [livePreviewConfig, setLivePreviewConfig] = useState<any | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>('loading');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -238,6 +242,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setB2bProfile(JSON.parse(savedB2b));
       }
     } catch {}
+  }, []);
+
+  // Live Storefront Preview Bridge (postMessage listener for Veda Studio)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isIframe = window.self !== window.top;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasPreviewParam = urlParams.get('carxen_preview') === 'true';
+
+    if (!isIframe && !hasPreviewParam) return;
+
+    setIsPreviewMode(true);
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'object') return;
+      if (
+        event.data.type === 'CARXEN_STOREFRONT_CONFIG_UPDATE' &&
+        event.data.config
+      ) {
+        setLivePreviewConfig(event.data.config);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Notify parent window (Veda Studio) that preview iframe is mounted & ready
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'CARXEN_PREVIEW_READY' }, '*');
+    }
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   // Load active vehicle makes and models from VEDA / Storefront endpoint
@@ -1680,7 +1718,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         products,
         storeSettings,
-        storefrontConfig: storeSettings?.storefront || null,
+        storefrontConfig: livePreviewConfig || storeSettings?.storefront || null,
+        isPreviewMode,
+        setLivePreviewConfig,
         catalogStatus,
         catalogError,
         retryCatalog,

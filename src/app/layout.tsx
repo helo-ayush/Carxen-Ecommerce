@@ -14,6 +14,7 @@ import { Preloader } from '@/components/Preloader';
 import { BottomNav } from '@/components/BottomNav';
 import { PwaSupport } from '@/components/PwaSupport';
 import { B2BSupportModal } from '@/components/wholesale/B2BSupportModal';
+import { StorefrontLivePreviewBridge } from '@/components/storefront/StorefrontLivePreviewBridge';
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.carxen.in';
@@ -134,6 +135,7 @@ export default function RootLayout({
       </head>
       <body>
         <AppProvider>
+          <StorefrontLivePreviewBridge />
           <Preloader />
           <CustomCursor />
           <ScrollProgress />
