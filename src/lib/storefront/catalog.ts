@@ -61,6 +61,10 @@ export interface EcommerceProductRow {
   comboItems?: unknown;
   wholesalePrice?: number | string | null;
   b2bMoq?: number | string | null;
+  taxCategory?: string | null;
+  taxRate?: number | string | null;
+  wholesaleTaxCategory?: string | null;
+  wholesaleTaxRate?: number | string | null;
   discountLimitQty?: number | string | null;
   packageDimensions?: string | null;
 }
@@ -447,10 +451,16 @@ function mapProductRow(
       ? (() => {
           const parsed = asFiniteNumber(row.wholesalePrice);
           const wsPrice = parsed !== null && parsed > 0 ? parsed : Math.round(price * 0.6);
-          const basePriceExGst = Math.round(wsPrice / 1.18);
+          const s = row.specifications && typeof row.specifications === 'object' ? (row.specifications as Record<string, unknown>) : {};
+          const rawWsRate = asFiniteNumber(row.wholesaleTaxRate) ?? asFiniteNumber(s.wholesaleTaxRate);
+          const rawRate = rawWsRate !== null && rawWsRate >= 0
+            ? rawWsRate
+            : (asFiniteNumber(row.taxRate) ?? asFiniteNumber(s.taxRate));
+          const gstPercent = rawRate !== null && rawRate >= 0 ? rawRate : 18;
+          const basePriceExGst = gstPercent > 0 ? Math.round(wsPrice / (1 + gstPercent / 100)) : wsPrice;
           const gstAmount = wsPrice - basePriceExGst;
           return {
-            gstPercent: 18,
+            gstPercent,
             basePriceExGst,
             gstAmount,
           };
