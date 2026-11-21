@@ -139,6 +139,7 @@ export default function HomePage() {
     showToast,
     setVehicle,
     products,
+    categories,
     catalogStatus,
     catalogError,
     retryCatalog,
@@ -190,6 +191,7 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
+  const [filterGroup, setFilterGroup] = useState('all');
   const [filterCat, setFilterCat] = useState('all');
   const [priceMin, setPriceMin] = useState(0);
   // null = "up to the priciest product in the catalog"
@@ -201,19 +203,35 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  const selectedHomeGroupObj = useMemo(
+    () => (filterGroup === 'all' ? null : categories.find((g) => g.slug === filterGroup || g.id === filterGroup) ?? null),
+    [categories, filterGroup],
+  );
+
   const categoryPills = useMemo(() => {
-    const categories = new Map<string, string>();
+    if (categories.length > 0) {
+      return [
+        { key: 'all', label: 'All Departments', isGroup: false },
+        ...categories.map((g) => ({
+          key: `group:${g.slug}`,
+          label: g.totalProductCount > 0 ? `${g.name} (${g.totalProductCount})` : g.name,
+          isGroup: true,
+        })),
+        { key: 'deals', label: 'Deals', isGroup: false },
+      ];
+    }
+    const catMap = new Map<string, string>();
     for (const product of products) {
-      categories.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
+      catMap.set(product.c, product.categoryLabel?.trim() || categoryLabel(product.c));
     }
     return [
-      { key: 'all', label: 'All categories' },
-      ...[...categories.entries()]
+      { key: 'all', label: 'All categories', isGroup: false },
+      ...[...catMap.entries()]
         .sort((a, b) => compareCategories({ key: a[0], label: a[1] }, { key: b[0], label: b[1] }))
-        .map(([key, label]) => ({ key, label })),
-      { key: 'deals', label: 'Deals' },
+        .map(([key, label]) => ({ key, label, isGroup: false })),
+      { key: 'deals', label: 'Deals', isGroup: false },
     ];
-  }, [products]);
+  }, [categories, products]);
 
   // Price scale, average and series list all follow the live catalog instead of
   // fixed assumptions, so a pricier product never falls off the slider.
@@ -231,14 +249,18 @@ export default function HomePage() {
   const seriesOptions = useMemo(() => {
     const palette = new Map(SERIES_LIST);
     const counts = new Map<string, number>();
-    for (const product of products) counts.set(product.s, (counts.get(product.s) ?? 0) + 1);
+    for (const product of products) {
+      const s = (product.s || '').trim();
+      if (!s) continue;
+      counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([series, count]) => ({ series, count, color: palette.get(series) ?? '#5d5d64' }));
   }, [products]);
 
   useEffect(() => {
-    setSelectedSeries(new Set(products.map((product) => product.s)));
+    setSelectedSeries(new Set(products.map((product) => (product.s || '').trim()).filter(Boolean)));
   }, [products]);
 
   // Dynamic Histogram
@@ -269,7 +291,7 @@ export default function HomePage() {
   };
 
   const handleResetSeries = () => {
-    setSelectedSeries(new Set(products.map((product) => product.s)));
+    setSelectedSeries(new Set(products.map((product) => (product.s || '').trim()).filter(Boolean)));
   };
 
   const handleResetPrice = () => {
@@ -278,6 +300,7 @@ export default function HomePage() {
   };
 
   const handleClearFilters = () => {
+    setFilterGroup('all');
     setFilterCat('all');
     setPriceMin(0);
     setPriceMax(null);
@@ -290,12 +313,30 @@ export default function HomePage() {
   // Filtered Products
   const filteredProducts = useMemo(() => {
     let list = products.filter((p) => {
-      const matchCat =
-        filterCat === 'all' ||
-        (filterCat === 'deals' ? !!p.o : p.c === filterCat);
+      const matchCat = (() => {
+        if (filterCat === 'deals') return Boolean(p.o && p.o > p.p);
+        if (filterCat !== 'all' && !filterCat.startsWith('group:')) {
+          const matchedSub = categories
+            .flatMap((g) => [g, ...g.children])
+            .find((c) => c.slug === filterCat || c.id === filterCat);
+          if (matchedSub) {
+            return p.categoryId === matchedSub.id || p.c === matchedSub.slug;
+          }
+          return p.c === filterCat;
+        }
+        if (filterGroup !== 'all' && selectedHomeGroupObj) {
+          const validIds = new Set([selectedHomeGroupObj.id, ...selectedHomeGroupObj.children.map((c) => c.id)]);
+          const validSlugs = new Set([selectedHomeGroupObj.slug, ...selectedHomeGroupObj.children.map((c) => c.slug)]);
+          return Boolean((p.categoryId && validIds.has(p.categoryId)) || validSlugs.has(p.c));
+        }
+        return true;
+      })();
       const matchPrice = p.p >= priceMin && p.p <= effectivePriceMax;
       const matchStar = p.r >= starRating;
-      const matchSeries = selectedSeries.has(p.s);
+      const matchSeries =
+        seriesOptions.length === 0 ||
+        selectedSeries.size === seriesOptions.length ||
+        (Boolean(p.s?.trim()) && selectedSeries.has(p.s.trim()));
       const matchDelivery = deliveryType === 'std' || p.pk;
       const searchHaystack = (p.n + ' ' + p.c + ' ' + p.s + ' ' + (p.d || '')).toLowerCase();
       const matchQuery = !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
@@ -319,11 +360,15 @@ export default function HomePage() {
     }
     return list;
   }, [
+    filterGroup,
+    selectedHomeGroupObj,
     filterCat,
+    categories,
     priceMin,
     effectivePriceMax,
     starRating,
     selectedSeries,
+    seriesOptions.length,
     deliveryType,
     sortBy,
     searchQuery,
@@ -337,7 +382,7 @@ export default function HomePage() {
   // Automatically reset to page 1 whenever any filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterCat, priceMin, effectivePriceMax, starRating, selectedSeries, deliveryType, sortBy, searchQuery]);
+  }, [filterGroup, selectedHomeGroupObj, filterCat, categories, priceMin, effectivePriceMax, starRating, selectedSeries, seriesOptions.length, deliveryType, sortBy, searchQuery, products]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
   const paginatedProducts = useMemo(() => {
@@ -695,15 +740,33 @@ export default function HomePage() {
           </div>
 
           <div className="pills rv in" id="pills">
-            {categoryPills.map((category) => (
-              <button
-                key={category.key}
-                className={`pill ${filterCat === category.key ? 'on' : ''}`}
-                onClick={() => setFilterCat(category.key)}
-              >
-                {category.label}
-              </button>
-            ))}
+            {categoryPills.map((category) => {
+              const isActive = category.key.startsWith('group:')
+                ? filterGroup === category.key.slice('group:'.length) && filterCat === 'all'
+                : category.key === 'all'
+                ? filterGroup === 'all' && filterCat === 'all'
+                : filterCat === category.key;
+              return (
+                <button
+                  key={category.key}
+                  className={`pill ${isActive ? 'on' : ''}`}
+                  onClick={() => {
+                    if (category.key === 'all') {
+                      setFilterGroup('all');
+                      setFilterCat('all');
+                    } else if (category.key.startsWith('group:')) {
+                      setFilterGroup(category.key.slice('group:'.length));
+                      setFilterCat('all');
+                    } else {
+                      setFilterGroup('all');
+                      setFilterCat(category.key);
+                    }
+                  }}
+                >
+                  {category.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="shop-g">

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@/components/storefront/category-nav.css';
 import { AppProvider } from '@/context/AppContext';
 import { SvgDefs } from '@/components/SvgDefs';
 import { Header } from '@/components/Header';

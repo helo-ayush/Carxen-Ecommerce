@@ -350,7 +350,11 @@ export default function WholesaleQuickOrderPage() {
                             {p.n}
                           </Link>
                           <div className="ws-prod-meta">
-                            <span className="ws-prod-series-badge">{p.s} Series</span>
+                            {p.s && (
+                              <span className="ws-prod-series-badge">
+                                {/\bseries$/i.test(p.s.trim()) ? p.s.trim() : `${p.s.trim()} Series`}
+                              </span>
+                            )}
                             {typeof p.fitment === 'string' && p.fitment ? (
                               <span className="ws-fitment-badge">{p.fitment}</span>
                             ) : null}

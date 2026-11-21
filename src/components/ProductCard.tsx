@@ -22,6 +22,7 @@ export interface ProductCardProps {
   onTagClick?: (tag: string) => void;
   fitText?: string | null;
   isCustomFitBadge?: boolean;
+  collectionBadge?: { type: 'new' | 'best'; label: string } | null;
   className?: string;
 }
 
@@ -35,6 +36,7 @@ export function ProductCard({
   onTagClick: _onTagClick,
   fitText,
   isCustomFitBadge = false,
+  collectionBadge = null,
   className = '',
 }: ProductCardProps) {
   const router = useRouter();
@@ -132,11 +134,14 @@ export function ProductCard({
   // Single subtle luxury tag matching clean UI
   const badge = (() => {
     if (isOutOfStock) return { type: 'sale', label: 'Out of Stock' };
+    if (collectionBadge) return collectionBadge;
     if (isCustomFitBadge && fitText && isMats && (product.id === 2 || !product.o)) {
       return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     }
     if (discountPercent > 0) return { type: 'sale', label: `${discountPercent}% OFF` };
-    if (product.top || product.spot) return { type: 'best', label: 'Best Seller' };
+    if (product.top || product.spot || (product.soldCount && product.soldCount > 0)) {
+      return { type: 'best', label: 'Best Seller' };
+    }
     if (product.nw) return { type: 'new', label: 'New' };
     if (isCustomFitBadge && fitText) return { type: 'fit', label: fitText.replace(/^[✓✔\s]+/, '') };
     return null;

@@ -9,11 +9,10 @@ import React, {
   useState,
 } from 'react';
 import type { Product } from '@/data/products';
+import type { StorefrontCategory } from '@/lib/storefront/types';
 import { loadCatalogProducts } from '@/lib/storefront/catalog-client';
 import {
   loadActiveVehicles,
-  FALLBACK_VEHICLES,
-  FALLBACK_INVENTORY_VEHICLES,
   type ActiveInventoryVehicle,
 } from '@/lib/storefront/vehicle-client';
 import { getEffectiveWholesaleUnitPrice, calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
@@ -95,6 +94,9 @@ export const DEFAULT_GARAGE_VEHICLES: GarageVehicle[] = [];
 
 interface AppContextType {
   products: Product[];
+  categories: StorefrontCategory[];
+  flatCategories: StorefrontCategory[];
+  mainNavCategoryIds: string[];
   storeSettings: Record<string, any> | null;
   storefrontConfig: any | null;
   isPreviewMode: boolean;
@@ -192,6 +194,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<StorefrontCategory[]>([]);
+  const [flatCategories, setFlatCategories] = useState<StorefrontCategory[]>([]);
+  const [mainNavCategoryIds, setMainNavCategoryIds] = useState<string[]>([]);
   const [storeSettings, setStoreSettings] = useState<Record<string, any> | null>(null);
   const [livePreviewConfig, setLivePreviewConfig] = useState<any | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
@@ -217,12 +222,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [communicationPrefs, setCommunicationPrefs] = useState<CommunicationPreferences>(DEFAULT_COMMUNICATION_PREFS);
   const [gstBilling, setGstBilling] = useState<GstBillingInfo>(DEFAULT_GST_INFO);
   const [garageVehicles, setGarageVehicles] = useState<GarageVehicle[]>(DEFAULT_GARAGE_VEHICLES);
-  const [availableVehicles, setAvailableVehicles] = useState<Record<string, string[]>>(FALLBACK_VEHICLES);
-  const [vehicleBrands, setVehicleBrands] = useState<string[]>(Object.keys(FALLBACK_VEHICLES));
-  const [inventoryVehicles, setInventoryVehicles] = useState<ActiveInventoryVehicle[]>(FALLBACK_INVENTORY_VEHICLES);
-  const [inventoryModels, setInventoryModels] = useState<string[]>(
-    Array.from(new Set(FALLBACK_INVENTORY_VEHICLES.flatMap((v) => v.models))),
-  );
+  const [availableVehicles, setAvailableVehicles] = useState<Record<string, string[]>>({});
+  const [vehicleBrands, setVehicleBrands] = useState<string[]>([]);
+  const [inventoryVehicles, setInventoryVehicles] = useState<ActiveInventoryVehicle[]>([]);
+  const [inventoryModels, setInventoryModels] = useState<string[]>([]);
   const [b2bProfile, setB2bProfile] = useState<B2BProfile | null>(null);
   const [workspaceMode, setWorkspaceModeState] = useState<'retail' | 'wholesale'>('retail');
   const [wholesaleBasket, setWholesaleBasket] = useState<Record<number, number>>({});
@@ -355,6 +358,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (signal?.aborted) return;
 
       setProducts(response.products);
+      setCategories(Array.isArray(response.categories) ? response.categories : []);
+      setFlatCategories(Array.isArray(response.flatCategories) ? response.flatCategories : []);
+      setMainNavCategoryIds(Array.isArray(response.mainNavCategoryIds) ? response.mainNavCategoryIds : []);
       if (response.store && (response.store as any).settings) {
         setStoreSettings((response.store as any).settings);
       }
@@ -363,6 +369,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
 
       setProducts([]);
+      setCategories([]);
+      setFlatCategories([]);
+      setMainNavCategoryIds([]);
       setCatalogStatus('error');
       setCatalogError(error instanceof Error ? error.message : 'The storefront catalog could not be loaded from the server.');
     }
@@ -1717,6 +1726,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         products,
+        categories,
+        flatCategories,
+        mainNavCategoryIds,
         storeSettings,
         storefrontConfig: livePreviewConfig || storeSettings?.storefront || null,
         isPreviewMode,
@@ -1843,6 +1855,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const headers = await getAuthHeaders();
           const response = await loadCatalogProducts(undefined, headers);
           setProducts(response.products);
+          if (Array.isArray(response.categories)) setCategories(response.categories);
+          if (Array.isArray(response.flatCategories)) setFlatCategories(response.flatCategories);
+          if (Array.isArray(response.mainNavCategoryIds)) setMainNavCategoryIds(response.mainNavCategoryIds);
         },
         fav,
         isCartOpen,

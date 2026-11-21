@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -19,6 +19,7 @@ import {
   LogOut,
   ShieldCheck,
   Clock,
+  ChevronDown,
   ChevronRight,
   PhoneCall,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ export function MobileMenu() {
   const {
     isMobileMenuOpen,
     closeMobileMenu,
+    categories,
     user,
     car,
     logout,
@@ -41,6 +43,7 @@ export function MobileMenu() {
     showToast,
     openSupportModal,
   } = useApp();
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
@@ -321,22 +324,102 @@ export function MobileMenu() {
               <Link href="/shop" onClick={closeMobileMenu} style={{ transitionDelay: '.1s' }}>
                 <i>01</i>All Parts
               </Link>
-              <Link href="/garage" onClick={closeMobileMenu} style={{ transitionDelay: '.18s' }}>
-                <i>02</i>My Garage ({activeCar.m})
+              <Link href="/shop?collection=new" onClick={closeMobileMenu} style={{ transitionDelay: '.15s' }}>
+                <i>02</i>New Arrivals
               </Link>
-              <Link href="/account?tab=orders" onClick={closeMobileMenu} style={{ transitionDelay: '.26s' }}>
-                <i>03</i>Track Order
+              <Link href="/shop?collection=bestsellers" onClick={closeMobileMenu} style={{ transitionDelay: '.2s' }}>
+                <i>03</i>Best Sellers
               </Link>
-              <Link href="/wishlist" onClick={closeMobileMenu} style={{ transitionDelay: '.34s' }}>
-                <i>04</i>Wishlist
+              <Link href="/garage" onClick={closeMobileMenu} style={{ transitionDelay: '.25s' }}>
+                <i>04</i>My Garage ({activeCar.m})
               </Link>
-              <Link href={user ? '/account' : '/login'} onClick={closeMobileMenu} style={{ transitionDelay: '.42s' }}>
-                <i>05</i>{user ? 'My Account' : 'Log in'}
+              <Link href="/wishlist" onClick={closeMobileMenu} style={{ transitionDelay: '.3s' }}>
+                <i>05</i>Wishlist
               </Link>
-              <Link href="/" onClick={closeMobileMenu} style={{ transitionDelay: '.50s' }}>
-                <i>06</i>Back to Home
+              <Link href={user ? '/account' : '/login'} onClick={closeMobileMenu} style={{ transitionDelay: '.35s' }}>
+                <i>06</i>{user ? 'My Account' : 'Log in'}
+              </Link>
+              <Link href="/" onClick={closeMobileMenu} style={{ transitionDelay: '.4s' }}>
+                <i>07</i>Back to Home
               </Link>
             </>
+          )}
+
+          {/* Autofurnish-style Expandable Departments & Subcategories */}
+          {categories.length > 0 && (
+            <div className="cx-mob-cats">
+              <div className="cx-mob-cats-heading">Shop by Department</div>
+              {categories.map((group) => {
+                const isOpen = openGroupId === group.id;
+                const hasSubs = group.children.length > 0;
+                return (
+                  <div key={group.id} className="cx-mob-cat-group">
+                    {hasSubs ? (
+                      <>
+                        <button
+                          type="button"
+                          className="cx-mob-cat-head"
+                          aria-expanded={isOpen}
+                          onClick={() => setOpenGroupId((prev) => (prev === group.id ? null : group.id))}
+                        >
+                          <span>
+                            {group.name}
+                            {group.totalProductCount > 0 ? ` (${group.totalProductCount})` : ''}
+                          </span>
+                          <ChevronDown
+                            size={15}
+                            style={{
+                              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.2s ease',
+                              opacity: 0.7,
+                            }}
+                          />
+                        </button>
+                        {isOpen && (
+                          <div className="cx-mob-cat-subs">
+                            <Link
+                              href={`/shop?group=${encodeURIComponent(group.slug)}`}
+                              onClick={closeMobileMenu}
+                              className="cx-mob-cat-sublink"
+                              style={{ color: '#ff5449' }}
+                            >
+                              <span>All in {group.name}</span>
+                              <ChevronRight size={13} />
+                            </Link>
+                            {group.children.map((sub) => (
+                              <Link
+                                key={sub.id}
+                                href={`/shop?group=${encodeURIComponent(group.slug)}&cat=${encodeURIComponent(sub.slug)}`}
+                                onClick={closeMobileMenu}
+                                className="cx-mob-cat-sublink"
+                              >
+                                <span>{sub.name}</span>
+                                {sub.productCount > 0 && (
+                                  <span style={{ fontSize: '11px', opacity: 0.6 }}>{sub.productCount}</span>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Link
+                        href={`/shop?group=${encodeURIComponent(group.slug)}`}
+                        onClick={closeMobileMenu}
+                        className="cx-mob-cat-head"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <span>
+                          {group.name}
+                          {group.totalProductCount > 0 ? ` (${group.totalProductCount})` : ''}
+                        </span>
+                        <ChevronRight size={15} style={{ opacity: 0.7 }} />
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </nav>
       )}

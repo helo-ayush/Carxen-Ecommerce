@@ -1,8 +1,14 @@
 import { isMatCategory, isSeatCategory } from '@/lib/storefront/categories';
 
 export type ProductCategory = string;
-export type ProductSeries = 'Signature' | 'Sport' | 'Urban' | 'Essentials';
+export type ProductSeries = string;
 export type ProductArtKey = 'seat' | 'mats' | 'wheel' | 'pillow' | 'arm' | 'trunk';
+
+export function formatSeriesLabel(series?: string | null): string {
+  const clean = (series || '').trim();
+  if (!clean) return '';
+  return /\bseries$/i.test(clean) ? clean : `${clean} Series`;
+}
 export type ProductTintOption = [string, string, string];
 
 export type ProductColor = {
@@ -41,6 +47,7 @@ export interface Product {
   d: string;
   sp: [string, string][];
   slug?: string;
+  categoryId?: string | null;
   categoryLabel?: string;
   tintOptions?: ProductTintOption[];
   fitment?: unknown;
@@ -69,6 +76,8 @@ export interface Product {
   isCustomProduct?: boolean;
   stockCount?: number | null;
   inStock?: boolean;
+  publishedAt?: string | null;
+  soldCount?: number;
 }
 
 // Product records are loaded from the storefront API. The remaining values are

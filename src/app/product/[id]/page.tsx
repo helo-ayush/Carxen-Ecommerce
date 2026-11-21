@@ -164,7 +164,8 @@ function getEnrichedSpecifications(product: Product) {
     );
   }
   if (!existingSpecs.has('Product Series') && product.s) {
-    existingSpecs.set('Product Series', `CARXEN ${product.s} Series`);
+    const seriesLabel = /\bseries$/i.test(product.s.trim()) ? product.s.trim() : `${product.s.trim()} Series`;
+    existingSpecs.set('Product Series', `CARXEN ${seriesLabel}`);
   }
   if (!existingSpecs.has('Fitment Type')) {
     existingSpecs.set('Fitment Type', custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit');
@@ -775,7 +776,7 @@ function ProductDetailContent({ product }: { product: Product }) {
                   </span>
                   {product.s && (
                     <span className="ps-overlay-pill ps-series-tag">
-                      {product.s} Series
+                      {/\bseries$/i.test(product.s.trim()) ? product.s.trim() : `${product.s.trim()} Series`}
                     </span>
                   )}
                 </div>

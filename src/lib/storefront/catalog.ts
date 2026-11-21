@@ -8,13 +8,14 @@ import type {
   ProductSeries,
   ProductTintOption,
 } from '@/data/products';
-import type { StorefrontProductsResponse } from './types';
+import type { StorefrontCategory, StorefrontProductsResponse } from './types';
 import {
   categoryArtKey,
   categoryLabel as resolveCategoryLabel,
   isMatCategory,
   isSeatCategory,
   normalizeCategoryKey,
+  slugifyCategory,
 } from './categories';
 
 type StoreId = string | number;
@@ -31,6 +32,7 @@ export interface EcommerceProductRow {
   publicId: number | string;
   storeId: StoreId;
   itemMasterId?: string | null;
+  categoryId?: string | null;
   slug: string;
   name: string;
   categoryKey: string;
@@ -91,6 +93,7 @@ const PRODUCT_COLUMNS = [
   'publicId',
   'storeId',
   'itemMasterId',
+  'categoryId',
   'slug',
   'name',
   'categoryKey',
@@ -122,8 +125,8 @@ const PRODUCT_COLUMNS = [
   'b2bMoq',
 ].join(', ');
 
-const SERIES_KEYS = ['Signature', 'Sport', 'Urban', 'Essentials'] as const;
 const ART_KEYS = ['seat', 'mats', 'wheel', 'pillow', 'arm', 'trunk'] as const;
+const MAX_MAIN_NAV_GROUPS = 3;
 
 function getCatalogConfig() {
   const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
@@ -147,15 +150,10 @@ function asCategory(value: unknown): ProductCategory {
 function asSeries(value: unknown): ProductSeries {
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    for (const key of SERIES_KEYS) {
-      if (key.toLowerCase() === trimmed.toLowerCase()) return key;
-    }
-    const lower = trimmed.toLowerCase();
-    if (lower.includes('sport') || lower.includes('rally')) return 'Sport';
-    if (lower.includes('urban') || lower.includes('city')) return 'Urban';
-    if (lower.includes('essential') || lower.includes('basic')) return 'Essentials';
+    if (!trimmed) return '';
+    return trimmed;
   }
-  return 'Signature';
+  return '';
 }
 
 function isImageUrl(value: unknown): string | undefined {
@@ -308,6 +306,7 @@ function mapProductRow(
   wholesaleTier?: 'tier1' | 'tier2',
   reviewAggregate?: { sum: number; count: number },
   customCommittedQty: number = 0,
+  soldCount: number = 0,
 ): Product | null {
   const id = asFiniteNumber(row.publicId) ?? 1;
   const name = asNonEmptyString(row.name) || 'CarXen Accessory';
@@ -390,6 +389,7 @@ function mapProductRow(
     sp: specifications,
     packageDimensions,
     slug,
+    categoryId: row.categoryId ?? null,
     categoryLabel,
     ...(colors ? { colors } : {}),
     ...(tintOptions ? { tintOptions } : {}),
@@ -457,6 +457,8 @@ function mapProductRow(
         })()
       : undefined,
     wholesaleTier: isWholesale ? (wholesaleTier || 'tier1') : undefined,
+    publishedAt: row.publishedAt ?? null,
+    ...(soldCount > 0 ? { soldCount } : {}),
     ...resolveCustomProductAvailability(row, customCommittedQty),
   };
 }
@@ -485,14 +487,23 @@ export async function getStorefrontProducts(options?: {
     throw new CatalogNotFoundError(`No public ecommerce store is configured for "${storeSlug}".`);
   }
 
-  const { data: productRows, error: productError } = await supabase
-    .from('ecommerce_products')
-    .select(PRODUCT_COLUMNS)
-    .eq('storeId', store.id)
-    .eq('status', 'PUBLISHED')
-    .not('publishedAt', 'is', null)
-    .order('topRank', { ascending: true, nullsFirst: false })
-    .order('updatedAt', { ascending: false });
+  const [{ data: productRows, error: productError }, { data: categoryRows }] = await Promise.all([
+    supabase
+      .from('ecommerce_products')
+      .select(PRODUCT_COLUMNS)
+      .eq('storeId', store.id)
+      .eq('status', 'PUBLISHED')
+      .not('publishedAt', 'is', null)
+      .order('topRank', { ascending: true, nullsFirst: false })
+      .order('updatedAt', { ascending: false }),
+    supabase
+      .from('ecommerce_categories')
+      .select('id, slug, name, description, artKey, parentId, sortOrder, status')
+      .eq('storeId', store.id)
+      .eq('status', 'PUBLISHED')
+      .order('sortOrder', { ascending: true })
+      .order('name', { ascending: true }),
+  ]);
 
   if (productError) {
     throw new CatalogDatabaseError('Unable to load ecommerce products.', productError);
@@ -502,22 +513,52 @@ export async function getStorefrontProducts(options?: {
 
   const reviewAggregates = new Map<string, { sum: number; count: number }>();
   const customCommittedByProduct = new Map<string, number>();
+  const soldCountByProduct = new Map<string, number>();
 
   if (rows.length > 0) {
-    // Reviews are behind RLS for anon reads; aggregates need the service key.
+    // Reviews and order sales aggregates need the service key (RLS-protected).
     const adminSupabase = getSupabaseAdmin();
-    const { data: reviewRows } = await adminSupabase
-      .from('ecommerce_reviews')
-      .select('productId, rating')
-      .eq('storeId', store.id)
-      .eq('status', 'PUBLISHED')
-      .not('publishedAt', 'is', null);
+    const [{ data: reviewRows }, { data: validOrders }] = await Promise.all([
+      adminSupabase
+        .from('ecommerce_reviews')
+        .select('productId, rating')
+        .eq('storeId', store.id)
+        .eq('status', 'PUBLISHED')
+        .not('publishedAt', 'is', null),
+      adminSupabase
+        .from('ecommerce_orders')
+        .select('id')
+        .eq('storeId', store.id)
+        .neq('status', 'CANCELLED')
+        .neq('status', 'REFUNDED'),
+    ]);
+
     for (const review of reviewRows || []) {
       const key = String(review.productId);
       const entry = reviewAggregates.get(key) || { sum: 0, count: 0 };
       entry.sum += Math.min(5, Math.max(1, Math.round(Number(review.rating) || 0)));
       entry.count += 1;
       reviewAggregates.set(key, entry);
+    }
+
+    const validOrderIds = (validOrders || []).map((o: any) => String(o.id)).filter(Boolean);
+    if (validOrderIds.length > 0) {
+      try {
+        const { data: soldItems } = await adminSupabase
+          .from('ecommerce_order_items')
+          .select('productId, quantity')
+          .in('orderId', validOrderIds);
+        for (const item of soldItems || []) {
+          if (!item.productId) continue;
+          const pid = String(item.productId);
+          const qty = Math.max(0, Math.floor(Number(item.quantity) || 0));
+          if (qty > 0) {
+            soldCountByProduct.set(pid, (soldCountByProduct.get(pid) ?? 0) + qty);
+          }
+        }
+      } catch (salesErr) {
+        console.warn('Could not load product sales totals:', salesErr);
+      }
     }
 
     const customProductIds = rows
@@ -586,12 +627,118 @@ export async function getStorefrontProducts(options?: {
         options?.wholesaleTier,
         reviewAggregates.get(row.id),
         customCommittedByProduct.get(row.id) ?? 0,
+        soldCountByProduct.get(row.id) ?? 0,
       ),
     )
     .filter((product): product is Product => product !== null);
 
+  // Build live 2-level storefront category hierarchy (Master Groups -> Subcategories)
+  const rawCats = (categoryRows || []) as Array<{
+    id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    artKey: string | null;
+    parentId: string | null;
+    sortOrder: number | null;
+    status: string;
+  }>;
+
+  const catIdSet = new Set(rawCats.map((c) => c.id));
+  const directCountById = new Map<string, number>();
+
+  for (const product of products) {
+    if (product.categoryId && catIdSet.has(product.categoryId)) {
+      directCountById.set(product.categoryId, (directCountById.get(product.categoryId) ?? 0) + 1);
+      continue;
+    }
+    const pSlug = slugifyCategory(product.c || '');
+    const pLabelSlug = slugifyCategory(product.categoryLabel || '');
+    const matched = rawCats.find((c) => {
+      const cSlug = slugifyCategory(c.slug || c.name);
+      const cNameSlug = slugifyCategory(c.name);
+      return (
+        (pSlug && (cSlug === pSlug || cNameSlug === pSlug)) ||
+        (pLabelSlug && (cSlug === pLabelSlug || cNameSlug === pLabelSlug))
+      );
+    });
+    if (matched) {
+      directCountById.set(matched.id, (directCountById.get(matched.id) ?? 0) + 1);
+      product.categoryId = matched.id;
+    }
+  }
+
+  const nodeMap = new Map<string, StorefrontCategory>();
+  for (const c of rawCats) {
+    const directCount = directCountById.get(c.id) ?? 0;
+    nodeMap.set(c.id, {
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      artKey: c.artKey,
+      parentId: c.parentId && catIdSet.has(c.parentId) ? c.parentId : null,
+      sortOrder: c.sortOrder ?? 0,
+      productCount: directCount,
+      totalProductCount: directCount,
+      children: [],
+    });
+  }
+
+  const rootCategories: StorefrontCategory[] = [];
+  for (const node of nodeMap.values()) {
+    if (node.parentId && nodeMap.has(node.parentId)) {
+      nodeMap.get(node.parentId)!.children.push(node);
+    } else {
+      rootCategories.push(node);
+    }
+  }
+
+  for (const root of rootCategories) {
+    root.children.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+    root.totalProductCount =
+      root.productCount + root.children.reduce((sum, child) => sum + child.productCount, 0);
+  }
+  rootCategories.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+
+  // Resolve up to 3 Main Navbar Master Groups from store.settings.mainNavCategoryIds
+  // (defaults automatically to the first 3 published Master Groups when not customized).
+  const storeSettingsObj =
+    (store as any).settings && typeof (store as any).settings === 'object' && !Array.isArray((store as any).settings)
+      ? ((store as any).settings as Record<string, unknown>)
+      : {};
+  const rootIdSet = new Set(rootCategories.map((r) => r.id));
+  const rawMainIds = storeSettingsObj.mainNavCategoryIds;
+  let mainNavCategoryIds: string[];
+  if (Array.isArray(rawMainIds)) {
+    const valid: string[] = [];
+    for (const raw of rawMainIds) {
+      if (typeof raw !== 'string') continue;
+      const id = raw.trim();
+      if (!id || !rootIdSet.has(id) || valid.includes(id)) continue;
+      valid.push(id);
+      if (valid.length >= MAX_MAIN_NAV_GROUPS) break;
+    }
+    mainNavCategoryIds =
+      rawMainIds.length === 0 || valid.length > 0
+        ? valid
+        : rootCategories.slice(0, MAX_MAIN_NAV_GROUPS).map((r) => r.id);
+  } else {
+    mainNavCategoryIds = rootCategories.slice(0, MAX_MAIN_NAV_GROUPS).map((r) => r.id);
+  }
+
+  const mainNavSet = new Set(mainNavCategoryIds);
+  for (const root of rootCategories) {
+    root.isMainNav = mainNavSet.has(root.id);
+  }
+
+  const flatCategories = Array.from(nodeMap.values());
+
   return {
-    store: { slug: store.slug, settings: (store as any).settings || {} },
+    store: { slug: store.slug, settings: storeSettingsObj },
     products,
+    categories: rootCategories,
+    flatCategories,
+    mainNavCategoryIds,
   };
 }

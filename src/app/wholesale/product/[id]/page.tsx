@@ -103,7 +103,8 @@ function getEnrichedSpecifications(product: Product) {
     );
   }
   if (!existingSpecs.has('Product Series') && product.s) {
-    existingSpecs.set('Product Series', `CarXen ${product.s} Series`);
+    const seriesLabel = /\bseries$/i.test(product.s.trim()) ? product.s.trim() : `${product.s.trim()} Series`;
+    existingSpecs.set('Product Series', `CarXen ${seriesLabel}`);
   }
   if (!existingSpecs.has('Fitment Type')) {
     existingSpecs.set('Fitment Type', custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit');
@@ -440,7 +441,7 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
               </span>
               {product.s && (
                 <span className="ws-pdp-overlay-chip series">
-                  {product.s} Series
+                  {/\bseries$/i.test(product.s.trim()) ? product.s.trim() : `${product.s.trim()} Series`}
                 </span>
               )}
             </div>
@@ -1018,7 +1019,9 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                 {product.s && (
                   <div className="ws-spec-item">
                     <span className="ws-spec-key">Product Series</span>
-                    <span className="ws-spec-val">CarXen {product.s} Series</span>
+                    <span className="ws-spec-val">
+                      CarXen {/\bseries$/i.test(product.s.trim()) ? product.s.trim() : `${product.s.trim()} Series`}
+                    </span>
                   </div>
                 )}
                 <div className="ws-spec-item">

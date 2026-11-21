@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { WholesaleIcon, WholesaleMark } from '@/components/wholesale/WholesaleIcon';
+import {
+  LandingCategoriesDropdown,
+  StorefrontCategoryBar,
+} from '@/components/storefront/CategoryNavBar';
 import { RefreshCw } from 'lucide-react';
 
 function HeaderContent() {
@@ -482,11 +486,12 @@ function HeaderContent() {
               <img src="/logo.png" alt="CARXEN" className="logo-img" />
             </Link>
 
-            {/* LANDING PAGE: Section Anchor Navigation */}
+            {/* LANDING PAGE: Section Anchor Navigation + Autofurnish Mega-Menu */}
             {isLandingPage ? (
               <nav className="main">
+                <LandingCategoriesDropdown />
                 {storefrontConfig?.featuredCategories?.enabled !== false && (
-                  <Link href="/#categories">Product</Link>
+                  <Link href="/#categories">Featured</Link>
                 )}
                 <Link href="/#craft">Craft</Link>
                 <Link href="/#shop">Explore</Link>
@@ -685,6 +690,7 @@ function HeaderContent() {
             </div>
           </div>
       </header>
+      {!isLandingPage && <StorefrontCategoryBar />}
     </div>
   );
 }

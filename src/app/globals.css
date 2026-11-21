@@ -8527,7 +8527,7 @@ footer {
 .shop-hero-banner {
   position: relative;
   width: 100%;
-  min-height: 220px;
+  min-height: 186px;
   background-color: #0b0c10;
   overflow: hidden;
   display: flex;
@@ -8562,7 +8562,7 @@ footer {
   width: 100%;
   max-width: 1380px;
   margin: 0 auto;
-  padding: 42px 24px;
+  padding: 30px 24px;
 }
 
 .shop-hero-eyebrow {
@@ -8619,13 +8619,13 @@ footer {
   box-sizing: border-box;
 }
 
-/* Sidebar Filter Card */
+/* Sidebar Filter Card — clears unified sticky header (72px) + category bar (46px) */
 .shop-sidebar-card {
   position: -webkit-sticky;
   position: sticky;
-  top: 96px;
+  top: 134px;
   z-index: 20;
-  max-height: calc(100vh - 116px);
+  max-height: calc(100vh - 154px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(14, 14, 16, 0.15) transparent;

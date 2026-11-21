@@ -424,7 +424,8 @@ export default function QuickOrderPage() {
                               {p.slug || `CX-${String(p.id).padStart(4, '0')}`}
                             </Link>
                             <span className="b2b-qo-cat-tag">
-                              {p.categoryLabel || p.c} · {p.s} Series
+                              {p.categoryLabel || p.c}
+                              {p.s ? ` · ${/\bseries$/i.test(p.s.trim()) ? p.s.trim() : `${p.s.trim()} Series`}` : ''}
                             </span>
                           </div>
                           {p.discountLimitQty && p.discountLimitQty > 0 ? (
