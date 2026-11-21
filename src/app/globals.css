@@ -1882,7 +1882,7 @@ nav.main a.active {
 }
 
 .tick span::after {
-  content: "✦";
+  content: var(--tick-sep, "✦");
   font-size: 10px;
   color: var(--red);
   opacity: .85;

@@ -156,7 +156,36 @@ export default function HomePage() {
   const craftConfig = storefrontConfig?.craftCards;
   const supportConfig = storefrontConfig?.support;
   const announcementConfig = storefrontConfig?.announcement;
+  const tickerConfig = storefrontConfig?.ticker;
   const addonsConfig = storefrontConfig?.addons;
+
+  const showTicker = tickerConfig ? tickerConfig.enabled !== false : true;
+  const tickerSpeed =
+    typeof tickerConfig?.speed === 'number' && tickerConfig.speed > 0
+      ? tickerConfig.speed
+      : 34;
+  const tickerSeparator = tickerConfig?.separator || '✦';
+  const defaultTickerItems = [
+    'Precision fit',
+    'All-weather protection',
+    'Premium leatherette',
+    '100+ vehicle models',
+    '2-year warranty',
+    'Free shipping over ₹1,499',
+    '100% Genuine Guaranteed',
+  ];
+  const configuredTickerItems =
+    Array.isArray(tickerConfig?.items) && tickerConfig.items.length > 0
+      ? tickerConfig.items.map((it: any) => String(it || '').trim()).filter(Boolean)
+      : defaultTickerItems;
+  const activeTickerItems =
+    configuredTickerItems.length > 0 ? configuredTickerItems : defaultTickerItems;
+  let tickerRepeatCount = Math.max(2, Math.ceil(14 / Math.max(1, activeTickerItems.length)));
+  if (tickerRepeatCount % 2 !== 0) tickerRepeatCount += 1;
+  const repeatedTickerItems = Array.from(
+    { length: tickerRepeatCount },
+    () => activeTickerItems
+  ).flat();
 
   const supportTitle = String(supportConfig?.title || "Need a hand? We're here.").trim();
   const supportTitleBreak = supportTitle.indexOf('?');
@@ -518,24 +547,29 @@ export default function HomePage() {
       {heroConfig?.enabled !== false && <HeroFrameSection heroConfig={heroConfig} />}
 
       {/* TICKER */}
-      <div className="tick" aria-hidden="true">
-        <div className="tick-t">
-          <span>Precision fit</span>
-          <span>All-weather protection</span>
-          <span>Premium leatherette</span>
-          <span>100+ vehicle models</span>
-          <span>2-year warranty</span>
-          <span>Free shipping over ₹1,499</span>
-          <span>100% Genuine Guaranteed</span>
-          <span>Precision fit</span>
-          <span>All-weather protection</span>
-          <span>Premium leatherette</span>
-          <span>100+ vehicle models</span>
-          <span>2-year warranty</span>
-          <span>Free shipping over ₹1,499</span>
-          <span>100% Genuine Guaranteed</span>
+      {showTicker && repeatedTickerItems.length > 0 && (
+        <div className="tick" aria-hidden="true">
+          <div
+            className="tick-t"
+            style={{
+              animationDuration: `${tickerSpeed}s`,
+            }}
+          >
+            {repeatedTickerItems.map((item, idx) => (
+              <span
+                key={idx}
+                style={
+                  tickerSeparator
+                    ? ({ '--tick-sep': `"${tickerSeparator}"` } as React.CSSProperties)
+                    : undefined
+                }
+              >
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PROMOTIONAL ADD-ONS (HIGH PREFERENCE — DIRECTLY BELOW HERO) */}
       <AddonSections addons={addonsConfig} />
