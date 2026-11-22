@@ -8,12 +8,12 @@ import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
-import { categoryLabel, compareCategories } from '@/lib/storefront/categories';
+import { categoryLabel, compareCategories, slugifyCategory, normalizeCategoryKey } from '@/lib/storefront/categories';
 import { readFitment } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
 import { CatalogState } from '@/components/CatalogState';
-import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter } from 'lucide-react';
+import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter, Layers } from 'lucide-react';
 import '../wholesale.css';
 
 // Vehicle Brands and Models are dynamically aggregated from VEDA catalog products below.
@@ -25,6 +25,8 @@ export default function WholesaleCatalogPage() {
     isWholesaleApproved,
     authLoading,
     products,
+    categories: categoryTree = [],
+    flatCategories = [],
     catalogStatus,
     catalogError,
     retryCatalog,
@@ -50,10 +52,99 @@ export default function WholesaleCatalogPage() {
   }, [authLoading, isWholesaleApproved, router, user]);
 
   const [search, setSearch] = useState('');
+  const [selectedMasterGroup, setSelectedMasterGroup] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Categories aggregated dynamically from VEDA products, deduplicated by display label
-  const categories = useMemo(() => {
+  // Active Master Group Object from configured Category Tree
+  const activeMasterGroupObj = useMemo(() => {
+    if (selectedMasterGroup === 'all') return null;
+    return (
+      categoryTree.find(
+        (g) =>
+          g.id === selectedMasterGroup ||
+          g.slug === selectedMasterGroup ||
+          slugifyCategory(g.slug) === slugifyCategory(selectedMasterGroup)
+      ) ?? null
+    );
+  }, [selectedMasterGroup, categoryTree]);
+
+  // Active Subcategory Object from configured Flat Categories
+  const activeSubCategoryObj = useMemo(() => {
+    if (selectedCategory === 'all') return null;
+    return (
+      flatCategories.find((c) => c.id === selectedCategory || c.slug === selectedCategory) ?? null
+    );
+  }, [selectedCategory, flatCategories]);
+
+  // Contextual Subcategories available under the selected Master Department
+  const availableSubcategories = useMemo(() => {
+    if (activeMasterGroupObj) {
+      return activeMasterGroupObj.children || [];
+    }
+    if (categoryTree.length > 0) {
+      const allSubs: typeof flatCategories = [];
+      for (const g of categoryTree) {
+        if (Array.isArray(g.children)) {
+          allSubs.push(...g.children);
+        }
+      }
+      return allSubs;
+    }
+    return [];
+  }, [activeMasterGroupObj, categoryTree, flatCategories]);
+
+  // Live product counts aggregated per master category and subcategory
+  const { masterCounts, subCounts } = useMemo(() => {
+    const mCounts = new Map<string, number>();
+    const sCounts = new Map<string, number>();
+
+    for (const p of products) {
+      const pSlug = slugifyCategory(p.c || '');
+      const pNorm = normalizeCategoryKey(p.c || '');
+      const pId = p.categoryId;
+      const pLabel = p.categoryLabel?.toLowerCase();
+
+      for (const group of categoryTree) {
+        const groupValidIds = new Set([group.id, ...(group.children || []).map((c) => c.id)]);
+        const groupValidSlugs = new Set([
+          slugifyCategory(group.slug),
+          ...(group.children || []).map((c) => slugifyCategory(c.slug)),
+          ...(group.children || []).map((c) => normalizeCategoryKey(c.slug)),
+        ]);
+        const groupValidNames = new Set([
+          group.name.toLowerCase(),
+          ...(group.children || []).map((c) => c.name.toLowerCase()),
+        ]);
+
+        const matchesGroup =
+          Boolean(pId && groupValidIds.has(pId)) ||
+          groupValidSlugs.has(pSlug) ||
+          groupValidSlugs.has(pNorm) ||
+          Boolean(pLabel && groupValidNames.has(pLabel));
+
+        if (matchesGroup) {
+          mCounts.set(group.id, (mCounts.get(group.id) || 0) + 1);
+        }
+
+        for (const sub of group.children || []) {
+          const sSlug = slugifyCategory(sub.slug || sub.name);
+          const matchesSub =
+            Boolean(pId && pId === sub.id) ||
+            pSlug === sSlug ||
+            pNorm === normalizeCategoryKey(sub.slug) ||
+            Boolean(pLabel && pLabel === sub.name.toLowerCase());
+          if (matchesSub) {
+            sCounts.set(sub.id, (sCounts.get(sub.id) || 0) + 1);
+          }
+        }
+      }
+    }
+
+    return { masterCounts: mCounts, subCounts: sCounts };
+  }, [products, categoryTree]);
+
+  // Fallback: Categories aggregated dynamically from VEDA products if no tree is configured
+  const dynamicCategories = useMemo(() => {
     const labelToIds = new Map<string, string[]>();
     for (const product of products) {
       const label = product.categoryLabel?.trim() || categoryLabel(product.c);
@@ -70,11 +161,17 @@ export default function WholesaleCatalogPage() {
 
     uniqueCategories.sort((a, b) => compareCategories({ key: a.id, label: a.label }, { key: b.id, label: b.label }));
 
-    return [
-      { id: 'all', allIds: ['all'], label: 'All Categories' },
-      ...uniqueCategories,
-    ];
+    return uniqueCategories;
   }, [products]);
+
+  const handleSelectMasterGroup = (groupId: string) => {
+    setSelectedMasterGroup(groupId);
+    setSelectedCategory('all');
+  };
+
+  const handleSelectSubCategory = (subId: string) => {
+    setSelectedCategory(subId);
+  };
 
   // Vehicle Brands & Models aggregated dynamically from VEDA inventory & registry
   const { vehicleBrands, modelsByBrand } = useMemo(() => {
@@ -143,11 +240,55 @@ export default function WholesaleCatalogPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // Category filter (matched against grouped category IDs or label)
-      if (selectedCategory !== 'all') {
-        const selectedCatObj = categories.find((c) => c.id === selectedCategory);
-        const matchingIds = selectedCatObj ? selectedCatObj.allIds : [selectedCategory];
-        if (!matchingIds.includes(p.c) && p.categoryLabel !== selectedCatObj?.label) return false;
+      // 1. Two-Tier Category Filtering
+      if (categoryTree.length > 0) {
+        if (selectedCategory !== 'all') {
+          const subNode = flatCategories.find(
+            (c) => c.id === selectedCategory || c.slug === selectedCategory
+          );
+          if (subNode) {
+            const pSlug = slugifyCategory(p.c || '');
+            const cSlug = slugifyCategory(subNode.slug || subNode.name);
+            const matchesId = p.categoryId === subNode.id;
+            const matchesSlug =
+              pSlug === cSlug || normalizeCategoryKey(p.c) === normalizeCategoryKey(subNode.slug);
+            const matchesLabel = Boolean(
+              p.categoryLabel && p.categoryLabel.toLowerCase() === subNode.name.toLowerCase()
+            );
+            if (!matchesId && !matchesSlug && !matchesLabel) return false;
+          }
+        } else if (selectedMasterGroup !== 'all' && activeMasterGroupObj) {
+          const validIds = new Set([
+            activeMasterGroupObj.id,
+            ...activeMasterGroupObj.children.map((c) => c.id),
+          ]);
+          const validSlugs = new Set([
+            slugifyCategory(activeMasterGroupObj.slug),
+            ...activeMasterGroupObj.children.map((c) => slugifyCategory(c.slug)),
+            ...activeMasterGroupObj.children.map((c) => normalizeCategoryKey(c.slug)),
+          ]);
+          const validNames = new Set([
+            activeMasterGroupObj.name.toLowerCase(),
+            ...activeMasterGroupObj.children.map((c) => c.name.toLowerCase()),
+          ]);
+
+          const matchesId = Boolean(p.categoryId && validIds.has(p.categoryId));
+          const pSlug = slugifyCategory(p.c || '');
+          const pNorm = normalizeCategoryKey(p.c || '');
+          const matchesSlug = validSlugs.has(pSlug) || validSlugs.has(pNorm);
+          const matchesLabel = Boolean(
+            p.categoryLabel && validNames.has(p.categoryLabel.toLowerCase())
+          );
+
+          if (!matchesId && !matchesSlug && !matchesLabel) return false;
+        }
+      } else {
+        // Fallback for flat dynamic categories
+        if (selectedCategory !== 'all') {
+          const selectedCatObj = dynamicCategories.find((c) => c.id === selectedCategory);
+          const matchingIds = selectedCatObj ? selectedCatObj.allIds : [selectedCategory];
+          if (!matchingIds.includes(p.c) && p.categoryLabel !== selectedCatObj?.label) return false;
+        }
       }
 
       const fitmentStr = getFitmentString(p).toLowerCase();
@@ -188,7 +329,18 @@ export default function WholesaleCatalogPage() {
 
       return true;
     });
-  }, [products, selectedCategory, selectedBrand, selectedModel, search]);
+  }, [
+    products,
+    categoryTree,
+    flatCategories,
+    selectedCategory,
+    selectedMasterGroup,
+    activeMasterGroupObj,
+    dynamicCategories,
+    selectedBrand,
+    selectedModel,
+    search,
+  ]);
 
   const handleRowQtyChange = (productId: number, val: number, moq: number, maxCustomQty: number | null = null) => {
     if (val <= 0) {
@@ -421,19 +573,6 @@ export default function WholesaleCatalogPage() {
             )}
           </div>
 
-          <div className="ws-category-chips">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`ws-category-chip ${selectedCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
           {availableModels.length > 0 && (
             <div style={{ marginLeft: 'auto' }}>
               <select
@@ -481,6 +620,172 @@ export default function WholesaleCatalogPage() {
             </button>
           ))}
         </div>
+
+        {/* Two-Tier B2C-Style Category Hierarchy */}
+        {categoryTree.length > 0 ? (
+          <div className="ws-category-hierarchy-container">
+            {/* Tier 1: Master Departments Strip */}
+            <div className="ws-master-cat-strip" aria-label="Master Product Departments">
+              <button
+                type="button"
+                className={`ws-master-cat-tab ${selectedMasterGroup === 'all' && selectedCategory === 'all' ? 'active' : ''}`}
+                onClick={() => handleSelectMasterGroup('all')}
+              >
+                <Layers size={14} />
+                <span>All Departments</span>
+                <span className="ws-master-cat-count">{products.length}</span>
+              </button>
+
+              {categoryTree.map((group) => {
+                const count = masterCounts.get(group.id) ?? group.totalProductCount ?? 0;
+                const isGroupActive = selectedMasterGroup === group.id;
+
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    className={`ws-master-cat-tab ${isGroupActive ? 'active' : ''}`}
+                    onClick={() => handleSelectMasterGroup(group.id)}
+                  >
+                    <span>{group.name}</span>
+                    <span className="ws-master-cat-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tier 2: Subcategory Strip (Contextual) */}
+            {availableSubcategories.length > 0 && (
+              <div className="ws-subcat-strip" aria-label="Product Subcategories">
+                <button
+                  type="button"
+                  className={`ws-subcat-chip ${selectedCategory === 'all' ? 'active' : ''}`}
+                  onClick={() => handleSelectSubCategory('all')}
+                >
+                  <span>
+                    {activeMasterGroupObj ? `All ${activeMasterGroupObj.name}` : 'All Subcategories'}
+                  </span>
+                </button>
+
+                {availableSubcategories.map((sub) => {
+                  const count = subCounts.get(sub.id) ?? sub.productCount ?? 0;
+                  const isSubActive = selectedCategory === sub.id;
+
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className={`ws-subcat-chip ${isSubActive ? 'active' : ''}`}
+                      onClick={() => handleSelectSubCategory(sub.id)}
+                    >
+                      <span>{sub.name}</span>
+                      <span className="ws-subcat-count">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Fallback: Flat dynamic category chips if no tree is configured */
+          <div className="ws-category-chips" style={{ paddingTop: '10px', borderTop: '1px solid var(--ws-border-light)' }}>
+            <button
+              type="button"
+              className={`ws-category-chip ${selectedCategory === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedCategory('all')}
+            >
+              All Categories
+            </button>
+            {dynamicCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`ws-category-chip ${selectedCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Active Filters Bar if any filter is active */}
+        {(selectedMasterGroup !== 'all' || selectedCategory !== 'all' || selectedBrand !== 'All Brands' || selectedModel !== 'all' || search) && (
+          <div className="ws-active-filters-bar">
+            <span className="ws-active-filters-label">Active Filters:</span>
+            {selectedMasterGroup !== 'all' && activeMasterGroupObj && (
+              <button
+                type="button"
+                className="ws-active-filter-pill"
+                onClick={() => handleSelectMasterGroup('all')}
+                title="Remove department filter"
+              >
+                <span>Dept: {activeMasterGroupObj.name}</span>
+                <X size={12} />
+              </button>
+            )}
+            {selectedCategory !== 'all' && (
+              <button
+                type="button"
+                className="ws-active-filter-pill"
+                onClick={() => setSelectedCategory('all')}
+                title="Remove subcategory filter"
+              >
+                <span>Subcat: {activeSubCategoryObj?.name || selectedCategory}</span>
+                <X size={12} />
+              </button>
+            )}
+            {selectedBrand !== 'All Brands' && (
+              <button
+                type="button"
+                className="ws-active-filter-pill"
+                onClick={() => {
+                  setSelectedBrand('All Brands');
+                  setSelectedModel('all');
+                }}
+                title="Remove vehicle brand filter"
+              >
+                <span>Brand: {selectedBrand}</span>
+                <X size={12} />
+              </button>
+            )}
+            {selectedModel !== 'all' && (
+              <button
+                type="button"
+                className="ws-active-filter-pill"
+                onClick={() => setSelectedModel('all')}
+                title="Remove model filter"
+              >
+                <span>Model: {selectedModel}</span>
+                <X size={12} />
+              </button>
+            )}
+            {search && (
+              <button
+                type="button"
+                className="ws-active-filter-pill"
+                onClick={() => setSearch('')}
+                title="Clear search filter"
+              >
+                <span>Search: &quot;{search}&quot;</span>
+                <X size={12} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="ws-active-filters-clear-btn"
+              onClick={() => {
+                setSearch('');
+                setSelectedMasterGroup('all');
+                setSelectedCategory('all');
+                setSelectedBrand('All Brands');
+                setSelectedModel('all');
+              }}
+            >
+              Reset All
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Inventory Display: Cards View vs Table View */}
@@ -496,6 +801,7 @@ export default function WholesaleCatalogPage() {
             className="ws-btn-secondary"
             onClick={() => {
               setSearch('');
+              setSelectedMasterGroup('all');
               setSelectedCategory('all');
               setSelectedBrand('All Brands');
               setSelectedModel('all');
