@@ -4239,14 +4239,23 @@ body:has(.wholesale-sidebar) .ws-page-container {
 .ws-breadcrumb-back-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--ws-red);
+  gap: 6px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid var(--ws-border);
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
-  transition: opacity 0.15s ease;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .ws-breadcrumb-back-link:hover {
-  opacity: 0.8;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0284c7;
 }
 
 .ws-partner-status-chip {
@@ -5635,6 +5644,18 @@ body:has(.wholesale-sidebar) .ws-page-container {
 @media (max-width: 1024px) {
   .ws-pdp-hero-grid {
     grid-template-columns: 1fr;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .ws-pdp-gallery-col,
+  .ws-pdp-details-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .ws-pdp-details-col {
+    position: static !important;
   }
   .ws-pdp-sticky-dock {
     left: 0;
@@ -5651,12 +5672,64 @@ body:has(.wholesale-sidebar) .ws-page-container {
   }
 }
 
+@media (max-width: 900px) {
+  /* Mobile PDP Right-Side Overflow Fixes */
+  .ws-pdp-showcase-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: clamp(260px, 60vw, 360px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-pdp-fitment-assurance-card,
+  .ws-pdp-specs-summary-card,
+  .ws-pdp-buybox-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 16px 14px !important;
+  }
+
+  .ws-specs-summary-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-spec-summary-item {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 8px 12px !important;
+  }
+
+  .ws-spec-summary-val {
+    text-align: right !important;
+    font-size: 12px !important;
+  }
+
+  .ws-fitment-tag-display {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-fitment-val {
+    word-break: break-word !important;
+  }
+}
+
 @media (max-width: 640px) {
   .ws-card-grid {
     grid-template-columns: 1fr;
   }
   .ws-pdp-thumbs-row {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .ws-pdp-thumbs-row button:nth-child(n+4) {
     display: none;

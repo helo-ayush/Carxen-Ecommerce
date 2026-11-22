@@ -403,14 +403,10 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
       {/* Sleek Top Navigation Bar */}
       <div className="ws-pdp-top-nav">
         <Link href="/wholesale/catalog" className="ws-breadcrumb-back-link">
-          <ArrowLeft size={16} />
-          <span>Back to Wholesale Catalogue</span>
+          <ArrowLeft size={15} />
+          <span>Back to Catalogue</span>
         </Link>
         <div className="ws-pdp-top-meta">
-          <div className="ws-partner-status-chip">
-            <span className="ws-partner-ping" />
-            <span>{partnerTier}</span>
-          </div>
           <Link href="/wholesale/order-basket" className="ws-btn-secondary" style={{ height: '36px', padding: '0 14px', fontSize: '12.5px', borderRadius: '8px' }}>
             <WholesaleIcon name="basket" size={15} />
             <span>Basket ({wholesaleBasketSkuCount})</span>
