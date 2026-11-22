@@ -1419,7 +1419,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (cappedAtMax && typeof p.stockCount === 'number') {
         showToast(`Only ${p.stockCount} unit(s) available for ${p.n}.`);
       } else {
-        showToast(`Added to cart — ${p.n}${isWholesaleApproved ? ` (Min. ${moq} units)` : ''}`);
+        showToast(`Added to cart${isWholesaleApproved ? ` (Min. ${moq} units)` : ''}`);
       }
     }
   };
@@ -1460,7 +1460,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return copy;
     });
     const p = products.find((x) => x.id === productId);
-    if (p) showToast(`Removed from cart — ${p.n}`);
+    if (p) showToast('Removed from cart');
   };
 
   const clearCart = () => {
@@ -1616,10 +1616,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const exists = prev.includes(productId);
       const p = products.find((x) => x.id === productId);
       if (exists) {
-        if (p) showToast(`Removed from favourites — ${p.n}`);
+        if (p) showToast('Removed from Wishlist');
         return prev.filter((id) => id !== productId);
       } else {
-        if (p) showToast(`Saved to favourites — ${p.n}`);
+        if (p) showToast('Saved to Wishlist');
         return [...prev, productId];
       }
     });
