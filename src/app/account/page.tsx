@@ -2155,7 +2155,7 @@ function AccountContent() {
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="ac-form-grid-2">
                         <div className="ac-field">
                           <label>New Password</label>
                           <input
@@ -2344,7 +2344,7 @@ function AccountContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="ac-form-grid-2">
                 <div className="ac-field" style={{ margin: 0 }}>
                   <label>Recipient Name</label>
                   <input
@@ -2375,7 +2375,7 @@ function AccountContent() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="ac-form-grid-2">
                 <div className="ac-field" style={{ margin: 0 }}>
                   <label>Locality / Area</label>
                   <input
@@ -2394,7 +2394,7 @@ function AccountContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
+              <div className="ac-form-grid-3" style={{ marginTop: '10px' }}>
                 <div className="ac-field" style={{ margin: 0 }}>
                   <label>City</label>
                   <input
@@ -2975,7 +2975,7 @@ function AccountContent() {
               </div>
 
               {/* Year & Fuel */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="ac-form-grid-2" style={{ gap: '10px' }}>
                 <div className="ac-field" style={{ margin: 0 }}>
                   <label>Model Year</label>
                   <select

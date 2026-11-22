@@ -560,11 +560,30 @@
   overflow-y: auto;
 }
 
+.ac-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ac-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .ac-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .ac-field label {
@@ -574,6 +593,9 @@
 }
 
 .ac-field input, .ac-field select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   height: 40px;
   padding: 0 12px;
   border-radius: 8px;
@@ -601,6 +623,14 @@
   .ac-tracker-line {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+  .ac-form-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+  .ac-form-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 
   /* Segmented Tabs Bar: 100% full-width, balanced 4-column grid (NO horizontal scrolling) */
