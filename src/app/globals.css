@@ -6384,70 +6384,249 @@ footer {
   position: sticky;
   top: clamp(14px, 3vw, 40px);
   align-self: start;
-  background: var(--dark);
-  background-image: linear-gradient(#ffffff0d 1px, transparent 1px), linear-gradient(90deg, #ffffff0d 1px, transparent 1px);
-  background-size: 38px 38px;
+  background: #0f1217;
   color: #fff;
-  border-radius: var(--r);
-  padding: clamp(22px, 3vw, 40px);
-  min-height: 520px;
+  border-radius: clamp(18px, 2vw, 24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+  padding: clamp(18px, 2.5vw, 24px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
+  overflow: hidden;
 }
 
-.gr-car {
+.gr-visual-frame {
+  position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9.5;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #181b22;
+  border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
-.gr-car path, .gr-car circle {
-  fill: none;
-  stroke: #ffffff88;
-  stroke-width: 2.2;
-  stroke-dasharray: 1700;
-  stroke-dashoffset: 1700;
-  animation: dr2 2.6s var(--mech) forwards;
+.gr-visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.gr-car .rd {
-  stroke: var(--red);
+.gr-v:hover .gr-visual-img {
+  transform: scale(1.03);
 }
 
-@keyframes dr2 {
-  to { stroke-dashoffset: 0; }
+.gr-visual-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 18, 23, 0.15) 0%, rgba(15, 18, 23, 0.75) 100%);
+  pointer-events: none;
 }
 
-.gr-vb {
-  color: #8d8d93;
-  font-size: 14px;
-  font-weight: 600;
+.gr-visual-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.gr-v h3 {
-  font-size: clamp(3rem, 5.4vw, 4.8rem);
+.gr-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.gr-visual-car-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(226, 35, 26, 0.92);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(226, 35, 26, 0.35);
+}
+
+.gr-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gr-model-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gr-brand-label {
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.gr-model-title {
+  font-family: var(--disp);
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
   word-break: break-word;
 }
 
-.gr-n {
+.gr-spec-pills {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 18px 0 20px;
-  font-size: 14px;
-  color: #a8a8ae;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
 }
 
-.gr-n b {
+.gr-spec-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.gr-spec-chip.fit-verified {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.gr-spec-hint {
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+.gr-parts-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gr-parts-count-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gr-parts-num {
   font-family: var(--disp);
-  font-weight: 400;
-  font-size: 44px;
+  font-size: 38px;
+  font-weight: 700;
   color: #fff;
   line-height: 1;
 }
 
-.gr-v .btn:disabled {
-  opacity: .35;
+.gr-parts-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gr-parts-labels strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.gr-parts-labels span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.gr-parts-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gr-parts-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gr-parts-chip.custom {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.gr-parts-chip.universal {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.gr-cta-btn {
+  margin-top: 4px;
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 12px;
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(226, 35, 26, 0.35);
+  transition: all 0.2s ease;
+}
+
+.gr-cta-btn:hover:not(:disabled) {
+  background: #c81e16;
+  box-shadow: 0 10px 24px rgba(226, 35, 26, 0.5);
+  transform: translateY(-1px);
+}
+
+.gr-cta-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
   pointer-events: none;
 }
 

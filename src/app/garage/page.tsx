@@ -1,18 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { fitsVehicle } from '@/lib/storefront/fitment';
 
 export default function GaragePage() {
   const router = useRouter();
-  const { car, setVehicle, vehicleBrands, getModelsForBrand } = useApp();
+  const { car, setVehicle, vehicleBrands, getModelsForBrand, storefrontConfig, products } = useApp();
 
   const [brand, setBrand] = useState(car?.b || '');
   const [model, setModel] = useState(car?.m || '');
   const [year, setYear] = useState(car?.y || '');
   const [fuel, setFuel] = useState(car?.f || 'Petrol');
+
+  const fitmentConfig = storefrontConfig?.fitment;
+  const fitmentImage =
+    fitmentConfig?.image ||
+    'https://images.unsplash.com/photo-1625690180114-5530b1304127?auto=format&fit=crop&w=1200&q=85';
 
   const models = brand ? getModelsForBrand(brand) : [];
   const years = Array.from({ length: 9 }, (_, i) => String(2026 - i));
@@ -20,6 +26,39 @@ export default function GaragePage() {
 
   const stepCount = (brand ? 1 : 0) + (model ? 1 : 0) + (year ? 1 : 0);
   const isComplete = !!(brand && model && year);
+
+  const currentVehicle = useMemo(
+    () => ({
+      b: brand || null,
+      m: model || null,
+      y: year || null,
+      f: fuel || null,
+    }),
+    [brand, model, year, fuel]
+  );
+
+  const matchingStats = useMemo(() => {
+    if (!products || products.length === 0) {
+      return { total: 0, custom: 0, universal: 0 };
+    }
+    if (!model) {
+      const custom = products.filter((p) => p.customFit !== false).length;
+      const universal = products.length - custom;
+      return { total: products.length, custom, universal };
+    }
+    let custom = 0;
+    let universal = 0;
+    for (const p of products) {
+      if (fitsVehicle(p, currentVehicle)) {
+        if (p.customFit !== false) {
+          custom++;
+        } else {
+          universal++;
+        }
+      }
+    }
+    return { total: custom + universal, custom, universal };
+  }, [products, model, currentVehicle]);
 
   const handleSave = () => {
     if (!isComplete) return;
@@ -124,31 +163,68 @@ export default function GaragePage() {
       </div>
 
       <div className="gr-v">
-        <svg className="gr-car" viewBox="50 96 740 180">
-          <path d="M78 262V224Q80 202 108 196L176 184Q214 132 292 122L486 112Q560 112 616 148L676 168Q756 176 766 208L768 262" />
-          <path d="M196 262Q196 200 258 200T320 262M560 262Q560 200 622 200T684 262M236 178Q268 140 320 134L470 126Q530 128 578 158L596 172L470 176" />
-          <circle className="rd" cx="258" cy="240" r="34" />
-          <circle className="rd" cx="622" cy="240" r="34" />
-        </svg>
+        <div className="gr-visual-frame">
+          <img
+            src={fitmentImage}
+            alt={fitmentConfig?.alt || (model ? `${brand} ${model} precision fitment` : 'Precision fit automotive interior')}
+            className="gr-visual-img"
+          />
+          <div className="gr-visual-shade" />
+          <div className="gr-visual-badge">
+            <span className="gr-badge-dot" />
+            <span>{model ? 'Precision Fit Guaranteed' : (fitmentConfig?.kicker || 'Precision Fitment')}</span>
+          </div>
+          {brand && (
+            <div className="gr-visual-car-tag">
+              <span>{brand}</span>
+            </div>
+          )}
+        </div>
 
-        <div>
-          <p className="gr-vb">{brand || 'Select your brand'}</p>
-          <h3 className="disp">{model || 'Your car'}</h3>
-          <p className="gr-vb">
-            {model ? `${year || 'Year'} · ${fuel}` : 'Choose brand, model and year'}
-          </p>
+        <div className="gr-info-body">
+          <div className="gr-model-meta">
+            <span className="gr-brand-label">{brand || 'Vehicle Profile'}</span>
+            <h3 className="gr-model-title">{model || 'Select Your Vehicle'}</h3>
+            <div className="gr-spec-pills">
+              {model ? (
+                <>
+                  <span className="gr-spec-chip">{year || 'All Years'}</span>
+                  <span className="gr-spec-chip">{fuel}</span>
+                  <span className="gr-spec-chip fit-verified">100% Fit Guaranteed</span>
+                </>
+              ) : (
+                <span className="gr-spec-hint">Select brand, model, and year to see precision-fit parts</span>
+              )}
+            </div>
+          </div>
 
-          <div className="gr-n">
-            <b>12</b>
-            <span>parts · 6 custom-fit, 6 universal</span>
+          <div className="gr-parts-card">
+            <div className="gr-parts-count-row">
+              <span className="gr-parts-num">{matchingStats.total}</span>
+              <div className="gr-parts-labels">
+                <strong>{matchingStats.total === 1 ? 'Compatible Part' : 'Compatible Parts'}</strong>
+                <span>{model ? `engineered for ${brand} ${model}` : 'in catalog'}</span>
+              </div>
+            </div>
+            <div className="gr-parts-chips">
+              <span className="gr-parts-chip custom">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                {matchingStats.custom} Custom-Fit
+              </span>
+              <span className="gr-parts-chip universal">
+                {matchingStats.universal} Universal
+              </span>
+            </div>
           </div>
 
           <button
-            className="btn mag"
+            className="btn mag gr-cta-btn"
             disabled={!isComplete}
             onClick={handleSave}
           >
-            Show my accessories{' '}
+            <span>Show my accessories</span>
             <svg viewBox="0 0 24 24">
               <path d="M4 12h16M13 5l7 7-7 7" />
             </svg>
