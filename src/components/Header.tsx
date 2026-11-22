@@ -547,50 +547,30 @@ function HeaderContent() {
               {isLandingPage && (
                 <Link
                   href="/wholesale"
-                  className={`wholesale-workspace-switch-btn ${
-                    isWholesaleApproved ? 'approved' : isWholesalePending ? 'pending' : 'guest-link'
-                  }`}
-                  title={
-                    isWholesaleApproved
-                      ? 'Switch to Authorized Dealer Workspace'
-                      : isWholesalePending
-                      ? 'Dealership Application Under Review'
-                      : 'Authorized Dealer Portal (Trade & B2B Commercial Only)'
-                  }
+                  className="wholesale-workspace-switch-btn"
+                  title="Authorized Dealer Portal (Trade & B2B Commercial Only)"
                   onClick={() => setWorkspaceMode('wholesale')}
                 >
-                  {isWholesaleApproved ? (
-                    <>
-                      <span className="wholesale-badge-dot" />
-                      <span className="wholesale-switch-text">Dealer Workspace</span>
-                      <span className="wholesale-micro-tier">B2B</span>
-                    </>
-                  ) : isWholesalePending ? (
-                    <>
-                      <span className="wholesale-badge-amber-dot" />
-                      <span className="wholesale-switch-text">Dealer Review</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="13"
-                        height="13"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={{ flexShrink: 0, opacity: 0.9 }}
-                      >
-                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                      </svg>
-                      <span className="wholesale-switch-text">Dealer Portal</span>
-                      <span className="wholesale-switch-arrow" aria-hidden="true">↗</span>
-                    </>
-                  )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="13"
+                    height="13"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="wholesale-switch-icon"
+                  >
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                  <span className="wholesale-switch-text">
+                    <span className="ws-text-full">Dealer Portal</span>
+                    <span className="ws-text-short">Dealer</span>
+                  </span>
+                  <span className="wholesale-switch-arrow" aria-hidden="true">↗</span>
                 </Link>
               )}
 
