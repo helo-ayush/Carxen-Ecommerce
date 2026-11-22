@@ -991,6 +991,7 @@ body:has(.wholesale-sidebar) {
     transform: translateY(16px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -1862,15 +1863,18 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .wholesale-sidebar {
     width: 220px;
   }
+
   body:has(.wholesale-sidebar) .ws-page-container {
     margin-left: 220px;
     max-width: calc(100% - 220px);
     padding: 24px 20px 120px;
   }
+
   .ws-procurement-table thead th {
     padding: 10px 7px;
     font-size: 10.5px;
   }
+
   .ws-procurement-table tbody td {
     padding: 10px 7px;
     font-size: 12.5px;
@@ -1881,12 +1885,15 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .ws-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .ws-shortcut-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .ws-basket-layout {
     grid-template-columns: 1fr;
   }
+
   .ws-checkout-card {
     position: static;
   }
@@ -1896,48 +1903,59 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .wholesale-sidebar {
     width: 195px;
   }
+
   body:has(.wholesale-sidebar) .ws-page-container {
     margin-left: 195px;
     max-width: calc(100% - 195px);
     padding: 20px 14px 120px;
   }
+
   .ws-procurement-table thead th {
     padding: 8px 5px;
     font-size: 10px;
     letter-spacing: 0.02em;
   }
+
   .ws-procurement-table tbody td {
     padding: 8px 5px;
     font-size: 12px;
   }
+
   .ws-prod-cell {
     gap: 7px;
   }
+
   .ws-prod-art-thumb {
     width: 36px;
     height: 36px;
   }
+
   .ws-prod-name {
     font-size: 12px;
   }
+
   .ws-stepper-btn {
     width: 20px;
     height: 24px;
   }
+
   .ws-stepper-input {
     width: 26px;
     height: 24px;
     font-size: 11.5px;
   }
+
   .ws-row-action-btn {
     padding: 4px 5px;
     font-size: 10.5px;
     min-height: 26px;
     gap: 3px;
   }
+
   .ws-price-wholesale {
     font-size: 12.5px;
   }
+
   .ws-price-tier2 {
     font-size: 11px;
   }
@@ -1947,26 +1965,32 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .wholesale-sidebar {
     width: 175px;
   }
+
   body:has(.wholesale-sidebar) .ws-page-container {
     margin-left: 175px;
     max-width: calc(100% - 175px);
     padding: 16px 10px 120px;
   }
+
   .ws-procurement-table thead th {
     padding: 7px 4px;
     font-size: 9.5px;
   }
+
   .ws-procurement-table tbody td {
     padding: 7px 4px;
     font-size: 11.5px;
   }
+
   .ws-prod-art-thumb {
     width: 30px;
     height: 30px;
   }
+
   .ws-prod-name {
     font-size: 11.5px;
   }
+
   .ws-sku-badge,
   .ws-fitment-badge,
   .ws-moq-badge {
@@ -1976,10 +2000,12 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 @media (max-width: 900px) {
+
   /* Hide the horizontal desktop sidebar completely on mobile/tablets */
   .wholesale-sidebar {
     display: none !important;
   }
+
   .ws-subcat-strip {
     display: none !important;
   }
@@ -2027,15 +2053,15 @@ body:has(.wholesale-sidebar) .ws-page-container {
     white-space: nowrap;
   }
 
-  .ws-view-toggle-group {
-    width: 100%;
-    display: flex;
+  /* Hide view toggle and table view on smaller screens (cards only) */
+  .ws-view-toggle-group,
+  .ws-desktop-only-table {
+    display: none !important;
   }
 
-  .ws-view-toggle-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 8px 12px;
+  .ws-card-grid,
+  .ws-card-grid.ws-desktop-table-active {
+    display: grid !important;
   }
 
   /* Metrics Grid */
@@ -3059,6 +3085,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
     transform: scale(0.6);
     opacity: 0.9;
   }
+
   100% {
     transform: scale(2.2);
     opacity: 0;
@@ -3251,10 +3278,13 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 @keyframes ws-inner-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(0.7);
     opacity: 0.6;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 1;
@@ -3720,6 +3750,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -3772,6 +3803,12 @@ body:has(.wholesale-sidebar) .ws-page-container {
   gap: 22px;
   margin-top: 20px;
   align-items: stretch;
+}
+
+@media (min-width: 901px) {
+  .ws-card-grid.ws-desktop-table-active {
+    display: none !important;
+  }
 }
 
 /* B2B Product Card: Refined, Uniform, Psychology-Optimized */
@@ -5555,6 +5592,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
   from {
     transform: translateY(100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -5643,21 +5681,26 @@ body:has(.wholesale-sidebar) .ws-page-container {
     max-width: 100% !important;
     min-width: 0 !important;
   }
+
   .ws-pdp-gallery-col,
   .ws-pdp-details-col {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
   }
+
   .ws-pdp-details-col {
     position: static !important;
   }
+
   .ws-pdp-sticky-dock {
     left: 0;
   }
+
   .ws-card-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .ws-specs-grid,
   .ws-fitment-check-grid,
   .ws-install-steps-list,
@@ -5668,6 +5711,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 @media (max-width: 900px) {
+
   /* Mobile PDP Right-Side Overflow Fixes */
   .ws-pdp-showcase-box {
     width: 100% !important;
@@ -5723,25 +5767,32 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .ws-card-grid {
     grid-template-columns: 1fr;
   }
+
   .ws-pdp-thumbs-row {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
+
   .ws-pdp-thumbs-row button:nth-child(n+4) {
     display: none;
   }
+
   .ws-pdp-tier-grid {
     grid-template-columns: 1fr;
   }
+
   .ws-pdp-perks-grid {
     grid-template-columns: 1fr;
   }
+
   .ws-sticky-dock-inner {
     flex-direction: column;
     align-items: stretch;
   }
+
   .ws-sticky-dock-actions {
     justify-content: space-between;
   }
+
   .ws-sticky-dock-actions .ws-btn-primary {
     flex: 1;
   }
@@ -5774,6 +5825,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 @media (max-width: 768px) {
+
   .ws-form-grid-2,
   .ws-form-grid-3 {
     grid-template-columns: 1fr;
@@ -6214,6 +6266,7 @@ textarea.ws-form-control {
              Orders Pipeline Stepper & Line Item Squeezing.
    ========================================================================== */
 @media (max-width: 900px) {
+
   /* 1. Page Container Bottom Clearance for Bottom Nav */
   body:has(.cx-bottom-nav) .ws-page-container {
     padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
@@ -6667,12 +6720,15 @@ textarea.ws-form-control {
     .ws-tab-label-full {
       display: inline !important;
     }
+
     .ws-tab-label-short {
       display: none !important;
     }
+
     .ws-timeline-label-full {
       display: block !important;
     }
+
     .ws-timeline-label-short {
       display: none !important;
     }
@@ -6742,7 +6798,7 @@ textarea.ws-form-control {
     line-height: 1.4 !important;
   }
 
-  .ws-order-footer > div:last-child {
+  .ws-order-footer>div:last-child {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -7098,7 +7154,7 @@ textarea.ws-form-control {
   border: 1.5px solid #cbd5e1;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   height: 34px;
   width: fit-content;
 }
@@ -7269,6 +7325,7 @@ textarea.ws-form-control {
 }
 
 @media (max-width: 640px) {
+
   .ws-form-grid-2,
   .ws-form-grid-3 {
     grid-template-columns: 1fr;
@@ -7814,6 +7871,7 @@ textarea.ws-form-control {
 }
 
 @media (max-width: 768px) {
+
   .ws-responsive-grid-2,
   .ws-responsive-grid-3 {
     grid-template-columns: minmax(0, 1fr);
@@ -7990,7 +8048,7 @@ textarea.ws-form-control {
   background: #0f172a;
   flex-shrink: 0;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
 }
 
@@ -8102,7 +8160,7 @@ textarea.ws-form-control {
     width: 100%;
   }
 
-  .ws-card-preview-actions > *:first-child {
+  .ws-card-preview-actions>*:first-child {
     grid-column: 1 / -1;
   }
 }
@@ -8584,30 +8642,37 @@ textarea.ws-form-control {
   .ws-gate-wrapper {
     margin: 10px auto 14px;
   }
+
   .ws-gate-card {
     padding: 24px 18px 20px;
     border-radius: 16px;
   }
+
   .ws-gate-header h1 {
     font-size: 20px;
   }
+
   .ws-gate-consumer-callout {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
+
   .ws-gate-consumer-pill-btn {
     align-self: flex-start;
   }
+
   .ws-gate-confirm-btn {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
     padding: 14px 16px;
   }
+
   .ws-gate-btn-arrow {
     align-self: flex-end;
   }
+
   .ws-gate-footer-trust {
     font-size: 10px;
     gap: 6px;

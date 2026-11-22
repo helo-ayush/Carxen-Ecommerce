@@ -810,30 +810,32 @@ export default function WholesaleCatalogPage() {
             Reset All Filters
           </button>
         </div>
-      ) : viewMode === 'cards' ? (
-        /* CARDS VIEW: Product cards like Shop page */
-        <div className="ws-card-grid">
-          {filteredProducts.map((p) => {
-            const moq = getProductMoq(p);
-            const inBasketQty = wholesaleBasket[p.id] || 0;
-            const draftQty = rowQuantities[p.id] || (inBasketQty > 0 ? inBasketQty : moq);
-
-            return (
-              <WholesaleProductCard
-                key={p.id}
-                product={p}
-                quantity={draftQty}
-                inBasketQty={inBasketQty}
-                onQuantityChange={(prodId, val) => handleRowQtyChange(prodId, val, moq)}
-                onAddToBasket={(prod, q) => handleAddToBasket(prod, q)}
-              />
-            );
-          })}
-        </div>
       ) : (
-        /* TABLE VIEW: Dense procurement spreadsheet */
-        <div className="ws-table-card">
-          <table className="ws-procurement-table">
+        <>
+          {/* CARDS VIEW: Product cards like Shop page (Always shown on smaller screens, and when Cards is selected on desktop) */}
+          <div className={`ws-card-grid ${viewMode === 'table' ? 'ws-desktop-table-active' : ''}`}>
+            {filteredProducts.map((p) => {
+              const moq = getProductMoq(p);
+              const inBasketQty = wholesaleBasket[p.id] || 0;
+              const draftQty = rowQuantities[p.id] || (inBasketQty > 0 ? inBasketQty : moq);
+
+              return (
+                <WholesaleProductCard
+                  key={p.id}
+                  product={p}
+                  quantity={draftQty}
+                  inBasketQty={inBasketQty}
+                  onQuantityChange={(prodId, val) => handleRowQtyChange(prodId, val, moq)}
+                  onAddToBasket={(prod, q) => handleAddToBasket(prod, q)}
+                />
+              );
+            })}
+          </div>
+
+          {/* TABLE VIEW: Desktop-only dense procurement spreadsheet */}
+          {viewMode === 'table' && (
+            <div className="ws-table-card ws-desktop-only-table">
+              <table className="ws-procurement-table">
             <thead>
               <tr>
                 <th style={{ width: '24%' }}>Product Details</th>
@@ -1018,6 +1020,8 @@ export default function WholesaleCatalogPage() {
           </table>
         </div>
       )}
+    </>
+  )}
 
       {/* Floating Bottom Order Summary Dock */}
       {wholesaleBasketSkuCount > 0 && (

@@ -504,8 +504,8 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                 style={{
                   filter:
                     (!activeColor.images || activeColor.images.length === 0) &&
-                    activeColor.filter &&
-                    activeColor.filter !== 'none'
+                      activeColor.filter &&
+                      activeColor.filter !== 'none'
                       ? activeColor.filter
                       : undefined,
                 }}
@@ -1420,8 +1420,8 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
         colorName={activeColor?.name}
         colorFilter={
           (!activeColor.images || activeColor.images.length === 0) &&
-          activeColor.filter &&
-          activeColor.filter !== 'none'
+            activeColor.filter &&
+            activeColor.filter !== 'none'
             ? activeColor.filter
             : undefined
         }
