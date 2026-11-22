@@ -447,9 +447,8 @@ body:has(.wholesale-sidebar) {
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
 }
 
 .ws-master-cat-strip::-webkit-scrollbar {
@@ -503,10 +502,9 @@ body:has(.wholesale-sidebar) {
 .ws-subcat-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  overflow-x: auto;
+  gap: 6px 8px;
+  flex-wrap: wrap;
   padding-bottom: 2px;
-  scrollbar-width: none;
 }
 
 .ws-subcat-strip::-webkit-scrollbar {
