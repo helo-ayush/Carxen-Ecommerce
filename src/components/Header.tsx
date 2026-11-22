@@ -235,12 +235,6 @@ function HeaderContent() {
             <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="logo-img" />
             </Link>
-            <span className="wholesale-brand-tag">DEALER PORTAL</span>
-            {isWholesaleApproved && (
-              <span className="wholesale-mobile-tier-badge">
-                Authorized Dealer
-              </span>
-            )}
           </div>
           <div className="wholesale-mobile-header-right">
             {isWholesaleApproved && (
