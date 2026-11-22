@@ -70,9 +70,6 @@ export default function GaragePage() {
     <div className="gr-w">
       <div className="gr-p">
         <div className="gr-top">
-          <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
-            <img src="/logo.png" alt="CARXEN" className="logo-img" style={{ height: '38px', width: 'auto' }} />
-          </Link>
           <button className="xb" onClick={() => router.back()} aria-label="Close">
             <svg viewBox="0 0 24 24">
               <path d="M6 6l12 12M18 6L6 18" />
