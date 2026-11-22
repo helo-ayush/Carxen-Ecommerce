@@ -1980,6 +1980,9 @@ body:has(.wholesale-sidebar) .ws-page-container {
   .wholesale-sidebar {
     display: none !important;
   }
+  .ws-subcat-strip {
+    display: none !important;
+  }
 
   body:has(.wholesale-sidebar) .ws-page-container {
     margin-left: 0 !important;

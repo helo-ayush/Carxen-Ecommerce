@@ -899,6 +899,9 @@
   .shop-mobile-only-group {
     display: block;
   }
+  .shop-subcat-strip {
+    display: none !important;
+  }
   .shop-results-bar {
     display: flex;
     flex-direction: column;
