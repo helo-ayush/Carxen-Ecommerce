@@ -269,8 +269,8 @@ function HeaderContent() {
               </Link>
             )}
             <button className="tool burger wholesale-mobile-burger" id="burger" onClick={openMobileMenu} aria-label="Open Dealer Menu">
-              <svg viewBox="0 0 24 24">
-                <path d="M3 7h18M3 12h18M3 17h18" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6.5h16M4 12h16M4 17.5h16" />
               </svg>
             </button>
           </div>
@@ -663,8 +663,8 @@ function HeaderContent() {
               )}
 
               <button className="tool burger" id="burger" onClick={openMobileMenu} aria-label="Menu">
-                <svg viewBox="0 0 24 24">
-                  <path d="M3 7h18M3 12h18M3 17h18" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 6.5h16M4 12h16M4 17.5h16" />
                 </svg>
               </button>
             </div>
