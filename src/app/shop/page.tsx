@@ -1144,27 +1144,23 @@ function ShopContent() {
               </div>
 
               <div className="shop-sort-wrap">
-                <div className="mobile-filter-btn-bar" style={{ display: 'none' }}>
+                <div className="mobile-filter-btn-bar">
                   <button
                     type="button"
-                    className="btn dark"
+                    className="shop-mobile-filter-btn"
                     onClick={() => setIsFilterOpen(true)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      borderRadius: '99px',
-                      padding: '7px 14px',
-                      fontSize: '12px',
-                    }}
+                    aria-label="Open product filters"
                   >
-                    <SlidersHorizontal style={{ width: 13, height: 13 }} />
-                    <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+                    <SlidersHorizontal size={14} />
+                    <span>Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="shop-mobile-filter-badge">{activeFilterCount}</span>
+                    )}
                   </button>
                 </div>
 
-                <span className="sort-label">Sort by</span>
                 <div className="sort-select-container">
+                  <span className="sort-label">Sort by</span>
                   <select
                     className="shop-sort-select"
                     value={sortBy}

@@ -29,7 +29,6 @@ export function MobileMenu() {
   const {
     isMobileMenuOpen,
     closeMobileMenu,
-    categories,
     user,
     car,
     logout,
@@ -43,7 +42,6 @@ export function MobileMenu() {
     showToast,
     openSupportModal,
   } = useApp();
-  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const activeCar = car || { b: 'Hyundai', m: 'Creta', y: '2024', f: 'Petrol' };
@@ -343,83 +341,6 @@ export function MobileMenu() {
                 <i>07</i>Back to Home
               </Link>
             </>
-          )}
-
-          {/* Autofurnish-style Expandable Departments & Subcategories */}
-          {categories.length > 0 && (
-            <div className="cx-mob-cats">
-              <div className="cx-mob-cats-heading">Shop by Department</div>
-              {categories.map((group) => {
-                const isOpen = openGroupId === group.id;
-                const hasSubs = group.children.length > 0;
-                return (
-                  <div key={group.id} className="cx-mob-cat-group">
-                    {hasSubs ? (
-                      <>
-                        <button
-                          type="button"
-                          className="cx-mob-cat-head"
-                          aria-expanded={isOpen}
-                          onClick={() => setOpenGroupId((prev) => (prev === group.id ? null : group.id))}
-                        >
-                          <span>
-                            {group.name}
-                            {group.totalProductCount > 0 ? ` (${group.totalProductCount})` : ''}
-                          </span>
-                          <ChevronDown
-                            size={15}
-                            style={{
-                              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                              transition: 'transform 0.2s ease',
-                              opacity: 0.7,
-                            }}
-                          />
-                        </button>
-                        {isOpen && (
-                          <div className="cx-mob-cat-subs">
-                            <Link
-                              href={`/shop?group=${encodeURIComponent(group.slug)}`}
-                              onClick={closeMobileMenu}
-                              className="cx-mob-cat-sublink"
-                              style={{ color: '#ff5449' }}
-                            >
-                              <span>All in {group.name}</span>
-                              <ChevronRight size={13} />
-                            </Link>
-                            {group.children.map((sub) => (
-                              <Link
-                                key={sub.id}
-                                href={`/shop?group=${encodeURIComponent(group.slug)}&cat=${encodeURIComponent(sub.slug)}`}
-                                onClick={closeMobileMenu}
-                                className="cx-mob-cat-sublink"
-                              >
-                                <span>{sub.name}</span>
-                                {sub.productCount > 0 && (
-                                  <span style={{ fontSize: '11px', opacity: 0.6 }}>{sub.productCount}</span>
-                                )}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <Link
-                        href={`/shop?group=${encodeURIComponent(group.slug)}`}
-                        onClick={closeMobileMenu}
-                        className="cx-mob-cat-head"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        <span>
-                          {group.name}
-                          {group.totalProductCount > 0 ? ` (${group.totalProductCount})` : ''}
-                        </span>
-                        <ChevronRight size={15} style={{ opacity: 0.7 }} />
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           )}
         </nav>
       )}
