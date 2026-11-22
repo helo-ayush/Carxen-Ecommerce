@@ -983,12 +983,19 @@ nav.main a.active {
 .menu {
   position: fixed;
   inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   z-index: 900;
   background: var(--dark);
   color: #fff;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--pad) 36px;
+  padding: 0 var(--pad) calc(32px + env(safe-area-inset-bottom, 20px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   clip-path: inset(0 0 100% 0);
   visibility: hidden;
   transition: clip-path .7s var(--mech), visibility 0s .7s;
@@ -1001,26 +1008,35 @@ nav.main a.active {
 }
 
 .menu-top {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   height: 72px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--dark);
+  backdrop-filter: blur(18px);
+  flex-shrink: 0;
 }
 
 .menu nav {
-  margin: auto 0;
+  margin: 0;
+  padding: 12px 0 calc(40px + env(safe-area-inset-bottom, 24px));
   display: flex;
   flex-direction: column;
+  min-height: min-content;
 }
 
 .menu nav a {
   font-family: var(--disp);
-  font-size: clamp(40px, 9vw, 72px);
+  font-size: clamp(24px, 6vw, 44px);
+  line-height: 1.15;
   text-transform: uppercase;
-  padding: 10px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--dline);
   display: flex;
-  gap: 18px;
+  gap: 14px;
   align-items: baseline;
   opacity: 0;
   transform: translateY(30px);
