@@ -211,6 +211,26 @@
   gap: 7px;
 }
 
+.ac-tab-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ac-tab-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ac-tab-full {
+  display: inline;
+}
+
+.ac-tab-short {
+  display: none;
+}
+
 .ac-tab-item:hover {
   color: #09090b;
 }
@@ -581,6 +601,77 @@
   .ac-tracker-line {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+
+  /* Segmented Tabs Bar: 100% full-width, balanced 4-column grid (NO horizontal scrolling) */
+  .ac-tab-track {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: visible !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    margin-bottom: 20px !important;
+    border-radius: 12px !important;
+  }
+
+  .ac-tab-item {
+    width: 100% !important;
+    padding: 8px 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    text-align: center !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  .ac-tab-icon-wrap {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ac-tab-icon-wrap svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .ac-tab-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+
+  .ac-tab-badge {
+    position: absolute !important;
+    top: -5px !important;
+    right: -8px !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    padding: 0 4px !important;
+    height: 13px !important;
+    line-height: 13px !important;
+    border-radius: 999px !important;
+    min-width: 13px !important;
+    box-sizing: border-box !important;
+  }
+
+  .ac-tab-full {
+    display: none !important;
+  }
+
+  .ac-tab-short {
+    display: inline !important;
   }
 }
 

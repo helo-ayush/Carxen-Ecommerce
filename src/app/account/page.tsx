@@ -1170,34 +1170,45 @@ function AccountContent() {
                   className={`ac-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
                   onClick={() => setActiveTab('orders')}
                 >
-                  <Package size={15} />
-                  Orders
-                  <span className="ac-tab-badge">{b2cOrders.length}</span>
+                  <div className="ac-tab-icon-wrap">
+                    <Package size={15} />
+                    <span className="ac-tab-badge">{b2cOrders.length}</span>
+                  </div>
+                  <span className="ac-tab-label">Orders</span>
                 </button>
                 <button
                   type="button"
                   className={`ac-tab-item ${activeTab === 'addresses' ? 'active' : ''}`}
                   onClick={() => setActiveTab('addresses')}
                 >
-                  <MapPin size={15} />
-                  Addresses
-                  <span className="ac-tab-badge">{b2cAddresses.length}</span>
+                  <div className="ac-tab-icon-wrap">
+                    <MapPin size={15} />
+                    <span className="ac-tab-badge">{b2cAddresses.length}</span>
+                  </div>
+                  <span className="ac-tab-label">Addresses</span>
                 </button>
                 <button
                   type="button"
                   className={`ac-tab-item ${activeTab === 'garage' ? 'active' : ''}`}
                   onClick={() => setActiveTab('garage')}
                 >
-                  <CarFront size={15} />
-                  My Garage
+                  <div className="ac-tab-icon-wrap">
+                    <CarFront size={15} />
+                  </div>
+                  <span className="ac-tab-label">
+                    <span className="ac-tab-full">My Garage</span>
+                    <span className="ac-tab-short">Garage</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={`ac-tab-item ${activeTab === 'security' ? 'active' : ''}`}
                   onClick={() => setActiveTab('security')}
                 >
-                  <Settings2 size={15} />
-                  Settings
+                  <div className="ac-tab-icon-wrap">
+                    <Settings2 size={15} />
+                  </div>
+                  <span className="ac-tab-label">Settings</span>
                 </button>
               </div>
 
