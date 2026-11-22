@@ -1217,45 +1217,6 @@ function AccountContent() {
               {/* ========================================================= */}
               {activeTab === 'orders' && (
                 <div>
-                  {/* Notice for Commercial / B2B Wholesalers */}
-                  {(hasCommercialOrders || isWholesaleApproved || isWholesalePending) && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '10px',
-                        marginBottom: '16px',
-                        fontSize: '12.5px',
-                        color: '#334155',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '15px' }}>🏢</span>
-                        <span>Commercial &amp; bulk wholesale consignments are managed in your dedicated B2B portal.</span>
-                      </div>
-                      <Link
-                        href="/wholesale/orders"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: 600,
-                          color: '#0284c7',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <span>View B2B Orders</span>
-                        <ExternalLink size={12} />
-                      </Link>
-                    </div>
-                  )}
-
                   {/* Toolbar */}
                   <div
                     style={{
@@ -2188,44 +2149,6 @@ function AccountContent() {
                       </button>
                     </form>
                   </div>
-
-                  {/* Commercial B2B Partner Workspace Notice (only if user has a wholesale account) */}
-                  {(isWholesaleApproved || isWholesalePending || b2bProfile) && (
-                    <div
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '14px',
-                        padding: '18px 20px',
-                        marginTop: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>Commercial Partner Workspace</span>
-                          <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                            B2B Portal
-                          </span>
-                        </div>
-                        <p style={{ color: '#64748b', fontSize: '12.5px', marginTop: '3px', margin: 0 }}>
-                          GSTIN tax credentials, legal company profile, and wholesale invoices are maintained in your B2B account.
-                        </p>
-                      </div>
-                      <Link
-                        href="/wholesale/account"
-                        className="ac-btn-outline"
-                        style={{ height: '34px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff' }}
-                      >
-                        <span>Manage B2B Profile</span>
-                        <ExternalLink size={13} />
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </>
