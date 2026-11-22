@@ -641,11 +641,10 @@
 .shop-subcat-strip {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
-  overflow-x: auto;
   padding-bottom: 2px;
-  scrollbar-width: none;
 }
 
 .shop-subcat-strip::-webkit-scrollbar {
