@@ -5247,11 +5247,18 @@ body:has(.wholesale-sidebar) .ws-page-container {
 }
 
 .ws-pdp-tabs-header {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   border-bottom: 1px solid var(--ws-border);
   background: #f8fafc;
   width: 100%;
+}
+
+.ws-pdp-tabs-header::-webkit-scrollbar {
+  display: none;
 }
 
 .ws-pdp-tab-btn {
@@ -5259,7 +5266,7 @@ body:has(.wholesale-sidebar) .ws-page-container {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px 12px;
+  padding: 14px 20px;
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
@@ -5269,21 +5276,9 @@ body:has(.wholesale-sidebar) .ws-page-container {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
-  width: 100%;
+  flex: 0 0 auto;
   box-sizing: border-box;
   text-align: center;
-}
-
-@media (max-width: 1100px) {
-  .ws-pdp-tabs-header {
-    display: flex;
-    overflow-x: auto;
-  }
-  .ws-pdp-tab-btn {
-    flex: 1 0 auto;
-    min-width: max-content;
-    padding: 14px 18px;
-  }
 }
 
 .ws-pdp-tab-btn:hover {

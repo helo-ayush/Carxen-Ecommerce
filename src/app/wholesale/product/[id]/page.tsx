@@ -977,11 +977,11 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
       <div className="ws-pdp-tabs-container">
         <div className="ws-pdp-tabs-header">
           {[
-            { id: 'specs', label: 'Technical Specifications', icon: FileText, badge: `${enrichedSpecs.length}` },
-            { id: 'fitment', label: 'Vehicle Compatibility Matrix', icon: Car, badge: fitmentData.kind === 'vehicle' ? 'Vehicle-Specific' : 'Universal' },
-            { id: 'install', label: 'Dealership Installation Guide', icon: Wrench, badge: installationDetails.steps.length > 0 ? `${installationDetails.steps.length} Steps` : undefined },
-            { id: 'box', label: 'Master Carton & Packaging', icon: Package, badge: `MOQ: ${product.b2bMoq || 5}` },
-            { id: 'procurement', label: 'Procurement & Invoicing', icon: ShieldCheck },
+            { id: 'specs', label: 'Specifications', icon: FileText, badge: `${enrichedSpecs.length}` },
+            { id: 'fitment', label: 'Vehicle Fitment Matrix', icon: Car, badge: fitmentData.kind === 'vehicle' ? 'Vehicle-Specific' : 'Universal' },
+            { id: 'install', label: 'Installation Guide', icon: Wrench, badge: installationDetails.steps.length > 0 ? `${installationDetails.steps.length} Steps` : undefined },
+            { id: 'box', label: 'Carton & Packaging', icon: Package, badge: `MOQ: ${product.b2bMoq || 5}` },
+            { id: 'procurement', label: 'Procurement & Terms', icon: ShieldCheck },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
