@@ -514,9 +514,9 @@ export function StorefrontCategoryBar() {
             <div className="cx-megamenu-head">
               <div>
                 <span className="cx-megamenu-eyebrow">
-                  All Departments · {categories.length} {categories.length === 1 ? 'Group' : 'Groups'}
+                  Additional Departments · {moreGroups.length} {moreGroups.length === 1 ? 'Department' : 'Departments'}
                 </span>
-                <h3 className="cx-megamenu-title">Explore All Categories</h3>
+                <h3 className="cx-megamenu-title">More Categories</h3>
               </div>
               <Link
                 href="/shop"
@@ -529,92 +529,45 @@ export function StorefrontCategoryBar() {
             </div>
 
             {moreGroups.length > 0 && (
-              <div>
-                <span className="cx-more-section-label">More Departments</span>
-                <div className="cx-more-grid">
-                  {moreGroups.map((group) => {
-                    const isGroupActive = activeGroupSlug === group.slug.toLowerCase();
-                    return (
-                      <div key={group.id} className={`cx-more-card ${isGroupActive ? 'active' : ''}`}>
-                        <Link
-                          href={`/shop?group=${encodeURIComponent(group.slug)}`}
-                          className="cx-more-card-head"
-                          onClick={() => setOpenMenuId(null)}
-                        >
-                          <div>
-                            <div className="cx-more-card-title">{group.name}</div>
-                            <div className="cx-more-card-count">
-                              {group.totalProductCount > 0
-                                ? `${group.totalProductCount} ${group.totalProductCount === 1 ? 'product' : 'products'}`
-                                : group.children.length > 0
-                                ? `${group.children.length} subcategories`
-                                : 'Browse department'}
-                            </div>
+              <div className="cx-more-grid">
+                {moreGroups.map((group) => {
+                  const isGroupActive = activeGroupSlug === group.slug.toLowerCase();
+                  return (
+                    <div key={group.id} className={`cx-more-card ${isGroupActive ? 'active' : ''}`}>
+                      <Link
+                        href={`/shop?group=${encodeURIComponent(group.slug)}`}
+                        className="cx-more-card-head"
+                        onClick={() => setOpenMenuId(null)}
+                      >
+                        <div>
+                          <div className="cx-more-card-title">{group.name}</div>
+                          <div className="cx-more-card-count">
+                            {group.totalProductCount > 0
+                              ? `${group.totalProductCount} ${group.totalProductCount === 1 ? 'product' : 'products'}`
+                              : group.children.length > 0
+                              ? `${group.children.length} subcategories`
+                              : 'Browse department'}
                           </div>
-                          <ChevronRight size={15} className="cx-megamenu-arrow" />
-                        </Link>
-                        {group.children.length > 0 && (
-                          <div className="cx-more-subpills">
-                            {group.children.map((sub) => (
-                              <Link
-                                key={sub.id}
-                                href={`/shop?group=${encodeURIComponent(group.slug)}&cat=${encodeURIComponent(sub.slug)}`}
-                                className={`cx-more-subpill ${activeCatSlug === sub.slug.toLowerCase() ? 'active' : ''}`}
-                                onClick={() => setOpenMenuId(null)}
-                              >
-                                {sub.name}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {mainGroups.length > 0 && (
-              <div className="cx-more-all-block">
-                <span className="cx-more-section-label">Featured Departments</span>
-                <div className="cx-more-grid">
-                  {mainGroups.map((group) => {
-                    const isGroupActive = activeGroupSlug === group.slug.toLowerCase();
-                    return (
-                      <div key={group.id} className={`cx-more-card ${isGroupActive ? 'active' : ''}`}>
-                        <Link
-                          href={`/shop?group=${encodeURIComponent(group.slug)}`}
-                          className="cx-more-card-head"
-                          onClick={() => setOpenMenuId(null)}
-                        >
-                          <div>
-                            <div className="cx-more-card-title">{group.name}</div>
-                            <div className="cx-more-card-count">
-                              {group.totalProductCount > 0
-                                ? `${group.totalProductCount} ${group.totalProductCount === 1 ? 'product' : 'products'}`
-                                : `${group.children.length} subcategories`}
-                            </div>
-                          </div>
-                          <ChevronRight size={15} className="cx-megamenu-arrow" />
-                        </Link>
-                        {group.children.length > 0 && (
-                          <div className="cx-more-subpills">
-                            {group.children.map((sub) => (
-                              <Link
-                                key={sub.id}
-                                href={`/shop?group=${encodeURIComponent(group.slug)}&cat=${encodeURIComponent(sub.slug)}`}
-                                className={`cx-more-subpill ${activeCatSlug === sub.slug.toLowerCase() ? 'active' : ''}`}
-                                onClick={() => setOpenMenuId(null)}
-                              >
-                                {sub.name}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        </div>
+                        <ChevronRight size={15} className="cx-megamenu-arrow" />
+                      </Link>
+                      {group.children.length > 0 && (
+                        <div className="cx-more-subpills">
+                          {group.children.map((sub) => (
+                            <Link
+                              key={sub.id}
+                              href={`/shop?group=${encodeURIComponent(group.slug)}&cat=${encodeURIComponent(sub.slug)}`}
+                              className={`cx-more-subpill ${activeCatSlug === sub.slug.toLowerCase() ? 'active' : ''}`}
+                              onClick={() => setOpenMenuId(null)}
+                            >
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
