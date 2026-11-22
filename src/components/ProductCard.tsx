@@ -210,7 +210,7 @@ export function ProductCard({
                   <span className="count">({product.rv})</span>
                 </>
               ) : (
-                <span className="count">No reviews yet</span>
+                <span className="count">No reviews</span>
               )}
             </div>
           </div>
@@ -226,11 +226,23 @@ export function ProductCard({
 
           {/* Feature chips: real fitment, then a real attribute from the spec sheet */}
           <div className="ref-feature-chips">
-            <span className="ref-feature-chip fit">
-              {fitText?.replace(/^[✓✔\s]+/, '') ||
-                (product.customFit !== false ? 'Custom fit' : 'Universal fit')}
+            <span
+              className="ref-feature-chip fit"
+              title={
+                fitText?.replace(/^[✓✔\s]+/, '') ||
+                (product.customFit !== false ? 'Custom fit' : 'Universal fit')
+              }
+            >
+              <span className="ref-feature-chip-text">
+                {fitText?.replace(/^[✓✔\s]+/, '') ||
+                  (product.customFit !== false ? 'Custom fit' : 'Universal fit')}
+              </span>
             </span>
-            {specChip && <span className="ref-feature-chip spec">{specChip}</span>}
+            {specChip && (
+              <span className="ref-feature-chip spec" title={specChip}>
+                <span className="ref-feature-chip-text">{specChip}</span>
+              </span>
+            )}
           </div>
         </div>
 

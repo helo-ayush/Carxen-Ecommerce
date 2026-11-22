@@ -3326,8 +3326,9 @@ nav.main a.active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 5px;
+  min-width: 0;
 }
 
 .ref-category {
@@ -3337,6 +3338,11 @@ nav.main a.active {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 /* Rating at Right Top */
@@ -3346,6 +3352,8 @@ nav.main a.active {
   gap: 3.5px;
   font-size: 11.5px;
   line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ref-rating .star {
@@ -3363,6 +3371,7 @@ nav.main a.active {
 .ref-rating .count {
   color: #94a3b8;
   font-size: 10.5px;
+  white-space: nowrap;
 }
 
 /* Product Title */
@@ -3381,6 +3390,7 @@ nav.main a.active {
   cursor: pointer;
   transition: color 0.18s ease;
   letter-spacing: -0.01em;
+  word-break: break-word;
 }
 
 .ref-title:hover,
@@ -3392,24 +3402,37 @@ nav.main a.active {
 .ref-feature-chips {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin: 6px 0 10px 0;
   flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
 }
 
 .ref-feature-chip {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
   font-size: 10.5px;
   font-weight: 550;
   letter-spacing: -0.01em;
-  padding: 3.5px 9.5px;
+  padding: 3px 8.5px;
   border-radius: 9999px;
   line-height: 1.25;
   backdrop-filter: blur(8px) saturate(150%);
   -webkit-backdrop-filter: blur(8px) saturate(150%);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.ref-feature-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  display: inline-block;
 }
 
 /* Glassmorphic Fitment Chip (Frosted Mint Glass) */
@@ -9601,15 +9624,26 @@ footer {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    overflow: hidden !important;
   }
   .ref-media { height: 135px !important; }
   .ref-hrt { width: 34px !important; height: 34px !important; top: 4px !important; right: 4px !important; }
   .ref-hrt svg { width: 14px !important; height: 14px !important; }
   .ref-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ref-info { padding: 8px 8px 10px !important; min-width: 0; }
-  .ref-title { font-size: 12.5px !important; word-break: break-word; }
-  .ref-btn { min-height: 38px; height: 38px !important; font-size: 12px !important; }
-  .ref-price-row { flex-wrap: wrap; gap: 4px; }
+  .ref-info { padding: 8px 8px 10px !important; min-width: 0; box-sizing: border-box !important; }
+  .ref-meta-row { gap: 4px !important; margin-bottom: 4px !important; min-width: 0 !important; }
+  .ref-category { font-size: 9.5px !important; letter-spacing: 0.03em !important; min-width: 0 !important; max-width: 60% !important; flex: 1 1 auto !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  .ref-rating { font-size: 10px !important; flex-shrink: 0 !important; white-space: nowrap !important; }
+  .ref-rating .count { font-size: 9.5px !important; white-space: nowrap !important; }
+  .ref-title { font-size: 12.5px !important; line-height: 1.35 !important; min-height: 34px !important; -webkit-line-clamp: 2 !important; word-break: break-word; margin-bottom: 4px !important; }
+  .ref-feature-chips { gap: 4px !important; margin: 4px 0 8px 0 !important; width: 100% !important; min-width: 0 !important; }
+  .ref-feature-chip { max-width: 100% !important; min-width: 0 !important; font-size: 9.5px !important; padding: 2px 7px !important; }
+  .ref-feature-chip-text { max-width: 100% !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  .ref-btn { min-height: 36px; height: 36px !important; font-size: 12px !important; }
+  .ref-price-row { display: flex !important; align-items: baseline !important; flex-wrap: wrap !important; gap: 3px 5px !important; }
+  .ref-price-now { font-size: 14px !important; }
+  .ref-price-old { font-size: 10.5px !important; }
+  .ref-price-discount { font-size: 9px !important; padding: 1px 4px !important; }
   .ref-swatches { flex-wrap: wrap; gap: 3px; }
 
   .wl-page-wrap { padding-inline: 14px; padding-bottom: 20px; width: 100%; max-width: 100%; box-sizing: border-box; }
