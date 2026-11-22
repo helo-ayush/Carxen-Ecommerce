@@ -480,7 +480,7 @@ function HeaderContent() {
         </div>
       )}
 
-      <header id="hdr" className={isScrolled ? 'sc' : ''}>
+      <header id="hdr" className={`${isScrolled ? 'sc' : ''} ${isLandingPage ? 'is-landing-header' : 'is-store-header'}`}>
           <div className="wrap hd">
             <Link href="/" className="logo logo-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="logo-img" />
