@@ -164,7 +164,10 @@ export default function WholesaleQuickOrderPage() {
 
   const [draftQuantities, setDraftQuantities] = useState<Record<number, number>>({});
 
-  const getProductMoq = (p: Product) => Math.max(1, p.b2bMoq || 5);
+  const getProductMoq = (p: Product) => {
+    if (typeof p.b2bMoq === 'number' && p.b2bMoq > 0) return p.b2bMoq;
+    return 5;
+  };
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -246,6 +249,27 @@ export default function WholesaleQuickOrderPage() {
     selectedBrand,
     search,
   ]);
+
+  const moqStats = useMemo(() => {
+    const list = filteredProducts.length > 0 ? filteredProducts : products;
+    if (list.length === 0) {
+      return {
+        value: 'Min 1 Unit',
+        subtext: 'No active products available',
+      };
+    }
+    const moqs = list.map((p) => getProductMoq(p));
+    const min = Math.min(...moqs);
+    const max = Math.max(...moqs);
+
+    const value = min === max ? `Min ${min} Unit${min === 1 ? '' : 's'}` : `Min ${min}–${max} Units`;
+    const subtext =
+      min === max
+        ? `Enforced at ${min} units/SKU to unlock factory discounts`
+        : `Enforced range (${min}–${max} units) to unlock factory discounts`;
+
+    return { value, subtext };
+  }, [filteredProducts, products]);
 
   if (authLoading || !user || !isWholesaleApproved) {
     return null;
@@ -372,8 +396,8 @@ export default function WholesaleQuickOrderPage() {
               <WholesaleIcon name="shield" size={16} />
             </div>
           </div>
-          <div className="ws-metric-value">Min 2–5 Units</div>
-          <div className="ws-metric-subtext">Enforced to unlock factory discounts</div>
+          <div className="ws-metric-value">{moqStats.value}</div>
+          <div className="ws-metric-subtext">{moqStats.subtext}</div>
         </div>
 
         <div className="ws-metric-card">
