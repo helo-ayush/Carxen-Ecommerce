@@ -48,6 +48,12 @@ function niceStep(value: number): number {
   return 10 * magnitude;
 }
 
+function isUrl(val?: string | null): val is string {
+  if (!val) return false;
+  const t = val.trim();
+  return t.startsWith('http://') || t.startsWith('https://') || t.startsWith('/') || t.startsWith('data:image');
+}
+
 function buildPriceBands(prices: number[]): PriceBand[] {
   const valid = prices.filter((price) => Number.isFinite(price));
   if (valid.length === 0) return [];
@@ -686,11 +692,18 @@ function ShopContent() {
   const showSiblingSubcats =
     Boolean(activeMasterGroupObj) && (activeMasterGroupObj?.children.length ?? 0) > 1;
 
+  const activeHeroImage =
+    (activeSubCategoryObj?.artKey && isUrl(activeSubCategoryObj.artKey) ? activeSubCategoryObj.artKey : null) ||
+    (activeMasterGroupObj?.artKey && isUrl(activeMasterGroupObj.artKey) ? activeMasterGroupObj.artKey : null);
+
   return (
     <div className="in-shop">
       {/* 1. HERO BANNER DIRECTLY BELOW UNIFIED NAVBAR */}
       <section className="shop-hero-banner" aria-label="Shop hero banner">
-        <div className="shop-hero-bg" />
+        <div
+          className="shop-hero-bg"
+          style={activeHeroImage ? { backgroundImage: `url("${activeHeroImage}")`, backgroundPosition: 'center center' } : undefined}
+        />
         <div className="shop-hero-overlay" />
         <div className="shop-hero-content">
           <span className="shop-hero-eyebrow">{heroEyebrow}</span>
@@ -812,6 +825,13 @@ function ShopContent() {
                                 className={`shop-tree-master-btn ${isDirectGroupSelected ? 'active' : ''}`}
                                 onClick={() => handleGroupSelect(group.slug)}
                               >
+                                {isUrl(group.artKey) && (
+                                  <img
+                                    src={group.artKey}
+                                    alt=""
+                                    style={{ width: '15px', height: '15px', borderRadius: '3px', objectFit: 'cover', flexShrink: 0 }}
+                                  />
+                                )}
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {group.name}
                                 </span>
@@ -846,6 +866,13 @@ function ShopContent() {
                                       className={`shop-tree-child-btn ${isSubActive ? 'active' : ''}`}
                                       onClick={() => handleCategorySelect(sub.slug, group.slug)}
                                     >
+                                      {(isUrl(sub.artKey) || isUrl(group.artKey)) && (
+                                        <img
+                                          src={isUrl(sub.artKey) ? sub.artKey : group.artKey!}
+                                          alt=""
+                                          style={{ width: '13px', height: '13px', borderRadius: '3px', objectFit: 'cover', flexShrink: 0 }}
+                                        />
+                                      )}
                                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {sub.name}
                                       </span>
@@ -1193,10 +1220,20 @@ function ShopContent() {
                   className={`shop-subcat-chip ${category === 'all' ? 'active' : ''}`}
                   onClick={() => handleGroupSelect(activeMasterGroupObj.slug)}
                 >
+                  {isUrl(activeMasterGroupObj.artKey) && (
+                    <img
+                      src={activeMasterGroupObj.artKey}
+                      alt=""
+                      style={{ width: '15px', height: '15px', borderRadius: '3px', objectFit: 'cover' }}
+                    />
+                  )}
                   <span>All {activeMasterGroupObj.name}</span>
                 </button>
                 {activeMasterGroupObj.children.map((sub) => {
                   const isSubActive = activeSubCategoryObj?.id === sub.id;
+                  const chipThumb = isUrl(sub.artKey)
+                    ? sub.artKey
+                    : (isUrl(activeMasterGroupObj.artKey) ? activeMasterGroupObj.artKey : null);
                   return (
                     <button
                       key={sub.id}
@@ -1204,6 +1241,13 @@ function ShopContent() {
                       className={`shop-subcat-chip ${isSubActive ? 'active' : ''}`}
                       onClick={() => handleCategorySelect(sub.slug, activeMasterGroupObj.slug)}
                     >
+                      {chipThumb && (
+                        <img
+                          src={chipThumb}
+                          alt=""
+                          style={{ width: '15px', height: '15px', borderRadius: '3px', objectFit: 'cover' }}
+                        />
+                      )}
                       <span>{sub.name}</span>
                       {sub.productCount > 0 && (
                         <span style={{ opacity: 0.65, fontSize: '11px' }}>({sub.productCount})</span>

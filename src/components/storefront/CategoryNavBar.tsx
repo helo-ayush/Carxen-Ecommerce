@@ -76,9 +76,11 @@ function isUrl(val?: string | null): val is string {
 function SubcategoryVisualThumb({
   sub,
   products,
+  parentArtKey,
 }: {
   sub: StorefrontCategory;
   products: Product[];
+  parentArtKey?: string | null;
 }) {
   if (isUrl(sub.artKey)) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -93,6 +95,11 @@ function SubcategoryVisualThumb({
   if (sampleProduct?.image) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={sampleProduct.image} alt={sub.name} loading="lazy" />;
+  }
+
+  if (isUrl(parentArtKey)) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={parentArtKey} alt={sub.name} loading="lazy" />;
   }
 
   const text = `${sub.slug} ${sub.name}`.toLowerCase();
@@ -463,7 +470,7 @@ export function StorefrontCategoryBar() {
                     onClick={() => setOpenMenuId(null)}
                   >
                     <div className="cx-megamenu-thumb">
-                      <SubcategoryVisualThumb sub={sub} products={products} />
+                      <SubcategoryVisualThumb sub={sub} products={products} parentArtKey={openCategory.artKey} />
                     </div>
                     <div className="cx-megamenu-card-body">
                       <span className="cx-megamenu-card-name">{sub.name}</span>
@@ -670,6 +677,19 @@ export function LandingCategoriesDropdown() {
                 onMouseEnter={() => setActiveTabId(group.id)}
                 onClick={() => setActiveTabId(group.id)}
               >
+                {isUrl(group.artKey) && (
+                  <img
+                    src={group.artKey}
+                    alt=""
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '4px',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
                 <span>{group.name}</span>
                 {group.totalProductCount > 0 && (
                   <span style={{ opacity: 0.72, fontSize: '11px' }}>({group.totalProductCount})</span>
@@ -688,7 +708,7 @@ export function LandingCategoriesDropdown() {
                   onClick={() => setOpen(false)}
                 >
                   <div className="cx-megamenu-thumb">
-                    <SubcategoryVisualThumb sub={sub} products={products} />
+                    <SubcategoryVisualThumb sub={sub} products={products} parentArtKey={activeGroup.artKey} />
                   </div>
                   <div className="cx-megamenu-card-body">
                     <span className="cx-megamenu-card-name">{sub.name}</span>
@@ -703,9 +723,30 @@ export function LandingCategoriesDropdown() {
               ))}
             </div>
           ) : (
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.68)', padding: '6px 0' }}>
-              Browse all products in {activeGroup.name}.
-            </p>
+            <div className="cx-megamenu-grid" style={{ gridTemplateColumns: 'minmax(260px, 340px)' }}>
+              <Link
+                href={`/shop?group=${encodeURIComponent(activeGroup.slug)}`}
+                className="cx-megamenu-card"
+                onClick={() => setOpen(false)}
+              >
+                <div className="cx-megamenu-thumb">
+                  {isUrl(activeGroup.artKey) ? (
+                    <img src={activeGroup.artKey} alt={activeGroup.name} loading="lazy" />
+                  ) : (
+                    <CategoryDeptIcon slug={activeGroup.slug} name={activeGroup.name} size={22} />
+                  )}
+                </div>
+                <div className="cx-megamenu-card-body">
+                  <span className="cx-megamenu-card-name">Explore {activeGroup.name}</span>
+                  <span className="cx-megamenu-card-meta">
+                    {activeGroup.totalProductCount > 0
+                      ? `${activeGroup.totalProductCount} ${activeGroup.totalProductCount === 1 ? 'product' : 'products'}`
+                      : 'Browse department'}
+                  </span>
+                </div>
+                <ChevronRight size={15} className="cx-megamenu-arrow" />
+              </Link>
+            </div>
           )}
 
           <div className="cx-megamenu-footer">

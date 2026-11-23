@@ -7,12 +7,19 @@ interface ProductArtProps {
   style?: React.CSSProperties;
 }
 
+function isUrl(val?: string | null): val is string {
+  if (!val) return false;
+  const t = val.trim();
+  return t.startsWith('http://') || t.startsWith('https://') || t.startsWith('/') || t.startsWith('data:image');
+}
+
 export function ProductArt({ product, className, style }: ProductArtProps) {
+  const rawSrc = product.image || (isUrl(product.a) ? product.a : undefined);
   const imgSrc =
     product.n?.toLowerCase().includes('quilted seat bench') ||
-    product.image?.includes('photo-1486006920555')
+    rawSrc?.includes('photo-1486006920555')
       ? '/quilted-seat-bench.jpg'
-      : product.image;
+      : rawSrc;
 
   if (imgSrc) {
     return (

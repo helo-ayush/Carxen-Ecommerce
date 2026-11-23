@@ -678,6 +678,22 @@ export async function getStorefrontProducts(options?: {
     }
   }
 
+  // Inherit category thumbnail if product does not have its own image
+  const rawCatById = new Map(rawCats.map((c) => [c.id, c]));
+  for (const product of products) {
+    if (!product.image) {
+      const cat = product.categoryId ? rawCatById.get(product.categoryId) : undefined;
+      const parentCat = cat?.parentId ? rawCatById.get(cat.parentId) : undefined;
+      const catImg = isImageUrl(cat?.artKey) || isImageUrl(parentCat?.artKey);
+      if (catImg) {
+        product.image = catImg;
+        if (!product.images || product.images.length === 0) {
+          product.images = [catImg];
+        }
+      }
+    }
+  }
+
   const nodeMap = new Map<string, StorefrontCategory>();
   for (const c of rawCats) {
     const directCount = directCountById.get(c.id) ?? 0;
