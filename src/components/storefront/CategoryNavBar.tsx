@@ -652,7 +652,7 @@ export function LandingCategoriesDropdown() {
         onClick={() => setOpen((prev) => !prev)}
       >
         <span>Categories</span>
-        <ChevronDown />
+        <ChevronDown size={13} className="cx-chev" />
       </button>
 
       {open && activeGroup && (
