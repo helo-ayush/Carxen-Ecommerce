@@ -5990,7 +5990,7 @@ footer {
 
 .ft-g {
   display: grid;
-  grid-template-columns: 1.4fr repeat(3, 1fr);
+  grid-template-columns: 1.4fr repeat(var(--ft-cols, 3), 1fr);
   gap: 36px;
   padding: clamp(44px, 6vw, 72px) 0 clamp(36px, 5vw, 60px);
 }

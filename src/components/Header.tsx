@@ -9,7 +9,7 @@ import {
   LandingCategoriesDropdown,
   StorefrontCategoryBar,
 } from '@/components/storefront/CategoryNavBar';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function HeaderContent() {
   const {
@@ -49,6 +49,26 @@ function HeaderContent() {
   const [cartBump, setCartBump] = useState(false);
   const [favBump, setFavBump] = useState(false);
   const [checkingWholesaleStatus, setCheckingWholesaleStatus] = useState(false);
+  const [isWholesaleSidebarCollapsed, setIsWholesaleSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cx_ws_sidebar_collapsed');
+      if (saved === 'true') {
+        setIsWholesaleSidebarCollapsed(true);
+      }
+    } catch {}
+  }, []);
+
+  const toggleWholesaleSidebar = () => {
+    setIsWholesaleSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('cx_ws_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const handleCheckWholesaleStatus = async () => {
     if (checkingWholesaleStatus) return;
@@ -212,6 +232,19 @@ function HeaderContent() {
   const isWholesaleMode = pathname.startsWith('/wholesale');
 
   useEffect(() => {
+    if (isWholesaleMode) {
+      if (isWholesaleSidebarCollapsed) {
+        document.body.classList.add('ws-sidebar-collapsed');
+      } else {
+        document.body.classList.remove('ws-sidebar-collapsed');
+      }
+    }
+    return () => {
+      document.body.classList.remove('ws-sidebar-collapsed');
+    };
+  }, [isWholesaleMode, isWholesaleSidebarCollapsed]);
+
+  useEffect(() => {
     if (isWholesaleMode && !authLoading) {
       if (!user) {
         router.replace(`/login?redirect=${encodeURIComponent(pathname || '/wholesale')}`);
@@ -271,22 +304,35 @@ function HeaderContent() {
         </header>
 
         {/* Full-Height Left Rail Sidebar (top: 0 to bottom: 0) */}
-        <aside className="wholesale-sidebar" aria-label="Dealer workspace navigation">
-          {/* Brand Area with ORIGINAL CARXEN LOGO */}
+        <aside
+          className={`wholesale-sidebar ${isWholesaleSidebarCollapsed ? 'collapsed' : ''}`}
+          aria-label="Dealer workspace navigation"
+        >
+          {/* Brand Area with CARXEN LOGO and Collapse/Expand Toggle */}
           <div className="wholesale-sidebar-brand">
             <Link href="/" className="wholesale-sidebar-brand-link" aria-label="CARXEN Homepage">
               <img src="/logo.png" alt="CARXEN" className="wholesale-sidebar-logo-img" />
             </Link>
-            <span className="wholesale-sidebar-b2b-badge">DEALER PORTAL</span>
+            <button
+              type="button"
+              onClick={toggleWholesaleSidebar}
+              className="wholesale-sidebar-toggle-btn"
+              aria-label={isWholesaleSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isWholesaleSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isWholesaleSidebarCollapsed ? (
+                <ChevronRight size={15} />
+              ) : (
+                <ChevronLeft size={15} />
+              )}
+            </button>
           </div>
 
-          {(() => {
+          {/* Verification Status (Only shown for non-approved/pending states; removed when verified) */}
+          {!isWholesaleApproved && (() => {
             let statusClass = 'status-pending';
             let statusText = 'Registration Required';
-            if (isWholesaleApproved) {
-              statusClass = 'status-approved';
-              statusText = 'Verified Dealer Partner';
-            } else if (isWholesaleInquiry) {
+            if (isWholesaleInquiry) {
               statusClass = 'status-inquiry';
               statusText = 'Action Required · Inquiry';
             } else if (isWholesaleRejected) {
@@ -339,19 +385,24 @@ function HeaderContent() {
                       showToast('Procurement is strictly restricted to authorized dealers.');
                     }}
                     className="wholesale-sidebar-link locked"
-                    title="Authorized dealer verification required"
+                    title={label}
                   >
                     <WholesaleIcon name={icon as any} size={18} />
-                    <span>{label}</span>
+                    <span className="wholesale-sidebar-link-text">{label}</span>
                     <span className="ws-locked-badge">🔒</span>
                   </button>
                 );
               }
 
               return (
-                <Link href={href} key={href} className={`wholesale-sidebar-link ${active ? 'active' : ''}`}>
+                <Link
+                  href={href}
+                  key={href}
+                  className={`wholesale-sidebar-link ${active ? 'active' : ''}`}
+                  title={label}
+                >
                   <WholesaleIcon name={icon as any} size={18} />
-                  <span>{label}</span>
+                  <span className="wholesale-sidebar-link-text">{label}</span>
                   {href === '/wholesale/order-basket' && wholesaleBasketSkuCount > 0 ? (
                     <span className="ws-sidebar-count">{wholesaleBasketSkuCount}</span>
                   ) : null}
@@ -380,24 +431,28 @@ function HeaderContent() {
                       showToast('Dealer management is strictly restricted to authorized partners.');
                     }}
                     className="wholesale-sidebar-link locked"
-                    title="Authorized dealer verification required"
+                    title={label}
                   >
                     <WholesaleIcon name={icon as any} size={18} />
-                    <span>{label}</span>
+                    <span className="wholesale-sidebar-link-text">{label}</span>
                     <span className="ws-locked-badge">🔒</span>
                   </button>
                 );
               }
 
               return (
-                <Link href={href} key={href} className={`wholesale-sidebar-link ${active ? 'active' : ''}`}>
+                <Link
+                  href={href}
+                  key={href}
+                  className={`wholesale-sidebar-link ${active ? 'active' : ''}`}
+                  title={label}
+                >
                   <WholesaleIcon name={icon as any} size={18} />
-                  <span>{label}</span>
+                  <span className="wholesale-sidebar-link-text">{label}</span>
                 </Link>
               );
             })}
           </div>
-
 
           <div className="wholesale-sidebar-spacer" />
 
@@ -417,10 +472,12 @@ function HeaderContent() {
                 initialMessage: 'Commercial inquiry regarding CarXen dealership operations.',
               })}
               className="ws-sidebar-desk-wa-btn"
+              title="Dealer Desk & Support"
               style={{ width: '100%', cursor: 'pointer', border: 'none', textAlign: 'center', justifyContent: 'center' }}
             >
-              <span>Contact Dealer Desk</span>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <WholesaleIcon name="phone" size={14} />
+              <span className="ws-sidebar-desk-wa-btn-text">Contact Dealer Desk</span>
+              <svg className="ws-sidebar-desk-wa-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
               </svg>
@@ -436,13 +493,14 @@ function HeaderContent() {
               router.push('/login');
             }}
             aria-label="Sign out of Dealer Portal"
+            title="Sign out"
           >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span>Sign out</span>
+            <span className="wholesale-sidebar-logout-text">Sign out</span>
           </button>
         </aside>
       </>

@@ -635,144 +635,264 @@ export default function WholesaleQuickOrderPage() {
           </button>
         </div>
       ) : (
-        <div className="ws-table-card">
-          <table className="ws-procurement-table ws-quick-order-table">
-            <thead>
-              <tr>
-                <th style={{ width: '25%' }}>Product Line</th>
-                <th style={{ width: '13%' }}>SKU / Part #</th>
-                <th style={{ width: '7%' }}>MOQ</th>
-                <th style={{ width: '12%' }}>Wholesale Price</th>
-                <th style={{ width: '13%' }}>Volume Price (20+)</th>
-                <th style={{ width: '14%', minWidth: '95px', textAlign: 'center' }}>Batch Qty</th>
-                <th style={{ width: '16%', minWidth: '115px', textAlign: 'right' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((p) => {
-                const moq = getProductMoq(p);
-                const tiers = getWholesaleTiers(p);
-                const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
-                const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
-                const currentQty = draftQuantities[p.id] || wholesaleBasket[p.id] || moq;
-                const isInBasket = Boolean(wholesaleBasket[p.id]);
-                const isDraftDifferent = isInBasket && draftQuantities[p.id] && draftQuantities[p.id] !== wholesaleBasket[p.id];
+        <>
+          {/* DESKTOP MATRIX TABLE (min-width: 901px) */}
+          <div className="ws-table-card ws-quick-order-desktop-table">
+            <table className="ws-procurement-table ws-quick-order-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '25%' }}>Product Line</th>
+                  <th style={{ width: '13%' }}>SKU / Part #</th>
+                  <th style={{ width: '7%' }}>MOQ</th>
+                  <th style={{ width: '12%' }}>Wholesale Price</th>
+                  <th style={{ width: '13%' }}>Volume Price (20+)</th>
+                  <th style={{ width: '14%', minWidth: '95px', textAlign: 'center' }}>Batch Qty</th>
+                  <th style={{ width: '16%', minWidth: '115px', textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p) => {
+                  const moq = getProductMoq(p);
+                  const tiers = getWholesaleTiers(p);
+                  const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
+                  const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
+                  const currentQty = draftQuantities[p.id] || wholesaleBasket[p.id] || moq;
+                  const isInBasket = Boolean(wholesaleBasket[p.id]);
+                  const isDraftDifferent = isInBasket && draftQuantities[p.id] && draftQuantities[p.id] !== wholesaleBasket[p.id];
 
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="ws-prod-cell">
-                        <Link href={`/wholesale/product/${p.id}`} className="ws-prod-art-thumb" title={`View ${p.n}`}>
-                          <ProductArt product={p} />
-                        </Link>
-                        <div className="ws-prod-info">
-                          <Link href={`/wholesale/product/${p.id}`} className="ws-prod-name" title={`View ${p.n}`}>
-                            {p.n}
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <div className="ws-prod-cell">
+                          <Link href={`/wholesale/product/${p.id}`} className="ws-prod-art-thumb" title={`View ${p.n}`}>
+                            <ProductArt product={p} />
                           </Link>
-                          <div className="ws-prod-meta">
-                            {p.s && (
-                              <span className="ws-prod-series-badge">
-                                {/\bseries$/i.test(p.s.trim()) ? p.s.trim() : `${p.s.trim()} Series`}
-                              </span>
-                            )}
-                            {typeof p.fitment === 'string' && p.fitment ? (
-                              <span className="ws-fitment-badge">{p.fitment}</span>
-                            ) : null}
+                          <div className="ws-prod-info">
+                            <Link href={`/wholesale/product/${p.id}`} className="ws-prod-name" title={`View ${p.n}`}>
+                              {p.n}
+                            </Link>
+                            <div className="ws-prod-meta">
+                              {p.s && (
+                                <span className="ws-prod-series-badge">
+                                  {/\bseries$/i.test(p.s.trim()) ? p.s.trim() : `${p.s.trim()} Series`}
+                                </span>
+                              )}
+                              {typeof p.fitment === 'string' && p.fitment ? (
+                                <span className="ws-fitment-badge">{p.fitment}</span>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td>
-                      <Link href={`/wholesale/product/${p.id}`} className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>
-                        {p.slug || `CX-${p.id}`}
-                      </Link>
-                    </td>
+                      <td>
+                        <Link href={`/wholesale/product/${p.id}`} className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>
+                          {p.slug || `CX-${p.id}`}
+                        </Link>
+                      </td>
 
-                    <td>
-                      <span className="ws-moq-badge">MOQ: {moq}</span>
-                    </td>
+                      <td>
+                        <span className="ws-moq-badge">MOQ: {moq}</span>
+                      </td>
 
-                    <td>
-                      <div className="ws-price-stack">
-                        {p.p > t1 && (
-                          <span className="ws-price-retail-strike">{formatINR(p.p)}</span>
+                      <td>
+                        <div className="ws-price-stack">
+                          {p.p > t1 && (
+                            <span className="ws-price-retail-strike">{formatINR(p.p)}</span>
+                          )}
+                          <span className="ws-price-wholesale">{formatINR(t1)}</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="ws-price-tier2">
+                          <span>{formatINR(t2)}</span>
+                          <span style={{ fontSize: '11px', color: '#059669', opacity: 0.85 }}>(-25%)</span>
+                        </div>
+                      </td>
+
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
+                        <div className="ws-stepper">
+                          <button
+                            type="button"
+                            className="ws-stepper-btn"
+                            onClick={() => handleQtyChange(p.id, currentQty - 1, moq)}
+                            aria-label="Decrease quantity"
+                            title={`Decrease (min ${moq})`}
+                          >
+                            <Minus size={13} />
+                          </button>
+                          <input
+                            type="number"
+                            min={moq}
+                            className="ws-stepper-input"
+                            value={currentQty}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (!isNaN(v)) {
+                                handleQtyChange(p.id, v, moq);
+                              }
+                            }}
+                            aria-label={`Batch Quantity for ${p.n}`}
+                          />
+                          <button
+                            type="button"
+                            className="ws-stepper-btn"
+                            onClick={() => handleQtyChange(p.id, currentQty + 1, moq)}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={13} />
+                          </button>
+                        </div>
+                      </td>
+
+                      <td style={{ textAlign: 'right' }}>
+                        {isInBasket && !isDraftDifferent ? (
+                          <button
+                            type="button"
+                            onClick={() => handleAddRowToBasket(p)}
+                            className="ws-row-action-btn in-basket"
+                            title="Currently in your wholesale basket"
+                          >
+                            <Check size={13} />
+                            <span>In Basket ({wholesaleBasket[p.id]})</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleAddRowToBasket(p)}
+                            className="ws-row-action-btn"
+                            title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
+                          >
+                            <Plus size={13} />
+                            <span>{isDraftDifferent ? `Update (${currentQty})` : `Add (${currentQty})`}</span>
+                          </button>
                         )}
-                        <span className="ws-price-wholesale">{formatINR(t1)}</span>
-                      </div>
-                    </td>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-                    <td>
-                      <div className="ws-price-tier2">
-                        <span>{formatINR(t2)}</span>
-                        <span style={{ fontSize: '11px', color: '#059669', opacity: 0.85 }}>(-25%)</span>
-                      </div>
-                    </td>
+          {/* COMPACT HIGH-DENSITY MOBILE LIST (max-width: 900px, Zero wasted white space) */}
+          <div className="ws-quick-order-mobile-list">
+            {filteredProducts.map((p) => {
+              const moq = getProductMoq(p);
+              const tiers = getWholesaleTiers(p);
+              const t1 = tiers[0]?.unitPrice || Math.round(p.p * 0.85);
+              const t2 = tiers[1]?.unitPrice || Math.round(p.p * 0.75);
+              const currentQty = draftQuantities[p.id] || wholesaleBasket[p.id] || moq;
+              const isInBasket = Boolean(wholesaleBasket[p.id]);
+              const isDraftDifferent = isInBasket && draftQuantities[p.id] && draftQuantities[p.id] !== wholesaleBasket[p.id];
 
-                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
-                      <div className="ws-stepper">
-                        <button
-                          type="button"
-                          className="ws-stepper-btn"
-                          onClick={() => handleQtyChange(p.id, currentQty - 1, moq)}
-                          aria-label="Decrease quantity"
-                          title={`Decrease (min ${moq})`}
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <input
-                          type="number"
-                          min={moq}
-                          className="ws-stepper-input"
-                          value={currentQty}
-                          onChange={(e) => {
-                            const v = parseInt(e.target.value, 10);
-                            if (!isNaN(v)) {
-                              handleQtyChange(p.id, v, moq);
-                            }
-                          }}
-                          aria-label={`Batch Quantity for ${p.n}`}
-                        />
-                        <button
-                          type="button"
-                          className="ws-stepper-btn"
-                          onClick={() => handleQtyChange(p.id, currentQty + 1, moq)}
-                          aria-label="Increase quantity"
-                        >
-                          <Plus size={13} />
-                        </button>
+              return (
+                <div key={p.id} className="ws-qo-card">
+                  {/* Top: Thumbnail, Title & Badges in one compact group */}
+                  <div className="ws-qo-top">
+                    <Link href={`/wholesale/product/${p.id}`} className="ws-qo-thumb" title={`View ${p.n}`}>
+                      <ProductArt product={p} />
+                    </Link>
+                    <div className="ws-qo-info">
+                      <Link href={`/wholesale/product/${p.id}`} className="ws-qo-name" title={`View ${p.n}`}>
+                        {p.n}
+                      </Link>
+                      <div className="ws-qo-badges">
+                        {p.s && (
+                          <span className="ws-prod-series-badge">
+                            {/\bseries$/i.test(p.s.trim()) ? p.s.trim() : `${p.s.trim()} Series`}
+                          </span>
+                        )}
+                        {typeof p.fitment === 'string' && p.fitment ? (
+                          <span className="ws-fitment-badge">{p.fitment}</span>
+                        ) : null}
+                        <Link href={`/wholesale/product/${p.id}`} className="ws-sku-badge" title={p.slug || `CX-${p.id}`}>
+                          {p.slug || `CX-${p.id}`}
+                        </Link>
+                        <span className="ws-moq-badge">MOQ: {moq}</span>
                       </div>
-                    </td>
+                    </div>
+                  </div>
 
-                    <td style={{ textAlign: 'right' }}>
-                      {isInBasket && !isDraftDifferent ? (
-                        <button
-                          type="button"
-                          onClick={() => handleAddRowToBasket(p)}
-                          className="ws-row-action-btn in-basket"
-                          title="Currently in your wholesale basket"
-                        >
-                          <Check size={13} />
-                          <span>In Basket ({wholesaleBasket[p.id]})</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleAddRowToBasket(p)}
-                          className="ws-row-action-btn"
-                          title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
-                        >
-                          <Plus size={13} />
-                          <span>{isDraftDifferent ? `Update (${currentQty})` : `Add (${currentQty})`}</span>
-                        </button>
+                  {/* Middle: Crisp Pricing & Volume Tier Bar */}
+                  <div className="ws-qo-pricing">
+                    <div className="ws-qo-price-group">
+                      <span className="ws-qo-price-val">{formatINR(t1)}</span>
+                      <span className="ws-qo-price-unit">/ unit</span>
+                      {p.p > t1 && (
+                        <span className="ws-price-retail-strike">{formatINR(p.p)}</span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div className="ws-qo-tier-group">
+                      <span className="ws-qo-tier-label">20+ Pcs:</span>
+                      <span className="ws-qo-tier-val">{formatINR(t2)}</span>
+                      <span className="ws-qo-tier-badge">-25%</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom: Stepper + Add to Basket on the same single row */}
+                  <div className="ws-qo-bottom">
+                    <div className="ws-stepper ws-qo-stepper">
+                      <button
+                        type="button"
+                        className="ws-stepper-btn"
+                        onClick={() => handleQtyChange(p.id, currentQty - 1, moq)}
+                        aria-label="Decrease quantity"
+                        title={`Decrease (min ${moq})`}
+                      >
+                        <Minus size={13} />
+                      </button>
+                      <input
+                        type="number"
+                        min={moq}
+                        className="ws-stepper-input"
+                        value={currentQty}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10);
+                          if (!isNaN(v)) {
+                            handleQtyChange(p.id, v, moq);
+                          }
+                        }}
+                        aria-label={`Batch Quantity for ${p.n}`}
+                      />
+                      <button
+                        type="button"
+                        className="ws-stepper-btn"
+                        onClick={() => handleQtyChange(p.id, currentQty + 1, moq)}
+                        aria-label="Increase quantity"
+                      >
+                        <Plus size={13} />
+                      </button>
+                    </div>
+
+                    {isInBasket && !isDraftDifferent ? (
+                      <button
+                        type="button"
+                        onClick={() => handleAddRowToBasket(p)}
+                        className="ws-row-action-btn in-basket ws-qo-action-btn"
+                        title="Currently in your wholesale basket"
+                      >
+                        <Check size={14} />
+                        <span>In Basket ({wholesaleBasket[p.id]})</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAddRowToBasket(p)}
+                        className="ws-row-action-btn ws-qo-action-btn"
+                        title={isDraftDifferent ? 'Update quantity in basket' : 'Add to basket'}
+                      >
+                        <Plus size={14} />
+                        <span>{isDraftDifferent ? `Update (${currentQty})` : `Add (${currentQty})`}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Floating Bottom Order Summary Dock */}

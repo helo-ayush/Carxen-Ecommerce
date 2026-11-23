@@ -227,7 +227,6 @@ export default function HomePage() {
   const [priceMax, setPriceMax] = useState<number | null>(null);
   const [starRating, setStarRating] = useState(0);
   const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
-  const [deliveryType, setDeliveryType] = useState('std');
   const [sortBy, setSortBy] = useState('pop');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -335,7 +334,6 @@ export default function HomePage() {
     setPriceMax(null);
     setStarRating(0);
     handleResetSeries();
-    setDeliveryType('std');
     setSortBy('pop');
   };
 
@@ -366,10 +364,9 @@ export default function HomePage() {
         seriesOptions.length === 0 ||
         selectedSeries.size === seriesOptions.length ||
         (Boolean(p.s?.trim()) && selectedSeries.has(p.s.trim()));
-      const matchDelivery = deliveryType === 'std' || p.pk;
       const searchHaystack = (p.n + ' ' + p.c + ' ' + p.s + ' ' + (p.d || '')).toLowerCase();
       const matchQuery = !searchQuery || searchHaystack.includes(searchQuery.toLowerCase().trim());
-      return matchCat && matchPrice && matchStar && matchSeries && matchDelivery && matchQuery;
+      return matchCat && matchPrice && matchStar && matchSeries && matchQuery;
     });
 
     switch (sortBy) {
@@ -398,7 +395,6 @@ export default function HomePage() {
     starRating,
     selectedSeries,
     seriesOptions.length,
-    deliveryType,
     sortBy,
     searchQuery,
     products,
@@ -411,7 +407,7 @@ export default function HomePage() {
   // Automatically reset to page 1 whenever any filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterGroup, selectedHomeGroupObj, filterCat, categories, priceMin, effectivePriceMax, starRating, selectedSeries, seriesOptions.length, deliveryType, sortBy, searchQuery, products]);
+  }, [filterGroup, selectedHomeGroupObj, filterCat, categories, priceMin, effectivePriceMax, starRating, selectedSeries, seriesOptions.length, sortBy, searchQuery, products]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE) || 1;
   const paginatedProducts = useMemo(() => {
@@ -934,30 +930,6 @@ export default function HomePage() {
                 </div>
               </div>
               )}
-
-              <div className="fbox">
-                <h4>Delivery options</h4>
-                <div className="seg" id="seg">
-                  <button
-                    className={deliveryType === 'std' ? 'on' : ''}
-                    onClick={() => {
-                      setDeliveryType('std');
-                      showToast('Showing all items');
-                    }}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    className={deliveryType === 'pick' ? 'on' : ''}
-                    onClick={() => {
-                      setDeliveryType('pick');
-                      showToast('Showing store pick-up items');
-                    }}
-                  >
-                    Pick up
-                  </button>
-                </div>
-              </div>
 
               <div className="drawer-footer-mobile">
                 <button
