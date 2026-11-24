@@ -918,6 +918,11 @@ export default function WholesaleOrderBasketPage() {
                               {isMoqMet ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
                               <span>MOQ: {moq}</span>
                             </span>
+                            {p.unitsPerMasterCarton ? (
+                              <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '3px' }}>
+                                📦 {p.unitsPerMasterCarton}/ctn
+                              </div>
+                            ) : null}
                             {!isMoqMet && (
                               <div style={{ fontSize: '10.5px', color: '#dc2626', marginTop: '3px', fontWeight: 600 }}>
                                 Min {moq} req.
@@ -1009,6 +1014,14 @@ export default function WholesaleOrderBasketPage() {
                             {isMoqMet ? <Check size={10} strokeWidth={3} /> : <AlertCircle size={10} />}
                             <span>MOQ: {moq}</span>
                           </span>
+                          {p.unitsPerMasterCarton ? (
+                            <span
+                              className="ws-moq-pill"
+                              style={{ background: '#f1f5f9', color: '#475569', borderColor: '#e2e8f0', fontSize: '10px' }}
+                            >
+                              📦 {p.unitsPerMasterCarton}/ctn
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                       <button

@@ -73,6 +73,16 @@ export interface Product {
   };
   wholesaleTier?: 'tier1' | 'tier2';
   packageDimensions?: string | null;
+  unitDimensions?: string | null;
+  unitWeight?: number | null;
+  unitWeightUom?: string | null;
+  innerBoxDimensions?: string | null;
+  innerBoxWeight?: number | null;
+  innerBoxWeightUom?: string | null;
+  masterCartonDimensions?: string | null;
+  unitsPerMasterCarton?: number | null;
+  masterCartonWeightKg?: number | null;
+  enforceCartonMultiples?: boolean | null;
   isCustomProduct?: boolean;
   stockCount?: number | null;
   inStock?: boolean;

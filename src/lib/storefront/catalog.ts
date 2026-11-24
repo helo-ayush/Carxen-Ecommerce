@@ -69,6 +69,16 @@ export interface EcommerceProductRow {
   wholesaleTaxRate?: number | string | null;
   discountLimitQty?: number | string | null;
   packageDimensions?: string | null;
+  unitDimensions?: string | null;
+  unitWeight?: number | string | null;
+  unitWeightUom?: string | null;
+  innerBoxDimensions?: string | null;
+  innerBoxWeight?: number | string | null;
+  innerBoxWeightUom?: string | null;
+  masterCartonDimensions?: string | null;
+  unitsPerMasterCarton?: number | string | null;
+  masterCartonWeightKg?: number | string | null;
+  enforceCartonMultiples?: boolean | null;
 }
 
 export class CatalogConfigurationError extends Error {
@@ -204,6 +214,21 @@ function asSpecifications(value: unknown): [string, string][] {
       if (
         k === 'discountLimitQty' ||
         k === 'packageDimensions' ||
+        k === 'unitDimensions' ||
+        k === 'unitWeight' ||
+        k === 'unitWeightUom' ||
+        k === 'unitDimensionUom' ||
+        k === 'innerBoxDimensions' ||
+        k === 'innerBoxWeight' ||
+        k === 'innerBoxWeightUom' ||
+        k === 'innerBoxDimensionUom' ||
+        k === 'masterCartonId' ||
+        k === 'masterCartonName' ||
+        k === 'masterCartonDimensions' ||
+        k === 'masterCartonDimensionUom' ||
+        k === 'unitsPerMasterCarton' ||
+        k === 'masterCartonWeightKg' ||
+        k === 'enforceCartonMultiples' ||
         k === 'items' ||
         k === 'isCustomProduct' ||
         k === 'manualStock' ||
@@ -358,12 +383,16 @@ function mapProductRow(
     resolveCategoryLabel(category, asNonEmptyString(row.categoryLabel));
   const colors = asColors(row.colors);
   const tintOptions = asTintOptions(row.colors) || asTintOptions(row.tintOptions);
+  const specsObj = row.specifications && typeof row.specifications === 'object' && !Array.isArray(row.specifications)
+    ? (row.specifications as Record<string, unknown>)
+    : {};
+
   const packageDimensions = (() => {
-    if (row.specifications && typeof row.specifications === 'object') {
-      const s = row.specifications as Record<string, unknown>;
-      if (typeof s.packageDimensions === 'string' && s.packageDimensions.trim()) {
-        return s.packageDimensions.trim();
-      }
+    if (typeof specsObj.packageDimensions === 'string' && specsObj.packageDimensions.trim()) {
+      return specsObj.packageDimensions.trim();
+    }
+    if (typeof (row as any).packageDimensions === 'string' && (row as any).packageDimensions.trim()) {
+      return (row as any).packageDimensions.trim();
     }
     if (specifications) {
       const item = specifications.find(([k]) => /dimension/i.test(k));
@@ -371,6 +400,49 @@ function mapProductRow(
     }
     return null;
   })();
+
+  const unitDimensions = (() => {
+    if (typeof specsObj.unitDimensions === 'string' && specsObj.unitDimensions.trim()) return specsObj.unitDimensions.trim();
+    if (typeof (row as any).unitDimensions === 'string' && (row as any).unitDimensions.trim()) return (row as any).unitDimensions.trim();
+    return null;
+  })();
+
+  const unitWeight = (() => {
+    const w = specsObj.unitWeight ?? (row as any).unitWeight;
+    return asFiniteNumber(w);
+  })();
+  const unitWeightUom = asNonEmptyString(specsObj.unitWeightUom ?? (row as any).unitWeightUom) || 'kg';
+
+  const innerBoxDimensions = (() => {
+    if (typeof specsObj.innerBoxDimensions === 'string' && specsObj.innerBoxDimensions.trim()) return specsObj.innerBoxDimensions.trim();
+    if (typeof (row as any).innerBoxDimensions === 'string' && (row as any).innerBoxDimensions.trim()) return (row as any).innerBoxDimensions.trim();
+    return packageDimensions;
+  })();
+
+  const innerBoxWeight = (() => {
+    const w = specsObj.innerBoxWeight ?? (row as any).innerBoxWeight;
+    return asFiniteNumber(w);
+  })();
+  const innerBoxWeightUom = asNonEmptyString(specsObj.innerBoxWeightUom ?? (row as any).innerBoxWeightUom) || 'kg';
+
+  const masterCartonDimensions = (() => {
+    if (typeof specsObj.masterCartonDimensions === 'string' && specsObj.masterCartonDimensions.trim()) return specsObj.masterCartonDimensions.trim();
+    if (typeof (row as any).masterCartonDimensions === 'string' && (row as any).masterCartonDimensions.trim()) return (row as any).masterCartonDimensions.trim();
+    return null;
+  })();
+
+  const unitsPerMasterCarton = (() => {
+    const u = specsObj.unitsPerMasterCarton ?? (row as any).unitsPerMasterCarton;
+    const num = asFiniteNumber(u);
+    return num && num > 0 ? Math.floor(num) : null;
+  })();
+
+  const masterCartonWeightKg = (() => {
+    const w = specsObj.masterCartonWeightKg ?? (row as any).masterCartonWeightKg;
+    return asFiniteNumber(w);
+  })();
+
+  const enforceCartonMultiples = Boolean(specsObj.enforceCartonMultiples ?? (row as any).enforceCartonMultiples);
 
   return {
     id,
@@ -392,6 +464,16 @@ function mapProductRow(
     d: description,
     sp: specifications,
     packageDimensions,
+    unitDimensions,
+    unitWeight,
+    unitWeightUom,
+    innerBoxDimensions,
+    innerBoxWeight,
+    innerBoxWeightUom,
+    masterCartonDimensions,
+    unitsPerMasterCarton,
+    masterCartonWeightKg,
+    enforceCartonMultiples,
     slug,
     categoryId: row.categoryId ?? null,
     categoryLabel,

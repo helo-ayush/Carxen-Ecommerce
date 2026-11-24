@@ -109,8 +109,21 @@ function getEnrichedSpecifications(product: Product) {
   if (!existingSpecs.has('Fitment Type')) {
     existingSpecs.set('Fitment Type', custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit');
   }
-  if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
+  if (product.unitDimensions && !existingSpecs.has('Product Dimensions (Unit)')) {
+    const wt = product.unitWeight ? ` · ${product.unitWeight} ${product.unitWeightUom || 'kg'}` : '';
+    existingSpecs.set('Product Dimensions (Unit)', `${product.unitDimensions}${wt}`);
+  }
+  const boxDim = product.innerBoxDimensions || product.packageDimensions;
+  if (boxDim && !existingSpecs.has('Inner Box Dimensions')) {
+    const wt = product.innerBoxWeight ? ` · ${product.innerBoxWeight} ${product.innerBoxWeightUom || 'kg'}` : '';
+    existingSpecs.set('Inner Box Dimensions', `${boxDim}${wt}`);
+  } else if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
     existingSpecs.set('Package Dimensions', product.packageDimensions);
+  }
+  if (product.masterCartonDimensions && !existingSpecs.has('Master Carton Dimensions')) {
+    const pcs = product.unitsPerMasterCarton ? ` · ${product.unitsPerMasterCarton} pcs/ctn` : '';
+    const wt = product.masterCartonWeightKg ? ` · ${product.masterCartonWeightKg} kg` : '';
+    existingSpecs.set('Master Carton Dimensions', `${product.masterCartonDimensions}${pcs}${wt}`);
   }
 
   return Array.from(existingSpecs.entries());
@@ -661,7 +674,12 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   <Package size={13} style={{ color: '#d97706' }} />
                   <span>Master Outer Carton</span>
                 </div>
-                <strong className="ws-spec-summary-val">5–10 Sets Export Pack</strong>
+                <strong className="ws-spec-summary-val">
+                  {product.unitsPerMasterCarton
+                    ? `${product.unitsPerMasterCarton} pcs / Carton`
+                    : (product.b2bMoq ? `${product.b2bMoq} Sets Export Pack` : 'Standard Shipper')}
+                  {product.masterCartonWeightKg ? ` (${product.masterCartonWeightKg} kg)` : ''}
+                </strong>
               </div>
               <div className="ws-spec-summary-item">
                 <div className="ws-spec-summary-label">
@@ -1043,17 +1061,46 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                     <span className="ws-spec-val">18% (100% Eligible for B2B ITC)</span>
                   </div>
                 )}
-                {product.packageDimensions && (
+                {product.unitDimensions && (
                   <div className="ws-spec-item">
-                    <span className="ws-spec-key">Package Dimensions</span>
-                    <span className="ws-spec-val">{product.packageDimensions}</span>
+                    <span className="ws-spec-key">Unit Dimensions</span>
+                    <span className="ws-spec-val">
+                      {product.unitDimensions}
+                      {product.unitWeight ? ` · ${product.unitWeight} ${product.unitWeightUom || 'kg'}` : ''}
+                    </span>
+                  </div>
+                )}
+                {(product.innerBoxDimensions || product.packageDimensions) && (
+                  <div className="ws-spec-item">
+                    <span className="ws-spec-key">Inner Box Dimensions</span>
+                    <span className="ws-spec-val">
+                      {product.innerBoxDimensions || product.packageDimensions}
+                      {product.innerBoxWeight ? ` · ${product.innerBoxWeight} ${product.innerBoxWeightUom || 'kg'}` : ''}
+                    </span>
+                  </div>
+                )}
+                {product.masterCartonDimensions && (
+                  <div className="ws-spec-item">
+                    <span className="ws-spec-key">Master Carton Dimensions</span>
+                    <span className="ws-spec-val">
+                      {product.masterCartonDimensions}
+                      {product.unitsPerMasterCarton ? ` · ${product.unitsPerMasterCarton} pcs/ctn` : ''}
+                      {product.masterCartonWeightKg ? ` · ${product.masterCartonWeightKg} kg` : ''}
+                    </span>
                   </div>
                 )}
 
                 {/* Real Veda Key-Value Specs */}
                 {enrichedSpecs.map(([k, v], idx) => {
                   const lower = k.toLowerCase();
-                  if (lower === 'product series' || lower === 'fitment type' || lower === 'package dimensions') return null;
+                  if (
+                    lower === 'product series' ||
+                    lower === 'fitment type' ||
+                    lower === 'package dimensions' ||
+                    lower === 'product dimensions (unit)' ||
+                    lower === 'inner box dimensions' ||
+                    lower === 'master carton dimensions'
+                  ) return null;
                   return (
                     <div key={idx} className="ws-spec-item">
                       <span className="ws-spec-key">{k}</span>
@@ -1226,18 +1273,37 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                 </div>
 
                 <div className="ws-pkg-card">
-                  <h4>Master Outer Carton &amp; Logistics</h4>
+                  <h4>3-Tier Packaging Hierarchy &amp; Logistics</h4>
                   <ul>
                     <li>
                       Wholesale Minimum Order Quantity (MOQ): <strong>{product.b2bMoq || 5} units</strong>
                     </li>
-                    {product.packageDimensions ? (
+                    {product.unitDimensions && (
                       <li>
-                        Package Dimensions (L × W × H): <strong>{product.packageDimensions}</strong>
+                        Tier 1 (Individual Unit): <strong>{product.unitDimensions}</strong>
+                        {product.unitWeight ? ` (Net: ${product.unitWeight} ${product.unitWeightUom || 'kg'})` : ''}
+                      </li>
+                    )}
+                    {(product.innerBoxDimensions || product.packageDimensions) && (
+                      <li>
+                        Tier 2 (Inner Retail Box): <strong>{product.innerBoxDimensions || product.packageDimensions}</strong>
+                        {product.innerBoxWeight ? ` (Gross: ${product.innerBoxWeight} ${product.innerBoxWeightUom || 'kg'})` : ''}
+                      </li>
+                    )}
+                    {product.masterCartonDimensions ? (
+                      <li>
+                        Tier 3 (Master Outer Carton): <strong>{product.masterCartonDimensions}</strong>
+                        {product.unitsPerMasterCarton ? ` (${product.unitsPerMasterCarton} pcs/ctn)` : ''}
+                        {product.masterCartonWeightKg ? ` · Carton Weight: ${product.masterCartonWeightKg} kg` : ''}
                       </li>
                     ) : null}
+                    {product.enforceCartonMultiples && (
+                      <li style={{ color: '#b91c1c', fontWeight: 600 }}>
+                        Carton Multiples Enforced: Wholesale orders must be in multiples of {product.unitsPerMasterCarton || product.b2bMoq || 5} units.
+                      </li>
+                    )}
                     <li>Heavy-duty corrugated outer shipper sealed for surface &amp; express freight</li>
-                    <li>Master outer shipper packed in batch multiples of <strong>{product.b2bMoq || 5} sets</strong></li>
+                    <li>Master outer shipper packed in batch multiples of <strong>{product.unitsPerMasterCarton || product.b2bMoq || 5} sets</strong></li>
                     <li>Dual-sided barcode &amp; part number labels for stockroom racking &amp; scanning</li>
                   </ul>
                 </div>

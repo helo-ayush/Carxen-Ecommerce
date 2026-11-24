@@ -926,6 +926,15 @@ export default function WholesaleCatalogPage() {
 
                     <td>
                       <span className="ws-moq-badge">MOQ: {moq}</span>
+                      {p.unitsPerMasterCarton ? (
+                        <span
+                          className="ws-moq-badge"
+                          style={{ display: 'inline-block', marginTop: '4px', background: '#f1f5f9', color: '#475569', fontSize: '10px' }}
+                          title={`Master Carton: ${p.unitsPerMasterCarton} pcs/ctn${p.masterCartonWeightKg ? ` · ${p.masterCartonWeightKg} kg` : ''}`}
+                        >
+                          📦 {p.unitsPerMasterCarton}/ctn
+                        </span>
+                      ) : null}
                     </td>
 
                     <td>

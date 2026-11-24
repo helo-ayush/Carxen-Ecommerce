@@ -170,7 +170,15 @@ function getEnrichedSpecifications(product: Product) {
   if (!existingSpecs.has('Fitment Type')) {
     existingSpecs.set('Fitment Type', custom ? 'Vehicle-specific custom fit' : 'Universal stretch fit');
   }
-  if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
+  if (product.unitDimensions && !existingSpecs.has('Product Dimensions (Unit)')) {
+    const wt = product.unitWeight ? ` · ${product.unitWeight} ${product.unitWeightUom || 'kg'}` : '';
+    existingSpecs.set('Product Dimensions (Unit)', `${product.unitDimensions}${wt}`);
+  }
+  const boxDim = product.innerBoxDimensions || product.packageDimensions;
+  if (boxDim && !existingSpecs.has('Package Dimensions (Box)')) {
+    const wt = product.innerBoxWeight ? ` · ${product.innerBoxWeight} ${product.innerBoxWeightUom || 'kg'}` : '';
+    existingSpecs.set('Package Dimensions (Box)', `${boxDim}${wt}`);
+  } else if (product.packageDimensions && !existingSpecs.has('Package Dimensions')) {
     existingSpecs.set('Package Dimensions', product.packageDimensions);
   }
 
