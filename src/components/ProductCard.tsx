@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Product } from '@/data/products';
 import { formatINR, TINT_OPTIONS } from '@/data/products';
@@ -40,8 +40,15 @@ export function ProductCard({
   className = '',
 }: ProductCardProps) {
   const router = useRouter();
+  const prefetchedRef = useRef(false);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
+
+  const handlePrefetch = () => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    router.prefetch(`/product/${product.id}`);
+  };
 
   const discountPercent =
     product.o && product.o > product.p
@@ -151,6 +158,8 @@ export function ProductCard({
     <article
       className={`ref-card ${className}`}
       data-id={product.id}
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
     >
       {/* Inset rounded media frame */}
       <div className="ref-media" onClick={handleCardClick}>

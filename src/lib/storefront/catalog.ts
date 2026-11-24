@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import type {
   Product,
@@ -608,9 +609,15 @@ export async function getStorefrontProducts(options?: {
   const soldCountByProduct = new Map<string, number>();
 
   if (rows.length > 0) {
-    // Reviews and order sales aggregates need the service key (RLS-protected).
+    // Reviews, orders, and custom reservations need the service key (RLS-protected).
+    // Fetch them in a single parallel batch instead of sequential waterfalls.
     const adminSupabase = getSupabaseAdmin();
-    const [{ data: reviewRows }, { data: validOrders }] = await Promise.all([
+    const customProductIds = rows
+      .filter((row) => resolveCustomProductAvailability(row, 0).isCustomProduct)
+      .map((row) => row.id);
+    const customProductIdSet = new Set(customProductIds);
+
+    const [{ data: reviewRows }, { data: validOrders }, reservationRes] = await Promise.all([
       adminSupabase
         .from('ecommerce_reviews')
         .select('productId, rating')
@@ -619,10 +626,18 @@ export async function getStorefrontProducts(options?: {
         .not('publishedAt', 'is', null),
       adminSupabase
         .from('ecommerce_orders')
-        .select('id')
+        .select('id, fulfillmentStatus')
         .eq('storeId', store.id)
         .neq('status', 'CANCELLED')
         .neq('status', 'REFUNDED'),
+      customProductIds.length > 0
+        ? adminSupabase
+            .from('ecommerce_inventory_reservations')
+            .select('productId, orderItemId, quantity')
+            .eq('storeId', store.id)
+            .eq('status', 'ACTIVE')
+            .in('productId', customProductIds)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
 
     for (const review of reviewRows || []) {
@@ -633,80 +648,54 @@ export async function getStorefrontProducts(options?: {
       reviewAggregates.set(key, entry);
     }
 
-    const validOrderIds = (validOrders || []).map((o: any) => String(o.id)).filter(Boolean);
-    if (validOrderIds.length > 0) {
-      try {
-        const { data: soldItems } = await adminSupabase
-          .from('ecommerce_order_items')
-          .select('productId, quantity')
-          .in('orderId', validOrderIds);
-        for (const item of soldItems || []) {
-          if (!item.productId) continue;
-          const pid = String(item.productId);
-          const qty = Math.max(0, Math.floor(Number(item.quantity) || 0));
-          if (qty > 0) {
-            soldCountByProduct.set(pid, (soldCountByProduct.get(pid) ?? 0) + qty);
-          }
-        }
-      } catch (salesErr) {
-        console.warn('Could not load product sales totals:', salesErr);
+    const reservedByOrderItem = new Map<string, number>();
+    for (const resRow of reservationRes.data || []) {
+      const pid = String(resRow.productId);
+      const qty = Math.max(0, Math.floor(Number(resRow.quantity) || 0));
+      customCommittedByProduct.set(pid, (customCommittedByProduct.get(pid) ?? 0) + qty);
+      if (resRow.orderItemId) {
+        const oid = String(resRow.orderItemId);
+        reservedByOrderItem.set(oid, (reservedByOrderItem.get(oid) ?? 0) + qty);
       }
     }
 
-    const customProductIds = rows
-      .filter((row) => resolveCustomProductAvailability(row, 0).isCustomProduct)
-      .map((row) => row.id);
+    const OPEN_FULFILLMENT = new Set(['PENDING', 'CONFIRMED', 'PACKED']);
+    const validOrderIds: string[] = [];
+    const openOrderIdSet = new Set<string>();
+    for (const o of (validOrders || []) as Array<{ id?: string; fulfillmentStatus?: string }>) {
+      if (!o.id) continue;
+      const oid = String(o.id);
+      validOrderIds.push(oid);
+      if (o.fulfillmentStatus && OPEN_FULFILLMENT.has(String(o.fulfillmentStatus).toUpperCase())) {
+        openOrderIdSet.add(oid);
+      }
+    }
 
-    if (customProductIds.length > 0) {
+    // Fetch order items ONCE and compute both sold totals and unreserved open commitments.
+    if (validOrderIds.length > 0) {
       try {
-        const [{ data: reservationRows }, { data: openOrders }] = await Promise.all([
-          adminSupabase
-            .from('ecommerce_inventory_reservations')
-            .select('productId, orderItemId, quantity')
-            .eq('storeId', store.id)
-            .eq('status', 'ACTIVE')
-            .in('productId', customProductIds),
-          adminSupabase
-            .from('ecommerce_orders')
-            .select('id')
-            .eq('storeId', store.id)
-            .in('fulfillmentStatus', ['PENDING', 'CONFIRMED', 'PACKED'])
-            .neq('status', 'CANCELLED')
-            .neq('status', 'REFUNDED'),
-        ]);
+        const { data: orderItems } = await adminSupabase
+          .from('ecommerce_order_items')
+          .select('id, orderId, productId, quantity')
+          .in('orderId', validOrderIds);
+        for (const item of orderItems || []) {
+          if (!item.productId) continue;
+          const pid = String(item.productId);
+          const qty = Math.max(0, Math.floor(Number(item.quantity) || 0));
+          if (qty <= 0) continue;
 
-        const reservedByOrderItem = new Map<string, number>();
-        for (const resRow of reservationRows || []) {
-          const pid = String(resRow.productId);
-          const qty = Math.max(0, Math.floor(Number(resRow.quantity) || 0));
-          customCommittedByProduct.set(pid, (customCommittedByProduct.get(pid) ?? 0) + qty);
-          if (resRow.orderItemId) {
-            const oid = String(resRow.orderItemId);
-            reservedByOrderItem.set(oid, (reservedByOrderItem.get(oid) ?? 0) + qty);
-          }
-        }
+          soldCountByProduct.set(pid, (soldCountByProduct.get(pid) ?? 0) + qty);
 
-        const openOrderIds = (openOrders || []).map((o: any) => String(o.id)).filter(Boolean);
-        if (openOrderIds.length > 0) {
-          const { data: openOrderItems } = await adminSupabase
-            .from('ecommerce_order_items')
-            .select('id, productId, quantity')
-            .in('orderId', openOrderIds)
-            .in('productId', customProductIds);
-
-          for (const itemRow of openOrderItems || []) {
-            if (!itemRow.productId) continue;
-            const pid = String(itemRow.productId);
-            const qty = Math.max(0, Math.floor(Number(itemRow.quantity) || 0));
-            const alreadyReserved = reservedByOrderItem.get(String(itemRow.id)) ?? 0;
+          if (customProductIdSet.has(pid) && item.orderId && openOrderIdSet.has(String(item.orderId))) {
+            const alreadyReserved = reservedByOrderItem.get(String(item.id)) ?? 0;
             const unreservedOpen = Math.max(0, qty - alreadyReserved);
             if (unreservedOpen > 0) {
               customCommittedByProduct.set(pid, (customCommittedByProduct.get(pid) ?? 0) + unreservedOpen);
             }
           }
         }
-      } catch (stockErr) {
-        console.warn('Could not load custom stock commitments for storefront catalog:', stockErr);
+      } catch (salesErr) {
+        console.warn('Could not load product sales/commitment totals:', salesErr);
       }
     }
   }
@@ -849,4 +838,105 @@ export async function getStorefrontProducts(options?: {
     flatCategories,
     mainNavCategoryIds,
   };
+}
+
+export interface StorefrontProductSeo {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  categoryKey: string;
+  categoryLabel?: string;
+  images: string[];
+  rating: number;
+  reviewCount: number;
+}
+
+const getCachedPublicStoreId = unstable_cache(
+  async (storeSlug: string): Promise<string | null> => {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from('ecommerce_stores')
+      .select('id')
+      .eq('slug', storeSlug)
+      .eq('isPublic', true)
+      .eq('status', 'PUBLISHED')
+      .maybeSingle();
+    return data?.id ? String(data.id) : null;
+  },
+  ['storefront-public-store-id'],
+  { revalidate: 300 },
+);
+
+/**
+ * Lightweight single-product SEO lookup for /product/[id]/layout.tsx.
+ * Avoids loading the entire catalog, orders, reservations, and categories on every product click.
+ */
+export async function getStorefrontProductSeoById(publicId: number): Promise<StorefrontProductSeo | null> {
+  if (!Number.isFinite(publicId)) return null;
+  const { storeSlug } = getCatalogConfig();
+
+  const fetchSingle = unstable_cache(
+    async (slug: string, pid: number): Promise<StorefrontProductSeo | null> => {
+      const storeId = await getCachedPublicStoreId(slug);
+      if (!storeId) return null;
+
+      const supabase = getSupabaseAdmin();
+      const { data: row, error } = await supabase
+        .from('ecommerce_products')
+        .select('publicId, name, description, price, rating, reviewCount, categoryKey, categoryLabel, images, colors')
+        .eq('storeId', storeId)
+        .eq('publicId', pid)
+        .eq('status', 'PUBLISHED')
+        .not('publishedAt', 'is', null)
+        .maybeSingle();
+
+      if (error || !row) return null;
+
+      const name = asNonEmptyString(row.name);
+      const price = asFiniteNumber(row.price);
+      if (!name || price === null) return null;
+
+      const images: string[] = [];
+      if (Array.isArray(row.images)) {
+        for (const img of row.images) {
+          const valid = isImageUrl(img);
+          if (valid && !images.includes(valid)) images.push(valid);
+        }
+      }
+      if (images.length === 0 && Array.isArray(row.colors)) {
+        for (const c of row.colors as Array<Record<string, unknown>>) {
+          if (Array.isArray(c?.images)) {
+            for (const img of c.images) {
+              const valid = isImageUrl(img);
+              if (valid && !images.includes(valid)) images.push(valid);
+            }
+          }
+        }
+      }
+
+      const categoryKey = asCategory(row.categoryKey);
+      const categoryLabel = asNonEmptyString(row.categoryLabel) ?? resolveCategoryLabel(categoryKey);
+
+      return {
+        id: Number(row.publicId),
+        name,
+        description: asNonEmptyString(row.description) ?? '',
+        price,
+        categoryKey,
+        categoryLabel,
+        images,
+        rating: asFiniteNumber(row.rating) ?? 0,
+        reviewCount: asFiniteNumber(row.reviewCount) ?? 0,
+      };
+    },
+    ['storefront-product-seo', storeSlug, String(publicId)],
+    { revalidate: 300 },
+  );
+
+  try {
+    return await fetchSingle(storeSlug, publicId);
+  } catch {
+    return null;
+  }
 }

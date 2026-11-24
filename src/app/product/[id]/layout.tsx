@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
-import { getStorefrontProducts } from '@/lib/storefront/catalog';
-import type { Product } from '@/data/products';
+import {
+  getStorefrontProductSeoById,
+  type StorefrontProductSeo,
+} from '@/lib/storefront/catalog';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
 
-// Product metadata is served from the same catalog the storefront uses;
-// caching per request avoids a duplicate fetch between generateMetadata
-// and the layout body.
-const getCatalogForSeo = cache(async () => {
+// Per-request deduplication between generateMetadata and ProductLayout.
+const getProductSeo = cache(async (productId: number) => {
   try {
-    return await getStorefrontProducts();
+    return await getStorefrontProductSeoById(productId);
   } catch {
     return null;
   }
@@ -35,19 +35,12 @@ function truncate(text: string, maxLength: number): string {
   return `${cut.slice(0, lastSpace > 0 ? lastSpace : maxLength).replace(/[,.;:]+$/, '')}…`;
 }
 
-function buildProductSchema(product: Product, url: string) {
-  const name = product.n;
+function buildProductSchema(product: StorefrontProductSeo, url: string) {
+  const name = product.name;
   const description =
-    product.d?.trim() ||
+    product.description?.trim() ||
     `${name} — premium car accessory by Carxen, precision fit with a 2-year warranty.`;
-  const images = (product.images?.length
-    ? product.images
-    : product.image
-      ? [product.image]
-      : []
-  )
-    .map(absoluteImageUrl)
-    .filter(Boolean);
+  const images = product.images.map(absoluteImageUrl).filter(Boolean);
 
   const productSchema: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -66,19 +59,19 @@ function buildProductSchema(product: Product, url: string) {
       '@type': 'Offer',
       url,
       priceCurrency: 'INR',
-      price: product.p,
+      price: product.price,
       availability: 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: {
         '@id': `${SITE_URL}/#organization`,
       },
     },
-    ...(product.rv > 0 && product.r > 0
+    ...(product.reviewCount > 0 && product.rating > 0
       ? {
           aggregateRating: {
             '@type': 'AggregateRating',
-            ratingValue: product.r,
-            reviewCount: product.rv,
+            ratingValue: product.rating,
+            reviewCount: product.reviewCount,
             bestRating: 5,
             worstRating: 1,
           },
@@ -95,7 +88,7 @@ function buildProductSchema(product: Product, url: string) {
             '@type': 'ListItem',
             position: 3,
             name: product.categoryLabel,
-            item: `${SITE_URL}/shop?cat=${encodeURIComponent(product.c)}`,
+            item: `${SITE_URL}/shop?cat=${encodeURIComponent(product.categoryKey)}`,
           },
         ]
       : []),
@@ -124,8 +117,7 @@ export async function generateMetadata({
   const { id } = await params;
   const productId = Number(id);
   const url = productUrl(productId);
-  const catalog = await getCatalogForSeo();
-  const product = catalog?.products.find((p) => p.id === productId);
+  const product = await getProductSeo(productId);
 
   if (!product) {
     return {
@@ -136,20 +128,13 @@ export async function generateMetadata({
     };
   }
 
-  const name = product.n;
+  const name = product.name;
   const description = truncate(
-    product.d?.trim() ||
+    product.description?.trim() ||
       `Buy ${name} online at Carxen — premium car accessories with precision fit, 2-year warranty and free shipping across India.`,
     160,
   );
-  const images = (product.images?.length
-    ? product.images
-    : product.image
-      ? [product.image]
-      : []
-  )
-    .map(absoluteImageUrl)
-    .filter(Boolean);
+  const images = product.images.map(absoluteImageUrl).filter(Boolean);
 
   return {
     title: name,
@@ -181,8 +166,7 @@ export default async function ProductLayout({
 }) {
   const { id } = await params;
   const productId = Number(id);
-  const catalog = await getCatalogForSeo();
-  const product = catalog?.products.find((p) => p.id === productId);
+  const product = await getProductSeo(productId);
 
   if (!product) {
     return <>{children}</>;

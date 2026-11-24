@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { Product } from '@/data/products';
@@ -332,8 +333,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void refreshCoupons();
   }, [refreshCoupons]);
 
-  const requestCatalog = useCallback(async (signal?: AbortSignal) => {
-    setCatalogStatus('loading');
+  const hasLoadedCatalogRef = useRef(false);
+  const lastWholesaleModeRef = useRef(false);
+
+  const requestCatalog = useCallback(async (signal?: AbortSignal, options?: { silent?: boolean }) => {
+    if (!options?.silent || !hasLoadedCatalogRef.current) {
+      setCatalogStatus('loading');
+    }
     setCatalogError(null);
 
     try {
@@ -357,6 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const response = await loadCatalogProducts(signal, customHeaders);
       if (signal?.aborted) return;
 
+      hasLoadedCatalogRef.current = true;
       setProducts(response.products);
       setCategories(Array.isArray(response.categories) ? response.categories : []);
       setFlatCategories(Array.isArray(response.flatCategories) ? response.flatCategories : []);
@@ -368,12 +375,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
 
-      setProducts([]);
-      setCategories([]);
-      setFlatCategories([]);
-      setMainNavCategoryIds([]);
-      setCatalogStatus('error');
-      setCatalogError(error instanceof Error ? error.message : 'The storefront catalog could not be loaded from the server.');
+      if (!options?.silent || !hasLoadedCatalogRef.current) {
+        setProducts([]);
+        setCategories([]);
+        setFlatCategories([]);
+        setMainNavCategoryIds([]);
+        setCatalogStatus('error');
+        setCatalogError(error instanceof Error ? error.message : 'The storefront catalog could not be loaded from the server.');
+      }
     }
   }, []);
 
@@ -383,12 +392,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => controller.abort();
   }, [requestCatalog]);
 
-  // Re-fetch catalog when user identity or wholesale approval status resolves
+  // Re-fetch catalog silently only when approved wholesale status actually changes
   useEffect(() => {
-    if (user?.id || b2bProfile?.status) {
-      void requestCatalog();
+    const isApprovedWholesale = b2bProfile?.status === 'APPROVED';
+    if (isApprovedWholesale !== lastWholesaleModeRef.current) {
+      lastWholesaleModeRef.current = isApprovedWholesale;
+      void requestCatalog(undefined, { silent: true });
     }
-  }, [user?.id, b2bProfile?.status, requestCatalog]);
+  }, [b2bProfile?.status, requestCatalog]);
 
   const retryCatalog = useCallback(() => {
     void requestCatalog();

@@ -11,15 +11,17 @@ export function Preloader() {
   const [isExiting, setIsExiting] = useState(false);
   const [isUnmounted, setIsUnmounted] = useState(false);
 
-  // If on wholesale procurement workspace, bypass preloader for instant B2B productivity
-  const isWholesale = pathname?.startsWith('/wholesale');
+  // Bypass the full-screen brand curtain on wholesale and direct product detail routes
+  const bypassPreloader = Boolean(
+    pathname?.startsWith('/wholesale') || pathname?.startsWith('/product/'),
+  );
 
   // Keep fresh ref to data readiness so timer interval sees current state
   const isDataReadyRef = useRef(false);
   isDataReadyRef.current = catalogStatus !== 'loading';
 
   useEffect(() => {
-    if (isWholesale) {
+    if (bypassPreloader) {
       document.body.classList.add('ready');
       document.body.style.overflow = '';
       return;
@@ -103,9 +105,9 @@ export function Preloader() {
       clearTimeout(fallback);
       document.body.style.overflow = '';
     };
-  }, [isWholesale]);
+  }, [bypassPreloader]);
 
-  if (isWholesale || isUnmounted) return null;
+  if (bypassPreloader || isUnmounted) return null;
 
   return (
     <div
