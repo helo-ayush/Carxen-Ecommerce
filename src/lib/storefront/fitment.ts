@@ -46,7 +46,20 @@ export function readFitment(product: Product): ProductFitment {
     }
   }
 
-  return { kind: 'universal', label: text(fitment) || UNIVERSAL_LABEL };
+  // If fitment is a string like "Hyundai Creta 2024 Facelift"
+  const rawStr = text(fitment);
+  if (rawStr && !/universal/i.test(rawStr)) {
+    // Check if it mentions known vehicles
+    return {
+      kind: 'vehicle',
+      brand: '',
+      model: '',
+      detail: '',
+      label: rawStr,
+    };
+  }
+
+  return { kind: 'universal', label: rawStr || UNIVERSAL_LABEL };
 }
 
 /**
