@@ -9,6 +9,8 @@ import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
 import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
+import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
+import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { ProductArt } from '@/components/ProductArt';
 import { CatalogState } from '@/components/CatalogState';
@@ -1271,6 +1273,7 @@ export default function WholesaleOrderBasketPage() {
                         <label htmlFor="ws-shipping-city" className="ws-form-label">City *</label>
                         <CityAutocomplete
                           id="ws-shipping-city"
+                          stateFilter={shippingState}
                           required
                           className="ws-form-input"
                           value={shippingCity}
@@ -1282,23 +1285,27 @@ export default function WholesaleOrderBasketPage() {
                         />
                       </div>
                       <div className="ws-form-group">
-                        <label className="ws-form-label">State *</label>
-                        <input
-                          type="text"
+                        <label htmlFor="ws-shipping-state" className="ws-form-label">State *</label>
+                        <StateAutocomplete
+                          id="ws-shipping-state"
                           required
                           className="ws-form-input"
                           value={shippingState}
-                          onChange={(e) => setShippingState(e.target.value)}
+                          onChange={(state) => setShippingState(state)}
                         />
                       </div>
                       <div className="ws-form-group">
-                        <label className="ws-form-label">PIN Code *</label>
-                        <input
-                          type="text"
+                        <label htmlFor="ws-shipping-pin" className="ws-form-label">PIN Code *</label>
+                        <PincodeAutocomplete
+                          id="ws-shipping-pin"
                           required
                           className="ws-form-input"
                           value={shippingPincode}
-                          onChange={(e) => setShippingPincode(e.target.value)}
+                          onChange={(pin) => setShippingPincode(pin)}
+                          onResolveLocation={(city, state) => {
+                            if (!shippingCity) setShippingCity(city);
+                            if (!shippingState) setShippingState(state);
+                          }}
                         />
                       </div>
                     </div>

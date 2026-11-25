@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
+import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
+import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
+import { IndianPhoneInput } from '@/components/ui/IndianPhoneInput';
 import { getAvailableCouponsForBuyer, type WholesaleBuyerContext } from '@/lib/storefront/coupons';
 import {
   Building2,
@@ -1237,14 +1240,13 @@ export default function B2BWholesalePage() {
                 </div>
 
                 <div className="b2b-field full">
-                  <label>Mobile / WhatsApp Number *</label>
-                  <input
-                    type="tel"
+                  <label htmlFor="b2b-phone">Mobile / WhatsApp Number *</label>
+                  <IndianPhoneInput
+                    id="b2b-phone"
                     required
                     value={formData.phone}
-                    maxLength={14}
-                    onChange={(e) => { let v = e.target.value.replace(/[^\d+]/g, ''); if (v.startsWith('+')) v = '+' + v.slice(1).replace(/\+/g, '').slice(0, 13); else v = v.replace(/\+/g, '').slice(0, 10); setFormData({ ...formData, phone: v }); }}
-                    placeholder="e.g. +91 98765 43210"
+                    onChange={(phone) => setFormData({ ...formData, phone })}
+                    placeholder="98765 43210"
                   />
                   <span className="b2b-field-hint">Used for dispatch tracking updates and order confirmations.</span>
                 </div>
@@ -1367,9 +1369,10 @@ export default function B2BWholesalePage() {
                 </div>
 
                 <div className="b2b-field">
-                  <label>City</label>
+                  <label htmlFor="b2b-city">City</label>
                   <CityAutocomplete
                     id="b2b-city"
+                    stateFilter={formData.state}
                     value={formData.city}
                     onChange={(city) => setFormData({ ...formData, city })}
                     onSelectCity={(city, state) => setFormData({ ...formData, city, state })}
@@ -1378,23 +1381,29 @@ export default function B2BWholesalePage() {
                 </div>
 
                 <div className="b2b-field">
-                  <label>State</label>
-                  <input
-                    type="text"
+                  <label htmlFor="b2b-state">State</label>
+                  <StateAutocomplete
+                    id="b2b-state"
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. Delhi"
+                    onChange={(state) => setFormData({ ...formData, state })}
+                    placeholder="Select or type State / UT..."
                   />
                 </div>
 
                 <div className="b2b-field full">
-                  <label>PIN Code</label>
-                  <input
-                    type="text"
-                    maxLength={6}
+                  <label htmlFor="b2b-pincode">PIN Code</label>
+                  <PincodeAutocomplete
+                    id="b2b-pincode"
                     value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-                    placeholder="e.g. 411019"
+                    onChange={(pincode) => setFormData({ ...formData, pincode })}
+                    onResolveLocation={(city, state) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        city: prev.city || city,
+                        state: prev.state || state,
+                      }))
+                    }
+                    placeholder="6-digit PIN (e.g. 411019)"
                   />
                 </div>
               </div>

@@ -10,6 +10,9 @@ import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
 import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
+import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
+import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
+import { IndianPhoneInput } from '@/components/ui/IndianPhoneInput';
 import { supabase } from '@/lib/supabase/client';
 import { createStorefrontOrder } from '@/lib/storefront/order-client';
 import {
@@ -1229,33 +1232,44 @@ export default function CheckoutPage() {
                                 value={newAddress.name}
                                 onChange={(e) => setNewAddress((c) => ({ ...c, name: e.target.value }))}
                               />
-                              <input
-                                className="inf-ck-input"
-                                placeholder="Mobile Phone (10-digit)"
+                              <IndianPhoneInput
+                                id="ck-addr-phone"
+                                placeholder="98765 43210"
                                 value={newAddress.phone}
-                                onChange={(e) => setNewAddress((c) => ({ ...c, phone: e.target.value }))}
+                                onChange={(phone) => setNewAddress((c) => ({ ...c, phone }))}
+                                showCounter={false}
                               />
                             </div>
                             <div className="inf-ck-form-row">
-                              <input
+                              <PincodeAutocomplete
+                                id="ck-addr-pin"
                                 className="inf-ck-input"
                                 placeholder="Postal Code / Pincode"
                                 value={newAddress.postalCode}
-                                onChange={(e) => setNewAddress((c) => ({ ...c, postalCode: e.target.value }))}
+                                onChange={(postalCode) => setNewAddress((c) => ({ ...c, postalCode }))}
+                                onResolveLocation={(city, state) =>
+                                  setNewAddress((c) => ({
+                                    ...c,
+                                    city: c.city || city,
+                                    state: c.state || state,
+                                  }))
+                                }
                               />
                               <CityAutocomplete
                                 id="ck-addr-city"
+                                stateFilter={newAddress.state}
                                 className="inf-ck-input"
                                 placeholder="City"
                                 value={newAddress.city}
                                 onChange={(city) => setNewAddress((c) => ({ ...c, city }))}
                                 onSelectCity={(city, state) => setNewAddress((c) => ({ ...c, city, state }))}
                               />
-                              <input
+                              <StateAutocomplete
+                                id="ck-addr-state"
                                 className="inf-ck-input"
                                 placeholder="State"
                                 value={newAddress.state}
-                                onChange={(e) => setNewAddress((c) => ({ ...c, state: e.target.value }))}
+                                onChange={(state) => setNewAddress((c) => ({ ...c, state }))}
                               />
                             </div>
                             <input

@@ -15,6 +15,9 @@ import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/custom
 import { Footer } from '@/components/Footer';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
+import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
+import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
+import { IndianPhoneInput } from '@/components/ui/IndianPhoneInput';
 import { supabase } from '@/lib/supabase/client';
 import {
   Package,
@@ -2185,12 +2188,12 @@ function AccountContent() {
               </div>
 
               <div className="ac-field">
-                <label>Contact Phone Number</label>
-                <input
-                  type="tel"
+                <label htmlFor="ac-edit-phone">Contact Phone Number</label>
+                <IndianPhoneInput
+                  id="ac-edit-phone"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="+91 99719 07190"
+                  onChange={(phone) => setEditPhone(phone)}
+                  placeholder="98765 43210"
                   required
                 />
               </div>
@@ -2278,11 +2281,11 @@ function AccountContent() {
                   />
                 </div>
                 <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
+                  <label htmlFor="ac-addr-phone">Phone Number</label>
+                  <IndianPhoneInput
+                    id="ac-addr-phone"
                     value={addressForm.phone}
-                    onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                    onChange={(phone) => setAddressForm({ ...addressForm, phone })}
                     required
                   />
                 </div>
@@ -2322,6 +2325,7 @@ function AccountContent() {
                   <label htmlFor="ac-addr-city">City</label>
                   <CityAutocomplete
                     id="ac-addr-city"
+                    stateFilter={addressForm.state}
                     value={addressForm.city}
                     onChange={(city) => setAddressForm({ ...addressForm, city })}
                     onSelectCity={(city, state) => setAddressForm({ ...addressForm, city, state })}
@@ -2329,21 +2333,27 @@ function AccountContent() {
                   />
                 </div>
                 <div className="ac-field" style={{ margin: 0 }}>
-                  <label>State</label>
-                  <input
-                    type="text"
+                  <label htmlFor="ac-addr-state">State</label>
+                  <StateAutocomplete
+                    id="ac-addr-state"
                     value={addressForm.state}
-                    onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                    onChange={(state) => setAddressForm({ ...addressForm, state })}
                     required
                   />
                 </div>
                 <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Pincode</label>
-                  <input
-                    type="text"
+                  <label htmlFor="ac-addr-pin">Pincode</label>
+                  <PincodeAutocomplete
+                    id="ac-addr-pin"
                     value={addressForm.postalCode}
-                    onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
-                    maxLength={6}
+                    onChange={(postalCode) => setAddressForm({ ...addressForm, postalCode })}
+                    onResolveLocation={(city, state) =>
+                      setAddressForm((prev) => ({
+                        ...prev,
+                        city: prev.city || city,
+                        state: prev.state || state,
+                      }))
+                    }
                     required
                   />
                 </div>

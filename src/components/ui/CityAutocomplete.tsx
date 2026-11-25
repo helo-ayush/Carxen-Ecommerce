@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { INDIAN_CITIES_WITH_STATE, type IndianCityOption } from '@/lib/validation/storefront-schemas';
 
 export interface CityAutocompleteProps {
   value: string;
+  stateFilter?: string;
   onChange: (city: string) => void;
   onSelectCity?: (city: string, state: string) => void;
   onBlur?: () => void;
@@ -20,10 +21,11 @@ export interface CityAutocompleteProps {
 
 export function CityAutocomplete({
   value,
+  stateFilter,
   onChange,
   onSelectCity,
   onBlur,
-  placeholder = 'Start typing city (e.g. Delhi, Pune)...',
+  placeholder = 'Start typing city (e.g. Delhi, Pune, Indore)...',
   required = false,
   disabled = false,
   className = '',
@@ -38,25 +40,10 @@ export function CityAutocomplete({
 
   const [open, setOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
+  const [suggestions, setSuggestions] = useState<IndianCityOption[]>(
+    INDIAN_CITIES_WITH_STATE.slice(0, 12)
+  );
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const suggestions = useMemo<IndianCityOption[]>(() => {
-    const q = (value || '').trim().toLowerCase();
-    if (!q) return INDIAN_CITIES_WITH_STATE.slice(0, 10);
-    const startsWith = INDIAN_CITIES_WITH_STATE.filter((item) =>
-      item.city.toLowerCase().startsWith(q)
-    );
-    const includes = INDIAN_CITIES_WITH_STATE.filter(
-      (item) =>
-        !item.city.toLowerCase().startsWith(q) &&
-        (item.city.toLowerCase().includes(q) || item.state.toLowerCase().includes(q))
-    );
-    return [...startsWith, ...includes].slice(0, 10);
-  }, [value]);
-
-  useEffect(() => {
-    setHighlightIdx(0);
-  }, [suggestions.length]);
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
@@ -67,6 +54,43 @@ export function CityAutocomplete({
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
+
+  useEffect(() => {
+    const q = (value || '').trim();
+    const st = (stateFilter || '').trim();
+    let active = true;
+
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams({ type: 'cities', q });
+      if (st) params.set('state', st);
+      fetch(`/api/storefront/locations?${params.toString()}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!active || !data || !Array.isArray(data.cities)) return;
+          if (data.cities.length > 0) {
+            setSuggestions(data.cities);
+          } else {
+            const localLower = q.toLowerCase();
+            const fallback = INDIAN_CITIES_WITH_STATE.filter(
+              (c) => c.city.toLowerCase().includes(localLower) || c.state.toLowerCase().includes(localLower)
+            ).slice(0, 12);
+            setSuggestions(fallback);
+          }
+        })
+        .catch(() => {
+          // Keep current suggestions
+        });
+    }, 120);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [value, stateFilter]);
+
+  useEffect(() => {
+    setHighlightIdx(0);
+  }, [suggestions.length]);
 
   const chooseOption = (opt: IndianCityOption) => {
     onChange(opt.city);
@@ -159,7 +183,7 @@ export function CityAutocomplete({
             const active = idx === highlightIdx;
             return (
               <li
-                key={`${item.city}-${item.state}`}
+                key={`${item.city}-${item.state}-${idx}`}
                 id={`${listboxId}-opt-${idx}`}
                 role="option"
                 aria-selected={active}
