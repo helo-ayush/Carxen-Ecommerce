@@ -1715,14 +1715,193 @@ function AccountContent() {
 
                     <button
                       type="button"
-                      className="ac-btn-red"
-                      onClick={handleOpenAddAddress}
+                      className={isAddressModalOpen ? 'ac-btn-outline' : 'ac-btn-red'}
+                      onClick={() => {
+                        if (isAddressModalOpen) setIsAddressModalOpen(false);
+                        else handleOpenAddAddress();
+                      }}
                       style={{ height: '36px', fontSize: '13px' }}
                     >
-                      <Plus size={14} />
-                      Add Address
+                      {isAddressModalOpen ? <X size={14} /> : <Plus size={14} />}
+                      {isAddressModalOpen ? 'Close Form' : 'Add Address'}
                     </button>
                   </div>
+
+                  {/* Inline Spacious Add / Edit Address Panel (Dealer-Portal Style) */}
+                  {isAddressModalOpen && (
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e4e4e7',
+                        borderRadius: '14px',
+                        padding: '22px',
+                        marginBottom: '22px',
+                        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <h4 style={{ fontSize: '15.5px', fontWeight: 700, color: '#09090b', margin: 0 }}>
+                          {editingAddress ? 'Edit Delivery Address' : 'Add New Delivery Address'}
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddressModalOpen(false)}
+                          style={{ cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none', padding: '4px' }}
+                          aria-label="Close address form"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveAddress}>
+                        <div style={{ marginBottom: '14px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '6px' }}>
+                            Address Type
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {['Home', 'Office', 'Workshop', 'Other'].map((lbl) => (
+                              <button
+                                key={lbl}
+                                type="button"
+                                onClick={() => setAddressForm({ ...addressForm, label: lbl })}
+                                className={addressForm.label === lbl ? 'ac-btn-dark' : 'ac-btn-outline'}
+                                style={{ height: '32px', fontSize: '12.5px', padding: '0 12px' }}
+                              >
+                                {lbl}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="ac-form-grid-2">
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-name">Recipient Name *</label>
+                            <input
+                              id="ac-addr-name"
+                              type="text"
+                              value={addressForm.name}
+                              onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
+                              placeholder="Full name"
+                              required
+                            />
+                          </div>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-phone">Phone Number *</label>
+                            <IndianPhoneInput
+                              id="ac-addr-phone"
+                              value={addressForm.phone}
+                              onChange={(phone) => setAddressForm({ ...addressForm, phone })}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="ac-field" style={{ marginTop: '14px' }}>
+                          <label htmlFor="ac-addr-line1">Address (House, Building, Street) *</label>
+                          <input
+                            id="ac-addr-line1"
+                            type="text"
+                            value={addressForm.addressLine1}
+                            onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
+                            placeholder="Plot/House No., Building, Street, Sector"
+                            required
+                          />
+                        </div>
+
+                        <div className="ac-form-grid-2" style={{ marginTop: '14px' }}>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-line2">Locality / Area</label>
+                            <input
+                              id="ac-addr-line2"
+                              type="text"
+                              value={addressForm.addressLine2}
+                              onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
+                              placeholder="Optional locality"
+                            />
+                          </div>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-landmark">Landmark</label>
+                            <input
+                              id="ac-addr-landmark"
+                              type="text"
+                              value={addressForm.landmark}
+                              onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
+                              placeholder="Optional landmark"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="ac-form-grid-3" style={{ marginTop: '14px' }}>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-city">City *</label>
+                            <CityAutocomplete
+                              id="ac-addr-city"
+                              stateFilter={addressForm.state}
+                              value={addressForm.city}
+                              onChange={(city) => setAddressForm({ ...addressForm, city })}
+                              onSelectCity={(city, state) => setAddressForm({ ...addressForm, city, state })}
+                              required
+                            />
+                          </div>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-state">State *</label>
+                            <StateAutocomplete
+                              id="ac-addr-state"
+                              value={addressForm.state}
+                              onChange={(state) => setAddressForm({ ...addressForm, state })}
+                              required
+                            />
+                          </div>
+                          <div className="ac-field" style={{ margin: 0 }}>
+                            <label htmlFor="ac-addr-pin">Pincode *</label>
+                            <PincodeAutocomplete
+                              id="ac-addr-pin"
+                              value={addressForm.postalCode}
+                              onChange={(postalCode) => setAddressForm({ ...addressForm, postalCode })}
+                              onResolveLocation={(city, state) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  city: prev.city || city,
+                                  state: prev.state || state,
+                                }))
+                              }
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ margin: '16px 0' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={addressForm.isPrimary}
+                              onChange={(e) => setAddressForm({ ...addressForm, isPrimary: e.target.checked })}
+                              style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
+                            />
+                            <span style={{ fontSize: '13px', color: '#09090b' }}>Set as default primary delivery address</span>
+                          </label>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #f4f4f5', paddingTop: '14px' }}>
+                          <button
+                            type="button"
+                            className="ac-btn-outline"
+                            onClick={() => setIsAddressModalOpen(false)}
+                            style={{ height: '38px', fontSize: '13px' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="ac-btn-red"
+                            style={{ height: '38px', fontSize: '13px', padding: '0 18px' }}
+                          >
+                            {editingAddress ? 'Update Address' : 'Save Address'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
 
                   {/* Primary Address */}
                   {primaryAddress ? (
@@ -2230,168 +2409,7 @@ function AccountContent() {
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* MODAL: ADD / EDIT ADDRESS MODAL                                   */}
-      {/* ================================================================= */}
-      {isAddressModalOpen && (
-        <div className="ac-dialog-overlay" onClick={() => setIsAddressModalOpen(false)}>
-          <div className="ac-dialog-card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 600, color: '#09090b' }}>
-                {editingAddress ? 'Edit Address' : 'Add New Address'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddressModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAddress}>
-              {/* Label selector */}
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '6px' }}>
-                  Address Type
-                </label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {['Home', 'Office', 'Workshop', 'Other'].map((lbl) => (
-                    <button
-                      key={lbl}
-                      type="button"
-                      onClick={() => setAddressForm({ ...addressForm, label: lbl })}
-                      className={addressForm.label === lbl ? 'ac-btn-dark' : 'ac-btn-outline'}
-                      style={{ height: '30px', fontSize: '12px', padding: '0 10px' }}
-                    >
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="ac-form-grid-2">
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Recipient Name</label>
-                  <input
-                    type="text"
-                    value={addressForm.name}
-                    onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label htmlFor="ac-addr-phone">Phone Number</label>
-                  <IndianPhoneInput
-                    id="ac-addr-phone"
-                    value={addressForm.phone}
-                    onChange={(phone) => setAddressForm({ ...addressForm, phone })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="ac-field" style={{ marginTop: '10px' }}>
-                <label>Address (House, Building, Street)</label>
-                <input
-                  type="text"
-                  value={addressForm.addressLine1}
-                  onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="ac-form-grid-2">
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Locality / Area</label>
-                  <input
-                    type="text"
-                    value={addressForm.addressLine2}
-                    onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
-                  />
-                </div>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Landmark</label>
-                  <input
-                    type="text"
-                    value={addressForm.landmark}
-                    onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="ac-form-grid-3" style={{ marginTop: '10px' }}>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label htmlFor="ac-addr-city">City</label>
-                  <CityAutocomplete
-                    id="ac-addr-city"
-                    stateFilter={addressForm.state}
-                    value={addressForm.city}
-                    onChange={(city) => setAddressForm({ ...addressForm, city })}
-                    onSelectCity={(city, state) => setAddressForm({ ...addressForm, city, state })}
-                    required
-                  />
-                </div>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label htmlFor="ac-addr-state">State</label>
-                  <StateAutocomplete
-                    id="ac-addr-state"
-                    value={addressForm.state}
-                    onChange={(state) => setAddressForm({ ...addressForm, state })}
-                    required
-                  />
-                </div>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label htmlFor="ac-addr-pin">Pincode</label>
-                  <PincodeAutocomplete
-                    id="ac-addr-pin"
-                    value={addressForm.postalCode}
-                    onChange={(postalCode) => setAddressForm({ ...addressForm, postalCode })}
-                    onResolveLocation={(city, state) =>
-                      setAddressForm((prev) => ({
-                        ...prev,
-                        city: prev.city || city,
-                        state: prev.state || state,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ margin: '14px 0' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={addressForm.isPrimary}
-                    onChange={(e) => setAddressForm({ ...addressForm, isPrimary: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
-                  />
-                  <span style={{ fontSize: '13px', color: '#09090b' }}>Set as default primary delivery address</span>
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="ac-btn-outline"
-                  onClick={() => setIsAddressModalOpen(false)}
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="ac-btn-red"
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  Save Address
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Inline address form rendered in Addresses tab */}
 
       {/* ================================================================= */}
       {/* MODAL: LIVE TRACKING TIMELINE                                     */}

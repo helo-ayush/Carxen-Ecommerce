@@ -174,9 +174,10 @@ export function PincodeAutocomplete({
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
-            left: 0,
             right: 0,
-            maxHeight: '220px',
+            minWidth: '280px',
+            width: '100%',
+            maxHeight: '240px',
             overflowY: 'auto',
             background: '#ffffff',
             border: '1px solid #e2e8f0',
