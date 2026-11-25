@@ -20,6 +20,7 @@ import { fitBadgeText, fitsVehicle, readFitment } from '@/lib/storefront/fitment
 import { CatalogState } from '@/components/CatalogState';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
+import { VehicleFilterBar } from '@/components/storefront/VehicleFilterBar';
 import { Pagination } from '@/components/ui/Pagination';
 import {
   Search,
@@ -201,6 +202,9 @@ function ShopContent() {
   const [fitType, setFitType] = useState<'all' | 'c' | 'u'>('all');
   const [selectedVehicleBrand, setSelectedVehicleBrand] = useState<string>(brandParam);
   const [selectedVehicleModel, setSelectedVehicleModel] = useState<string>(modelParam);
+  const [selectedVehicleYear, setSelectedVehicleYear] = useState<string>('');
+  const [selectedVehicleFuel, setSelectedVehicleFuel] = useState<string>('');
+  const [includeUniversalFit, setIncludeUniversalFit] = useState<boolean>(true);
   const [priceTier, setPriceTier] = useState<string>('all');
   const [seriesFilter, setSeriesFilter] = useState(seriesParam);
   const [searchQuery, setSearchQuery] = useState(queryParam);
@@ -445,29 +449,18 @@ function ShopContent() {
       const matchFit =
         fitType === 'all' || (fitType === 'c') === isCustomFit(p);
 
-      if (selectedVehicleBrand !== 'all') {
-        const bQuery = selectedVehicleBrand.toLowerCase();
-        const fit = readFitment(p);
-        const fitmentStr = typeof p.fitment === 'object' && p.fitment !== null ? JSON.stringify(p.fitment).toLowerCase() : String(p.fitment || '').toLowerCase();
-        const nameStr = p.n.toLowerCase();
-        const tagsStrLower = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
-        const brandMatch =
-          (fit.kind === 'vehicle' && fit.brand.toLowerCase() === bQuery) ||
-          fitmentStr.includes(bQuery) ||
-          nameStr.includes(bQuery) ||
-          tagsStrLower.includes(bQuery);
-        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
-        if (!brandMatch && !isUniversal) return false;
-
-        if (selectedVehicleModel !== 'all') {
-          const mQuery = selectedVehicleModel.toLowerCase();
-          const modelMatch =
-            (fit.kind === 'vehicle' && fit.model.toLowerCase().includes(mQuery)) ||
-            fitmentStr.includes(mQuery) ||
-            nameStr.includes(mQuery) ||
-            tagsStrLower.includes(mQuery);
-          if (!modelMatch && !isUniversal) return false;
-        }
+      if (selectedVehicleBrand !== 'all' || selectedVehicleModel !== 'all') {
+        const matched = fitsVehicle(
+          p,
+          {
+            b: selectedVehicleBrand !== 'all' ? selectedVehicleBrand : null,
+            m: selectedVehicleModel !== 'all' ? selectedVehicleModel : null,
+            y: selectedVehicleYear || null,
+            f: selectedVehicleFuel || null,
+          },
+          { includeUniversal: includeUniversalFit }
+        );
+        if (!matched) return false;
       }
 
       const matchPrice =
@@ -1257,6 +1250,32 @@ function ShopContent() {
                 })}
               </div>
             )}
+
+            {/* SEARCHABLE VEHICLE FITMENT FILTER BAR */}
+            <VehicleFilterBar
+              title="Find Parts for Your Vehicle"
+              activeGarageCar={activeCar}
+              includeUniversal={includeUniversalFit}
+              onToggleUniversal={setIncludeUniversalFit}
+              value={{
+                brand: selectedVehicleBrand === 'all' ? '' : selectedVehicleBrand,
+                model: selectedVehicleModel === 'all' ? '' : selectedVehicleModel,
+                year: selectedVehicleYear,
+                fuel: selectedVehicleFuel,
+              }}
+              onChange={(next) => {
+                const b = next.brand || 'all';
+                const m = next.model || 'all';
+                setSelectedVehicleBrand(b);
+                setSelectedVehicleModel(m);
+                setSelectedVehicleYear(next.year);
+                setSelectedVehicleFuel(next.fuel);
+                updateUrlFilters({
+                  brand: b === 'all' ? null : b,
+                  model: m === 'all' ? null : m,
+                });
+              }}
+            />
 
             {/* ACTIVE FILTERS CHIPS */}
             {hasActiveFilters && (

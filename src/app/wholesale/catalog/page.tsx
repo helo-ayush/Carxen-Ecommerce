@@ -11,9 +11,10 @@ import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
 import { getWholesaleQtyRules, snapWholesaleQty } from '@/lib/storefront/wholesale-qty';
 import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
 import { categoryLabel, compareCategories, slugifyCategory, normalizeCategoryKey } from '@/lib/storefront/categories';
-import { readFitment } from '@/lib/storefront/fitment';
+import { readFitment, fitsVehicle } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
+import { VehicleFilterBar } from '@/components/storefront/VehicleFilterBar';
 import { CatalogState } from '@/components/CatalogState';
 import { Plus, Minus, X, ArrowRight, Check, LayoutGrid, TableProperties, Sparkles, Filter, Layers } from 'lucide-react';
 import '../wholesale.css';
@@ -56,6 +57,9 @@ export default function WholesaleCatalogPage() {
   const [search, setSearch] = useState('');
   const [selectedMasterGroup, setSelectedMasterGroup] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedFuel, setSelectedFuel] = useState<string>('');
+  const [includeUniversalFit, setIncludeUniversalFit] = useState<boolean>(true);
 
   // Active Master Group Object from configured Category Tree
   const activeMasterGroupObj = useMemo(() => {
@@ -297,26 +301,19 @@ export default function WholesaleCatalogPage() {
       const nameStr = p.n.toLowerCase();
       const fit = readFitment(p);
 
-      // Brand filter (dynamically matched against VEDA product fitment)
-      if (selectedBrand !== 'All Brands') {
-        const brandQuery = selectedBrand.toLowerCase();
-        const brandMatch =
-          (fit.kind === 'vehicle' && fit.brand.toLowerCase() === brandQuery) ||
-          fitmentStr.includes(brandQuery) ||
-          nameStr.includes(brandQuery);
-        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
-        if (!brandMatch && !isUniversal) return false;
-      }
-
-      // Model filter (dynamically matched against VEDA product model)
-      if (selectedModel !== 'all') {
-        const modelQuery = selectedModel.toLowerCase();
-        const modelMatch =
-          (fit.kind === 'vehicle' && fit.model.toLowerCase() === modelQuery) ||
-          fitmentStr.includes(modelQuery) ||
-          nameStr.includes(modelQuery);
-        const isUniversal = fit.kind === 'universal' || fitmentStr.includes('universal');
-        if (!modelMatch && !isUniversal) return false;
+      // Multi-vehicle + Year + Fuel fitment matching
+      if (selectedBrand !== 'All Brands' || selectedModel !== 'all' || selectedYear || selectedFuel) {
+        const matched = fitsVehicle(
+          p,
+          {
+            b: selectedBrand !== 'All Brands' ? selectedBrand : null,
+            m: selectedModel !== 'all' ? selectedModel : null,
+            y: selectedYear || null,
+            f: selectedFuel || null,
+          },
+          { includeUniversal: includeUniversalFit }
+        );
+        if (!matched) return false;
       }
 
       // Text Search
@@ -546,6 +543,23 @@ export default function WholesaleCatalogPage() {
 
       {/* Multi-Vehicle & Category Filter Toolbar */}
       <div className="ws-filter-toolbar">
+        <VehicleFilterBar
+          title="Filter Wholesale Catalog by Vehicle (Make ➔ Model ➔ Year ➔ Fuel)"
+          includeUniversal={includeUniversalFit}
+          onToggleUniversal={setIncludeUniversalFit}
+          value={{
+            brand: selectedBrand === 'All Brands' ? '' : selectedBrand,
+            model: selectedModel === 'all' ? '' : selectedModel,
+            year: selectedYear,
+            fuel: selectedFuel,
+          }}
+          onChange={(next) => {
+            setSelectedBrand(next.brand || 'All Brands');
+            setSelectedModel(next.model || 'all');
+            setSelectedYear(next.year);
+            setSelectedFuel(next.fuel);
+          }}
+        />
         <div className="ws-filter-row-primary">
           <div className="ws-search-input-wrap">
             <span className="ws-search-icon">

@@ -5,24 +5,32 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { fitsVehicle } from '@/lib/storefront/fitment';
+import {
+  VehicleMakeAutocomplete,
+  VehicleModelAutocomplete,
+  type VehicleCatalogModelOption,
+} from '@/components/ui/VehicleAutocomplete';
+import { getYearsForRange } from '@/data/indian-vehicles-master';
 
 export default function GaragePage() {
   const router = useRouter();
-  const { car, setVehicle, vehicleBrands, getModelsForBrand, storefrontConfig, products } = useApp();
+  const { car, setVehicle, storefrontConfig, products } = useApp();
 
   const [brand, setBrand] = useState(car?.b || '');
   const [model, setModel] = useState(car?.m || '');
   const [year, setYear] = useState(car?.y || '');
   const [fuel, setFuel] = useState(car?.f || 'Petrol');
+  const [selectedModelMeta, setSelectedModelMeta] = useState<VehicleCatalogModelOption | null>(null);
 
   const fitmentConfig = storefrontConfig?.fitment;
   const fitmentImage =
     fitmentConfig?.image ||
     'https://images.unsplash.com/photo-1625690180114-5530b1304127?auto=format&fit=crop&w=1200&q=85';
 
-  const models = brand ? getModelsForBrand(brand) : [];
-  const years = Array.from({ length: 9 }, (_, i) => String(2026 - i));
-  const fuels = ['Petrol', 'Diesel', 'CNG', 'Electric'];
+  const years = getYearsForRange(selectedModelMeta?.yearFrom, selectedModelMeta?.yearTo);
+  const fuels = selectedModelMeta?.fuels?.length
+    ? selectedModelMeta.fuels
+    : ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'];
 
   const stepCount = (brand ? 1 : 0) + (model ? 1 : 0) + (year ? 1 : 0);
   const isComplete = !!(brand && model && year);
@@ -91,41 +99,62 @@ export default function GaragePage() {
         </div>
 
         <p className="gr-h">Brand</p>
-        <div className="gr-brands">
-          {vehicleBrands.map((b) => (
-            <button
-              key={b}
-              className={`gr-t ${brand === b ? 'on' : ''}`}
-              onClick={() => {
-                setBrand(b);
-                setModel('');
-                setYear('');
-              }}
-            >
-              <b>{b[0]}</b>
-              {b}
-            </button>
-          ))}
+        <div style={{ marginBottom: '12px' }}>
+          <VehicleMakeAutocomplete
+            value={brand}
+            placeholder="Search brand (e.g. Maruti Suzuki, Hyundai, BMW)..."
+            style={{
+              width: '100%',
+              height: '40px',
+              borderRadius: '10px',
+              border: '1px solid #d4d4d8',
+              padding: '0 12px',
+              fontSize: '13.5px',
+              background: '#ffffff',
+              color: '#09090b',
+            }}
+            onChange={(nextBrand) => {
+              setBrand(nextBrand);
+              if (nextBrand !== brand) setSelectedModelMeta(null);
+            }}
+            onSelectMake={(nextBrand) => {
+              setBrand(nextBrand);
+              setModel('');
+              setYear('');
+              setSelectedModelMeta(null);
+            }}
+          />
         </div>
 
         <p className="gr-h">Model</p>
-        <div className="gr-chips">
-          {brand ? (
-            models.map((m) => (
-              <button
-                key={m}
-                className={`pill ${model === m ? 'on' : ''}`}
-                onClick={() => {
-                  setModel(m);
-                  setYear('');
-                }}
-              >
-                {m}
-              </button>
-            ))
-          ) : (
-            <p className="gr-hint">Pick a brand first.</p>
-          )}
+        <div style={{ marginBottom: '12px' }}>
+          <VehicleModelAutocomplete
+            make={brand}
+            value={model}
+            placeholder={brand ? `Search ${brand} model...` : 'Pick a brand first, or type model...'}
+            style={{
+              width: '100%',
+              height: '40px',
+              borderRadius: '10px',
+              border: '1px solid #d4d4d8',
+              padding: '0 12px',
+              fontSize: '13.5px',
+              background: '#ffffff',
+              color: '#09090b',
+            }}
+            onChange={(nextModel) => setModel(nextModel)}
+            onSelectModel={(opt) => {
+              setModel(opt.model);
+              setSelectedModelMeta(opt);
+              const validYears = getYearsForRange(opt.yearFrom, opt.yearTo);
+              if (!validYears.includes(year)) setYear(validYears[0] || '');
+              if (opt.fuels.length > 0 && !opt.fuels.includes(fuel)) setFuel(opt.fuels[0]);
+            }}
+            onCatalogLoaded={(modelsList) => {
+              const match = modelsList.find((m) => m.model.toLowerCase() === model.trim().toLowerCase());
+              if (match) setSelectedModelMeta(match);
+            }}
+          />
         </div>
 
         <p className="gr-h">Year</p>
