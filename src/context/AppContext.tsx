@@ -1672,14 +1672,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isCartOpen, isMobileMenuOpen, quickViewProduct]);
 
   const cartCount = useMemo(() => {
+    if (catalogStatus === 'loading') return 0;
     return Object.entries(cart).reduce((sum, [idStr, q]) => {
       if (q <= 0) return sum;
-      if (products.length > 0 && !products.some((p) => p.id === Number(idStr))) {
+      if (!products.some((p) => p.id === Number(idStr))) {
         return sum;
       }
       return sum + q;
     }, 0);
-  }, [cart, products]);
+  }, [cart, products, catalogStatus]);
+
+  // Automatically prune stale/orphaned cart & wishlist IDs from localStorage once catalog finishes loading
+  useEffect(() => {
+    if (!isLoaded || catalogStatus === 'loading' || catalogStatus === 'error') return;
+    const validIds = new Set(products.map((p) => p.id));
+
+    setCart((prev) => {
+      const next: Record<number, number> = {};
+      let changed = false;
+      for (const [idStr, qty] of Object.entries(prev)) {
+        const numId = Number(idStr);
+        if (qty > 0 && validIds.has(numId)) {
+          next[numId] = qty;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+
+    setFav((prev) => {
+      const next = prev.filter((id) => validIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [isLoaded, catalogStatus, products]);
 
   const cartSubtotal = useMemo(() => {
     return Object.entries(cart).reduce((total, [idStr, qty]) => {
