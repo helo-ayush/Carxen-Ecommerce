@@ -161,15 +161,6 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Razorpay Sandbox / Mock Simulation state
-  const [mockModalOpen, setMockModalOpen] = useState(false);
-  const [mockOrderDetails, setMockOrderDetails] = useState<{
-    razorpayOrderId: string;
-    amountInPaise: number;
-    finalTotal: number;
-    selectedAddress: StorefrontShippingAddressSnapshot;
-  } | null>(null);
-
   // Confetti Canvas ref
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const confettiAnimRef = useRef<number | null>(null);
@@ -624,7 +615,6 @@ export default function CheckoutPage() {
         }),
       });
 
-      setMockModalOpen(false);
       clearCart();
       showToast('Payment verified & order placed successfully!');
       try {
@@ -690,20 +680,7 @@ export default function CheckoutPage() {
 
         const orderData = await createOrderRes.json();
         if (!createOrderRes.ok || !orderData.success) {
-          throw new Error(orderData.error || 'Failed to initialize Razorpay checkout order.');
-        }
-
-        // Check if environment is in mock test mode (placeholder keys)
-        if (orderData.isMock) {
-          setMockOrderDetails({
-            razorpayOrderId: orderData.razorpayOrderId,
-            amountInPaise: orderData.amount,
-            finalTotal,
-            selectedAddress,
-          });
-          setMockModalOpen(true);
-          setIsSubmitting(false);
-          return;
+          throw new Error(orderData.error || 'Online payment is currently unavailable. Please try again or select Cash on Delivery.');
         }
 
         // Live Razorpay Mode: Ensure script is ready
@@ -2147,241 +2124,6 @@ export default function CheckoutPage() {
           )}
         </div>
       </main>
-
-      {/* RAZORPAY TEST ENVIRONMENT SIMULATOR MODAL (When placeholder keys are active) */}
-      {mockModalOpen && mockOrderDetails && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(14, 14, 16, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: 20,
-              width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 20px 48px rgba(0, 0, 0, 0.28)',
-              overflow: 'hidden',
-              border: '1px solid #eeede8',
-              animation: 'modalSlideIn 0.25s ease-out',
-            }}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                background: '#0e0e10',
-                color: '#ffffff',
-                padding: '20px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div
-                  style={{
-                    background: 'var(--red, #e2231a)',
-                    color: '#ffffff',
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: 15,
-                  }}
-                >
-                  CX
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.3px' }}>CARXEN CHECKOUT</div>
-                  <div style={{ fontSize: 11, color: '#a1a1aa' }}>Razorpay Test Gateway (Sandbox)</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMockModalOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#a1a1aa',
-                  cursor: 'pointer',
-                  padding: 4,
-                }}
-              >
-                <X style={{ width: 18, height: 18 }} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Notice Pill */}
-              <div
-                style={{
-                  background: '#fef3c7',
-                  border: '1px solid #fde68a',
-                  borderRadius: 10,
-                  padding: '12px 14px',
-                  fontSize: 12,
-                  color: '#92400e',
-                  lineHeight: 1.45,
-                }}
-              >
-                <strong>🔑 Sandbox Mode Active:</strong> Your <code>.env.local</code> currently has placeholder Razorpay keys. Once you add your live Razorpay Key ID &amp; Secret, this modal will seamlessly open the real Razorpay popup directly.
-              </div>
-
-              {/* Order Info */}
-              <div
-                style={{
-                  background: '#faf9f6',
-                  borderRadius: 12,
-                  border: '1px solid #eeede8',
-                  padding: '14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  fontSize: 13,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#5d5d64' }}>
-                  <span>Razorpay Order ID</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0e0e10' }}>
-                    {mockOrderDetails.razorpayOrderId}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#5d5d64' }}>
-                  <span>Customer</span>
-                  <span style={{ fontWeight: 600, color: '#0e0e10' }}>
-                    {mockOrderDetails.selectedAddress.name} ({mockOrderDetails.selectedAddress.phone})
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    paddingTop: 8,
-                    borderTop: '1px solid #eeede8',
-                    fontSize: 15,
-                    fontWeight: 800,
-                    color: '#0e0e10',
-                  }}
-                >
-                  <span>Amount to Pay</span>
-                  <span style={{ color: 'var(--red, #e2231a)' }}>{formatINR(mockOrderDetails.finalTotal)}</span>
-                </div>
-              </div>
-
-              {/* Supported simulated payment methods */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#71717a', textTransform: 'uppercase' }}>
-                  Simulated Payment Modes:
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, fontSize: 12 }}>
-                  <div style={{ background: '#f4f3ef', borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                    <Smartphone style={{ width: 14, height: 14, color: 'var(--red, #e2231a)' }} /> UPI (PhonePe / GPay)
-                  </div>
-                  <div style={{ background: '#f4f3ef', borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                    <CreditCard style={{ width: 14, height: 14, color: '#2563eb' }} /> Visa &bull; Mastercard
-                  </div>
-                  <div style={{ background: '#f4f3ef', borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                    <Building2 style={{ width: 14, height: 14, color: '#059669' }} /> NetBanking
-                  </div>
-                  <div style={{ background: '#f4f3ef', borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                    <QrCode style={{ width: 14, height: 14, color: '#7c3aed' }} /> Dynamic UPI QR
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-                <button
-                  type="button"
-                  style={{
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '12px 18px',
-                    borderRadius: 10,
-                    fontWeight: 700,
-                    fontSize: 13.5,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-                  }}
-                  disabled={isSubmitting}
-                  onClick={async () => {
-                    const mockPaymentId = `pay_mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                    const mockSignature = `mock_sig_${Math.random().toString(36).slice(2, 12)}`;
-                    await handleVerifyAndPlaceOrder({
-                      razorpay_order_id: mockOrderDetails.razorpayOrderId,
-                      razorpay_payment_id: mockPaymentId,
-                      razorpay_signature: mockSignature,
-                      selectedAddress: mockOrderDetails.selectedAddress,
-                    });
-                  }}
-                >
-                  <ShieldCheck style={{ width: 16, height: 16 }} />
-                  {isSubmitting ? 'Verifying with Backend...' : '✓ Approve Test Payment (Simulate Success)'}
-                </button>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button
-                    type="button"
-                    style={{
-                      background: '#ffffff',
-                      color: 'var(--red, #e2231a)',
-                      border: '1px solid rgba(226, 35, 26, 0.3)',
-                      padding: '10px 14px',
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      fontSize: 12,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => {
-                      setMockModalOpen(false);
-                      setSubmitError('Simulated payment failure: Transaction was cancelled or declined by user.');
-                      showToast('Payment declined (Test Simulation)');
-                    }}
-                  >
-                    Simulate Decline
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      background: '#f4f3ef',
-                      color: '#5d5d64',
-                      border: '1px solid #e7e6e0',
-                      padding: '10px 14px',
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      fontSize: 12,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setMockModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

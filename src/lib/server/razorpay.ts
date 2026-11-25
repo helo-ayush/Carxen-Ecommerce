@@ -3,7 +3,15 @@
 export interface RazorpayConfig {
   keyId: string;
   keySecret: string;
-  isMock: boolean;
+}
+
+export class PaymentGatewayUnavailableError extends Error {
+  constructor(
+    message = 'Online payment gateway is currently unavailable. Please try again later or choose Cash on Delivery (COD).'
+  ) {
+    super(message);
+    this.name = 'PaymentGatewayUnavailableError';
+  }
 }
 
 export function getRazorpayConfig(): RazorpayConfig {
@@ -15,16 +23,19 @@ export function getRazorpayConfig(): RazorpayConfig {
 
   const keySecret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
 
-  const isMock =
+  const isPlaceholder =
     !keyId ||
     !keySecret ||
     keyId === 'rzp_test_mockKeyId123' ||
     keySecret === 'mockKeySecret123';
 
+  if (isPlaceholder) {
+    throw new PaymentGatewayUnavailableError();
+  }
+
   return {
-    keyId: keyId || 'rzp_test_mockKeyId123',
-    keySecret: keySecret || 'mockKeySecret123',
-    isMock,
+    keyId,
+    keySecret,
   };
 }
 
@@ -41,7 +52,6 @@ export interface RazorpayOrderResult {
   currency: string;
   receipt?: string;
   status: string;
-  isMock: boolean;
   notes?: Record<string, string>;
 }
 
@@ -50,19 +60,7 @@ export interface RazorpayOrderResult {
  * The amount is always verified on the backend before this is called.
  */
 export async function createRazorpayOrder(params: CreateOrderParams): Promise<RazorpayOrderResult> {
-  const { keyId, keySecret, isMock } = getRazorpayConfig();
-
-  if (isMock) {
-    return {
-      id: `order_mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      amount: params.amountInPaise,
-      currency: params.currency || 'INR',
-      receipt: params.receipt,
-      status: 'created',
-      isMock: true,
-      notes: params.notes,
-    };
-  }
+  const { keyId, keySecret } = getRazorpayConfig();
 
   const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
 
@@ -83,7 +81,7 @@ export async function createRazorpayOrder(params: CreateOrderParams): Promise<Ra
   if (!response.ok) {
     const errorBody = await response.text();
     console.error('Razorpay order creation failed:', errorBody);
-    throw new Error(`Failed to create Razorpay order (${response.status}): ${errorBody}`);
+    throw new Error('Unable to connect to the payment gateway right now. Please try again or use Cash on Delivery.');
   }
 
   const data = await response.json();
@@ -93,7 +91,6 @@ export async function createRazorpayOrder(params: CreateOrderParams): Promise<Ra
     currency: data.currency,
     receipt: data.receipt,
     status: data.status,
-    isMock: false,
     notes: data.notes,
   };
 }
@@ -109,17 +106,7 @@ export interface VerifySignatureParams {
  * Uses timing-safe string comparison to prevent timing attacks.
  */
 export function verifyRazorpaySignature(params: VerifySignatureParams): boolean {
-  const { keySecret, isMock } = getRazorpayConfig();
-
-  if (isMock) {
-    // In mock simulation mode, accept mock order & payment tokens
-    return (
-      Boolean(params.razorpay_order_id && params.razorpay_payment_id) &&
-      (params.razorpay_order_id.startsWith('order_mock_') ||
-        params.razorpay_payment_id.startsWith('pay_mock_') ||
-        params.razorpay_signature.startsWith('mock_sig_'))
-    );
-  }
+  const { keySecret } = getRazorpayConfig();
 
   if (!params.razorpay_order_id || !params.razorpay_payment_id || !params.razorpay_signature) {
     return false;
@@ -156,19 +143,7 @@ export interface FetchPaymentParams {
  * 3. Confirms payment order_id matches expected order_id
  */
 export async function fetchAndVerifyRazorpayPayment(params: FetchPaymentParams) {
-  const { keyId, keySecret, isMock } = getRazorpayConfig();
-
-  if (isMock) {
-    return {
-      id: params.razorpay_payment_id,
-      order_id: params.expected_order_id,
-      amount: params.expected_amount_in_paise,
-      currency: 'INR',
-      status: 'captured',
-      method: 'upi',
-      isMock: true,
-    };
-  }
+  const { keyId, keySecret } = getRazorpayConfig();
 
   const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
   const response = await fetch(`https://api.razorpay.com/v1/payments/${params.razorpay_payment_id}`, {

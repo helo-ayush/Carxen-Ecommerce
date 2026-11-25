@@ -418,19 +418,16 @@ function AccountContent() {
       if (directToken) {
         headers['Authorization'] = `Bearer ${directToken}`;
       }
-      const cached = localStorage.getItem('cx_user_profile') || localStorage.getItem('cx_demo_user');
+      const cached = localStorage.getItem('cx_user_profile');
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed.id) headers['x-demo-user-id'] = parsed.id;
-          if (parsed.email) headers['x-demo-user-email'] = parsed.email;
+          if (parsed.id) headers['x-user-id'] = parsed.id;
         } catch {}
       }
     }
-    if (user?.id && !headers['x-demo-user-id']) headers['x-demo-user-id'] = user.id;
-    if (user?.email && !headers['x-demo-user-email']) headers['x-demo-user-email'] = user.email;
     return headers;
-  }, [user?.id, user?.email]);
+  }, []);
 
   // Sync customer product reviews from backend API with localStorage fallback
   const loadCustomerReviews = React.useCallback(async () => {
@@ -955,14 +952,6 @@ function AccountContent() {
                 >
                   Sign in with Email
                 </Link>
-                <button
-                  type="button"
-                  className="ac-btn-outline"
-                  onClick={() => login('Aarav Sharma')}
-                  style={{ height: '42px', fontSize: '14px' }}
-                >
-                  Instant Demo Sign-in (Aarav Sharma)
-                </button>
                 <Link
                   className="ac-btn-outline"
                   href="/shop"

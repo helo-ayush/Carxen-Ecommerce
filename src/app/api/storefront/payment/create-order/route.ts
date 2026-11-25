@@ -117,7 +117,6 @@ export async function POST(request: Request) {
         amount: totals.amountInPaise,
         currency: 'INR',
         keyId,
-        isMock: rzpOrder.isMock,
         summary: {
           subtotal: totals.subtotal,
           couponDiscount: totals.couponDiscount,

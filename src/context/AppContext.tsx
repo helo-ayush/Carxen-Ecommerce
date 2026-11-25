@@ -564,20 +564,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setUser(constructUserFromSession(data.session.user));
             void fetchCustomerBackendProfile(data.session.access_token, data.session.user);
           } else {
-            // Check for locally persisted active user session (direct DB auth or demo)
+            // Check for locally persisted active user session
             try {
               const cachedProfile = localStorage.getItem('cx_user_profile');
               const cachedToken = localStorage.getItem('cx_auth_token');
-              const cachedDemo = localStorage.getItem('cx_demo_user');
 
               if (cachedProfile) {
                 const parsed = JSON.parse(cachedProfile);
                 setUser(parsed);
                 void fetchCustomerBackendProfile(cachedToken || undefined, parsed);
-              } else if (cachedDemo) {
-                const parsed = JSON.parse(cachedDemo);
-                setUser(parsed);
-                void fetchCustomerBackendProfile(undefined, parsed);
               } else {
                 setUser(null);
               }
@@ -775,20 +770,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toastMessage]);
 
-  const login = (name?: string) => {
-    const demoUser: User = {
-      name: name || 'Aarav Sharma',
-      email: 'aarav.speed@carxen.io',
-      phone: '+91 98201 44829',
-      avatarUrl: '',
-      joinedDate: 'Oct 2024',
-      rewardPoints: 250,
-    };
-    setUser(demoUser);
-    try {
-      localStorage.setItem('cx_demo_user', JSON.stringify(demoUser));
-    } catch {}
-    showToast(`Signed in as ${demoUser.name}`);
+  const login = () => {
+    showToast('Please sign in with your email and password.');
   };
 
   const loginWithEmail = async (email: string, password: string) => {
@@ -955,9 +938,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = prev ? { ...prev, ...profileUpdates } : ({ name: 'Driver', ...profileUpdates } as User);
       try {
         localStorage.setItem('cx_user_profile', JSON.stringify(next));
-        if (localStorage.getItem('cx_demo_user')) {
-          localStorage.setItem('cx_demo_user', JSON.stringify(next));
-        }
       } catch {}
       return next;
     });
@@ -1837,7 +1817,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 };
                 try {
                   localStorage.setItem('cx_user_profile', JSON.stringify(updatedUser));
-                  localStorage.setItem('cx_demo_user', JSON.stringify(updatedUser));
                 } catch {}
                 return updatedUser;
               });

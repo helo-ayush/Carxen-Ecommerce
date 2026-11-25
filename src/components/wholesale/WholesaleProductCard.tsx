@@ -161,8 +161,8 @@ export function WholesaleProductCard({
           style={{
             filter:
               (!colorOptions[selectedColorIdx]?.images || colorOptions[selectedColorIdx]?.images.length === 0) &&
-              activeTintFilter &&
-              activeTintFilter !== 'none'
+                activeTintFilter &&
+                activeTintFilter !== 'none'
                 ? activeTintFilter
                 : undefined,
           }}

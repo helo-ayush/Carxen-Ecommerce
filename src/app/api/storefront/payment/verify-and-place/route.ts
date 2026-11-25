@@ -223,7 +223,6 @@ export async function POST(request: Request) {
             payment_method: verifiedPayment?.method || 'razorpay',
             paid_amount_in_paise: totals.amountInPaise,
             paid_at: now,
-            is_mock: Boolean(verifiedPayment?.isMock),
           },
           paidAt: now,
           createdAt: now,

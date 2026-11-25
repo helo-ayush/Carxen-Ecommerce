@@ -74,9 +74,9 @@ const SUPPORT_CARD_FALLBACK_IMAGE =
 const LANDING_REVIEWS = [
   {
     id: 'landing-rev-1',
-    author: 'Aarav Sharma',
+    author: 'Rahul Verma',
     sub: 'Hyundai Creta · New Delhi',
-    avatar: 'AS',
+    avatar: 'RV',
     bg: '#e2231a',
     rating: 5.0,
     text: 'The seat covers fit my Creta like they were stitched around it. Two months of daily driving and there is still zero creasing.',
@@ -1428,7 +1428,7 @@ export default function HomePage() {
                 <input
                   id="support-name"
                   className="support-input"
-                  placeholder="e.g. Aarav Sharma"
+                  placeholder="Your full name"
                   value={supportName}
                   onChange={(e) => setSupportName(e.target.value)}
                   minLength={2}

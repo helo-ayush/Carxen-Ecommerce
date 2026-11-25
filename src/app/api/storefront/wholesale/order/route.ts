@@ -355,7 +355,6 @@ export async function POST(request: Request) {
         amount: amountInPaise,
         currency: 'INR',
         keyId,
-        isMock: rzpOrder.isMock,
         subtotal,
         discountAmount: couponDiscount,
         couponCode: validCouponCode,
