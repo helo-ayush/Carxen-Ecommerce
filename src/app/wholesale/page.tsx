@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
+import {
+  IndianPhoneInput,
+  extractTenDigitIndianPhone,
+  isValidIndianMobile10,
+} from '@/components/ui/IndianPhoneInput';
+import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
+import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
+import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
 import { 
   ArrowRight, 
   AlertCircle, 
@@ -62,8 +70,7 @@ const sanitizePincode = (val: string) => {
 };
 
 const isValidPhone = (val: string) => {
-  const digits = val.replace(/\D/g, '');
-  return digits.length === 10 || (digits.length === 12 && digits.startsWith('91'));
+  return isValidIndianMobile10(extractTenDigitIndianPhone(val));
 };
 
 function extractVisitingCard(b2bDocuments: unknown): { url: string; name: string; size?: number } | null {
@@ -779,37 +786,17 @@ export default function WholesaleDashboardPage() {
 
                 <div className="ws-field-group">
                   <div className="ws-field-header">
-                    <label className="ws-field-label">
+                    <label htmlFor="ws-onboard-phone" className="ws-field-label">
                       Business Phone / WhatsApp <span className="ws-field-req">*</span>
                     </label>
-                    {formData.phone ? (
-                      <span style={{ fontSize: '11px', color: isValidPhone(formData.phone) ? '#059669' : '#d97706', fontWeight: 600 }}>
-                        {formData.phone.replace(/\D/g, '').length} digits
-                      </span>
-                    ) : null}
                   </div>
-                  <input
-                    type="tel"
+                  <IndianPhoneInput
+                    id="ws-onboard-phone"
                     required
-                    maxLength={14}
-                    className="ws-input-text"
-                    style={{
-                      border: formData.phone && !isValidPhone(formData.phone) ? '1px solid #f59e0b' : undefined,
-                    }}
-                    placeholder="+91 9876543210 or 9876543210"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: sanitizePhone(e.target.value) })}
+                    onChange={(phone) => setFormData({ ...formData, phone })}
+                    placeholder="98765 43210"
                   />
-                  {formData.phone && !isValidPhone(formData.phone) && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
-                      Please enter a valid 10-digit mobile number
-                    </span>
-                  )}
-                  {formData.phone && isValidPhone(formData.phone) && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
-                      ✓ Valid mobile number
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -838,39 +825,41 @@ export default function WholesaleDashboardPage() {
               <div className="ws-responsive-grid-3">
                 <div className="ws-field-group">
                   <div className="ws-field-header">
-                    <label className="ws-field-label">
+                    <label htmlFor="ws-onboard-city" className="ws-field-label">
                       City <span className="ws-field-req">*</span>
                     </label>
                   </div>
-                  <input
-                    type="text"
+                  <CityAutocomplete
+                    id="ws-onboard-city"
+                    stateFilter={formData.state}
                     required
                     className="ws-input-text"
-                    placeholder="e.g. New Delhi"
+                    placeholder="Start typing city (e.g. Delhi, Pune)..."
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(city) => setFormData({ ...formData, city })}
+                    onSelectCity={(city, state) => setFormData({ ...formData, city, state })}
                   />
                 </div>
 
                 <div className="ws-field-group">
                   <div className="ws-field-header">
-                    <label className="ws-field-label">
+                    <label htmlFor="ws-onboard-state" className="ws-field-label">
                       State <span className="ws-field-req">*</span>
                     </label>
                   </div>
-                  <input
-                    type="text"
+                  <StateAutocomplete
+                    id="ws-onboard-state"
                     required
                     className="ws-input-text"
-                    placeholder="e.g. Delhi"
+                    placeholder="Select or type State / UT..."
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={(state) => setFormData({ ...formData, state })}
                   />
                 </div>
 
                 <div className="ws-field-group">
                   <div className="ws-field-header">
-                    <label className="ws-field-label">
+                    <label htmlFor="ws-onboard-pin" className="ws-field-label">
                       PIN Code <span className="ws-field-req">*</span>
                     </label>
                     {formData.pincode ? (
@@ -879,28 +868,21 @@ export default function WholesaleDashboardPage() {
                       </span>
                     ) : null}
                   </div>
-                  <input
-                    type="text"
+                  <PincodeAutocomplete
+                    id="ws-onboard-pin"
                     required
-                    maxLength={6}
                     className="ws-input-text mono"
-                    style={{
-                      border: formData.pincode && formData.pincode.length < 6 ? '1px solid #f59e0b' : undefined,
-                    }}
                     placeholder="110001"
                     value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: sanitizePincode(e.target.value) })}
+                    onChange={(pincode) => setFormData({ ...formData, pincode })}
+                    onResolveLocation={(city, state) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        city: prev.city || city,
+                        state: prev.state || state,
+                      }))
+                    }
                   />
-                  {formData.pincode && formData.pincode.length < 6 && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
-                      6-digit postal code required
-                    </span>
-                  )}
-                  {formData.pincode && formData.pincode.length === 6 && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#059669', marginTop: '4px' }}>
-                      ✓ Valid PIN code
-                    </span>
-                  )}
                 </div>
               </div>
 
