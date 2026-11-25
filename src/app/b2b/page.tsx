@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
 import { getAvailableCouponsForBuyer, type WholesaleBuyerContext } from '@/lib/storefront/coupons';
 import {
   Building2,
@@ -1367,10 +1368,11 @@ export default function B2BWholesalePage() {
 
                 <div className="b2b-field">
                   <label>City</label>
-                  <input
-                    type="text"
+                  <CityAutocomplete
+                    id="b2b-city"
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(city) => setFormData({ ...formData, city })}
+                    onSelectCity={(city, state) => setFormData({ ...formData, city, state })}
                     placeholder="e.g. Delhi"
                   />
                 </div>

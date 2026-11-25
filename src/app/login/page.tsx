@@ -4,6 +4,8 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { loginSchema, signupSchema, extractZodFieldErrors } from '@/lib/validation/storefront-schemas';
 
 function LoginForm() {
   const router = useRouter();
@@ -18,6 +20,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || '/account';
 
@@ -62,35 +65,21 @@ function LoginForm() {
     e.preventDefault();
     setErrorMessage(null);
     setInfoMessage(null);
+    setFieldErrors({});
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setErrorMessage('Please enter your email address.');
-      return;
-    }
-
-    if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
-      setErrorMessage('Please enter a valid email address.');
-      return;
-    }
-
-    if (!password) {
-      setErrorMessage('Please enter your password.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
-      return;
-    }
 
     if (mode === 'up') {
-      if (!fullName.trim()) {
-        setErrorMessage('Please enter your full name.');
-        return;
-      }
-      if (confirmPassword && password !== confirmPassword) {
-        setErrorMessage('Passwords do not match.');
+      const parsed = signupSchema.safeParse({
+        fullName,
+        email: trimmedEmail,
+        password,
+        confirmPassword,
+      });
+      if (!parsed.success) {
+        const errs = extractZodFieldErrors(parsed);
+        setFieldErrors(errs);
+        setErrorMessage(Object.values(errs)[0] || 'Please check the highlighted fields.');
         return;
       }
 
@@ -398,23 +387,32 @@ function LoginForm() {
                   required
                 />
 
-                <input
-                  className="lg-in"
-                  type="password"
+                <PasswordInput
+                  id="login-password"
+                  inputClassName="lg-in"
                   placeholder={mode === 'up' ? 'Password (min. 6 characters)' : 'Password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  showStrength={mode === 'up'}
+                  error={fieldErrors.password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: '' }));
+                  }}
                   autoComplete={mode === 'up' ? 'new-password' : 'current-password'}
                   required
                 />
 
                 {mode === 'up' && (
-                  <input
-                    className="lg-in"
-                    type="password"
+                  <PasswordInput
+                    id="login-confirm-password"
+                    inputClassName="lg-in"
                     placeholder="Confirm password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    error={fieldErrors.confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: '' }));
+                    }}
                     autoComplete="new-password"
                   />
                 )}

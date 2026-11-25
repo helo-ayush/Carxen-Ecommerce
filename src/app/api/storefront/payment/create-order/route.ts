@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getRazorpayConfig, createRazorpayOrder } from '@/lib/server/razorpay';
 import { calculateAuthoritativeCartTotals } from '@/lib/server/checkout-pricing';
 import { getAuthenticatedCustomer, loadCustomerOrders } from '@/lib/server/customer';

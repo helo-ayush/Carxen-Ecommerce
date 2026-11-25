@@ -9,6 +9,7 @@ import { formatINR } from '@/data/products';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { Footer } from '@/components/Footer';
+import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
 import { supabase } from '@/lib/supabase/client';
 import { createStorefrontOrder } from '@/lib/storefront/order-client';
 import {
@@ -1242,11 +1243,13 @@ export default function CheckoutPage() {
                                 value={newAddress.postalCode}
                                 onChange={(e) => setNewAddress((c) => ({ ...c, postalCode: e.target.value }))}
                               />
-                              <input
+                              <CityAutocomplete
+                                id="ck-addr-city"
                                 className="inf-ck-input"
                                 placeholder="City"
                                 value={newAddress.city}
-                                onChange={(e) => setNewAddress((c) => ({ ...c, city: e.target.value }))}
+                                onChange={(city) => setNewAddress((c) => ({ ...c, city }))}
+                                onSelectCity={(city, state) => setNewAddress((c) => ({ ...c, city, state }))}
                               />
                               <input
                                 className="inf-ck-input"

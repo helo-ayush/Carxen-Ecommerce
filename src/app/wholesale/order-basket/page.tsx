@@ -8,6 +8,7 @@ import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
+import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { ProductArt } from '@/components/ProductArt';
 import { CatalogState } from '@/components/CatalogState';
@@ -1267,13 +1268,17 @@ export default function WholesaleOrderBasketPage() {
 
                     <div className="ws-form-grid ws-form-grid-3">
                       <div className="ws-form-group">
-                        <label className="ws-form-label">City *</label>
-                        <input
-                          type="text"
+                        <label htmlFor="ws-shipping-city" className="ws-form-label">City *</label>
+                        <CityAutocomplete
+                          id="ws-shipping-city"
                           required
                           className="ws-form-input"
                           value={shippingCity}
-                          onChange={(e) => setShippingCity(e.target.value)}
+                          onChange={(city) => setShippingCity(city)}
+                          onSelectCity={(city, state) => {
+                            setShippingCity(city);
+                            setShippingState(state);
+                          }}
                         />
                       </div>
                       <div className="ws-form-group">

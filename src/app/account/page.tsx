@@ -13,6 +13,8 @@ import {
 } from '@/lib/order-stages';
 import type { CustomerAddress, CustomerOrderHistoryRecord } from '@/types/customer';
 import { Footer } from '@/components/Footer';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
 import { supabase } from '@/lib/supabase/client';
 import {
   Package,
@@ -2095,34 +2097,43 @@ function AccountContent() {
 
                     <form onSubmit={handleUpdatePassword}>
                       <div className="ac-field">
-                        <label>Current Password</label>
-                        <input
-                          type="password"
+                        <label htmlFor="ac-current-pw">Current Password</label>
+                        <PasswordInput
+                          id="ac-current-pw"
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           placeholder="••••••••"
+                          autoComplete="current-password"
                           required
                         />
                       </div>
 
                       <div className="ac-form-grid-2">
                         <div className="ac-field">
-                          <label>New Password</label>
-                          <input
-                            type="password"
+                          <label htmlFor="ac-new-pw">New Password</label>
+                          <PasswordInput
+                            id="ac-new-pw"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="••••••••"
+                            autoComplete="new-password"
+                            showStrength
                             required
                           />
                         </div>
                         <div className="ac-field">
-                          <label>Confirm Password</label>
-                          <input
-                            type="password"
+                          <label htmlFor="ac-confirm-pw">Confirm Password</label>
+                          <PasswordInput
+                            id="ac-confirm-pw"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
+                            autoComplete="new-password"
+                            error={
+                              confirmPassword && newPassword !== confirmPassword
+                                ? 'Passwords do not match'
+                                : undefined
+                            }
                             required
                           />
                         </div>
@@ -2308,11 +2319,12 @@ function AccountContent() {
 
               <div className="ac-form-grid-3" style={{ marginTop: '10px' }}>
                 <div className="ac-field" style={{ margin: 0 }}>
-                  <label>City</label>
-                  <input
-                    type="text"
+                  <label htmlFor="ac-addr-city">City</label>
+                  <CityAutocomplete
+                    id="ac-addr-city"
                     value={addressForm.city}
-                    onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                    onChange={(city) => setAddressForm({ ...addressForm, city })}
+                    onSelectCity={(city, state) => setAddressForm({ ...addressForm, city, state })}
                     required
                   />
                 </div>
