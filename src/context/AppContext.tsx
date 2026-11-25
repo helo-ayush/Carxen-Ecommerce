@@ -17,6 +17,7 @@ import {
   type ActiveInventoryVehicle,
 } from '@/lib/storefront/vehicle-client';
 import { getEffectiveWholesaleUnitPrice, calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
+import { getWholesaleQtyRules, snapWholesaleQty } from '@/lib/storefront/wholesale-qty';
 import { supabase } from '@/lib/supabase/client';
 import type {
   CustomerAddress,
@@ -1487,7 +1488,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addToWholesaleBasket = useCallback((productId: number, qty = 1) => {
     const p = products.find((x) => x.id === productId);
-    const moq = p?.b2bMoq || 5;
+    const rules = p ? getWholesaleQtyRules(p) : { moq: 5, minQty: 5, packSize: 1, enforcePack: false, step: 1 };
+    const moq = rules.minQty;
+    const maxStock = p?.isCustomProduct && typeof p.stockCount === 'number' ? p.stockCount : null;
 
     if (p?.isCustomProduct && typeof p.stockCount === 'number') {
       if (p.stockCount <= 0 || p.inStock === false) {
@@ -1495,19 +1498,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (p.stockCount < moq) {
-        showToast(`Only ${p.stockCount} unit(s) available (below MOQ of ${moq}).`);
+        showToast(`Only ${p.stockCount} unit(s) available (below minimum ${moq}).`);
         return;
       }
     }
 
     let cappedAtMax = false;
+    let finalAddedQty = qty;
     setWholesaleBasket((prev) => {
       const current = prev[productId] || 0;
-      let initialQty = current === 0 ? Math.max(qty, moq) : current + qty;
-      if (p?.isCustomProduct && typeof p.stockCount === 'number' && initialQty > p.stockCount) {
-        initialQty = p.stockCount;
+      const rawNext = current === 0 ? Math.max(qty, moq) : current + qty;
+      let initialQty = p ? snapWholesaleQty(p, rawNext, maxStock) : rawNext;
+      if (maxStock !== null && rawNext > maxStock) {
         cappedAtMax = true;
       }
+      finalAddedQty = initialQty;
       const next = { ...prev, [productId]: initialQty };
       try {
         localStorage.setItem('cx_wholesale_basket', JSON.stringify(next));
@@ -1518,20 +1523,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (cappedAtMax && typeof p.stockCount === 'number') {
         showToast(`Capped at ${p.stockCount} available unit(s) for ${p.n}.`);
       } else {
-        showToast(`Added to Wholesale Order Basket — ${p.n} (${qty} units)`);
+        showToast(`Added to Wholesale Order Basket — ${p.n} (${finalAddedQty} units)`);
       }
     }
   }, [products]);
 
   const updateWholesaleBasketQty = useCallback((productId: number, qty: number) => {
     const p = products.find((x) => x.id === productId);
-    const cappedQty =
-      p?.isCustomProduct && typeof p.stockCount === 'number' && qty > p.stockCount
-        ? Math.max(0, p.stockCount)
-        : qty;
-    if (p?.isCustomProduct && typeof p.stockCount === 'number' && qty > p.stockCount) {
-      showToast(`Only ${p.stockCount} unit(s) available for ${p.n}.`);
+    const maxStock = p?.isCustomProduct && typeof p.stockCount === 'number' ? p.stockCount : null;
+    if (maxStock !== null && qty > maxStock) {
+      showToast(`Only ${maxStock} unit(s) available for ${p?.n}.`);
     }
+    const cappedQty = qty <= 0 ? 0 : p ? snapWholesaleQty(p, qty, maxStock) : qty;
     setWholesaleBasket((prev) => {
       const copy = { ...prev };
       if (cappedQty <= 0) {

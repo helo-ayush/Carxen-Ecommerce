@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
+import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import { ProductArt } from '@/components/ProductArt';
 import { CatalogState } from '@/components/CatalogState';
@@ -938,36 +939,14 @@ export default function WholesaleOrderBasketPage() {
                           </td>
 
                           <td style={{ textAlign: 'center' }}>
-                            <div className="ws-stepper-wrap" style={{ margin: '0 auto' }}>
-                              <button
-                                type="button"
-                                className="ws-stepper-btn"
-                                onClick={() => updateWholesaleBasketQty(p.id, Math.max(1, quantity - 1))}
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus size={13} />
-                              </button>
-                              <input
-                                type="number"
-                                min={1}
-                                className="ws-stepper-input"
+                            <div style={{ display: 'inline-block', margin: '0 auto' }}>
+                              <WholesaleQtyStepper
+                                product={p}
                                 value={quantity}
-                                onChange={(e) => {
-                                  const v = parseInt(e.target.value, 10);
-                                  if (!isNaN(v)) {
-                                    updateWholesaleBasketQty(p.id, v);
-                                  }
-                                }}
-                                aria-label={`Quantity for ${p.n}`}
+                                maxQty={p.isCustomProduct && typeof p.stockCount === 'number' ? p.stockCount : null}
+                                onChange={(nextQty) => updateWholesaleBasketQty(p.id, nextQty)}
+                                wrapperClassName="ws-stepper-wrap"
                               />
-                              <button
-                                type="button"
-                                className="ws-stepper-btn"
-                                onClick={() => updateWholesaleBasketQty(p.id, quantity + 1)}
-                                aria-label="Increase quantity"
-                              >
-                                <Plus size={13} />
-                              </button>
                             </div>
                           </td>
 
@@ -1049,37 +1028,14 @@ export default function WholesaleOrderBasketPage() {
                       </div>
 
                       <div className="ws-mobile-actions-right">
-                        <div className="ws-stepper-wrap">
-                          <button
-                            type="button"
-                            className="ws-stepper-btn"
-                            onClick={() => updateWholesaleBasketQty(p.id, Math.max(1, quantity - 1))}
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <input
-                            type="number"
-                            min={1}
-                            className="ws-stepper-input"
-                            value={quantity}
-                            onChange={(e) => {
-                              const v = parseInt(e.target.value, 10);
-                              if (!isNaN(v)) {
-                                updateWholesaleBasketQty(p.id, v);
-                              }
-                            }}
-                            aria-label={`Quantity for ${p.n}`}
-                          />
-                          <button
-                            type="button"
-                            className="ws-stepper-btn"
-                            onClick={() => updateWholesaleBasketQty(p.id, quantity + 1)}
-                            aria-label="Increase quantity"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
+                        <WholesaleQtyStepper
+                          product={p}
+                          value={quantity}
+                          maxQty={p.isCustomProduct && typeof p.stockCount === 'number' ? p.stockCount : null}
+                          onChange={(nextQty) => updateWholesaleBasketQty(p.id, nextQty)}
+                          wrapperClassName="ws-stepper-wrap"
+                          iconSize={12}
+                        />
 
                         <div className="ws-mobile-line-total">
                           <span className="ws-mobile-total-label">Subtotal</span>

@@ -19,6 +19,8 @@ import {
 import { ProductArt } from '@/components/ProductArt';
 import { ModularDescription } from '@/components/storefront/ModularDescription';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
+import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
+import { getWholesaleQtyRules } from '@/lib/storefront/wholesale-qty';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import {
   getWholesaleTiers,
@@ -838,49 +840,25 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
               <div className="ws-pdp-stepper-row">
                 <div className="ws-pdp-stepper-wrap">
                   <span className="ws-pdp-stepper-label">Order Quantity:</span>
-                  <div className="ws-card-stepper" style={{ width: '130px', height: '42px' }}>
-                    <button
-                      type="button"
-                      className="ws-card-stepper-btn"
-                      onClick={() => handleQtyChange(quantity - 1)}
-                      disabled={cannotOrder || quantity <= moq}
-                      aria-label="Decrease quantity"
-                      title={quantity <= moq ? `Minimum order quantity is ${moq}` : 'Decrease quantity'}
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <input
-                      type="number"
-                      min={moq}
-                      max={maxCustomQty ?? undefined}
-                      disabled={cannotOrder}
-                      className="ws-card-stepper-input"
-                      style={{ fontSize: '15px', fontWeight: 700 }}
-                      value={quantity}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value, 10);
-                        if (!isNaN(v)) {
-                          handleQtyChange(v);
-                        }
-                      }}
-                      aria-label="Batch Quantity"
-                    />
-                    <button
-                      type="button"
-                      className="ws-card-stepper-btn"
-                      onClick={() => handleQtyChange(quantity + 1)}
-                      disabled={cannotOrder || (maxCustomQty !== null && quantity >= maxCustomQty)}
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
+                  <WholesaleQtyStepper
+                    product={product}
+                    value={quantity}
+                    maxQty={maxCustomQty}
+                    disabled={cannotOrder}
+                    onChange={handleQtyChange}
+                    wrapperClassName="ws-card-stepper"
+                    buttonClassName="ws-card-stepper-btn"
+                    inputClassName="ws-card-stepper-input"
+                    iconSize={14}
+                  />
                 </div>
 
                 <div className="ws-pdp-moq-hint">
                   <Info size={14} />
                   <span>
-                    MOQ: {moq} units per batch
+                    {getWholesaleQtyRules(product).enforcePack
+                      ? `Pack of ${getWholesaleQtyRules(product).packSize} enforced (Min ${getWholesaleQtyRules(product).minQty} units)`
+                      : `MOQ: ${moq} units per batch`}
                     {isOutOfStock ? (
                       <strong style={{ color: '#dc2626', marginLeft: 8 }}>· Out of Stock</strong>
                     ) : insufficientForMoq ? (

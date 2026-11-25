@@ -8,7 +8,9 @@ import { formatINR, TINT_OPTIONS } from '@/data/products';
 import { ProductArt } from '@/components/ProductArt';
 import { categoryLabel } from '@/lib/storefront/categories';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
-import { Plus, Minus, Check, Layers, ChevronRight, Sparkles } from 'lucide-react';
+import { getWholesaleQtyRules, snapWholesaleQty } from '@/lib/storefront/wholesale-qty';
+import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
+import { Plus, Check, Layers, ChevronRight, Sparkles } from 'lucide-react';
 
 export interface WholesaleProductCardProps {
   product: Product;
@@ -31,14 +33,14 @@ export function WholesaleProductCard({
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
 
-  const moq = Math.max(1, product.b2bMoq || 5);
+  const { minQty: moq, enforcePack, packSize } = getWholesaleQtyRules(product);
   const isCustom = Boolean(product.isCustomProduct);
   const maxCustomQty = isCustom ? Math.max(0, Math.floor(product.stockCount ?? 0)) : null;
   const isOutOfStock = isCustom && (product.inStock === false || (maxCustomQty ?? 0) <= 0);
   const insufficientForMoq = isCustom && !isOutOfStock && maxCustomQty !== null && maxCustomQty < moq;
   const cannotOrder = isOutOfStock || insufficientForMoq;
   const rawQty = quantity !== undefined ? quantity : (inBasketQty > 0 ? inBasketQty : moq);
-  const currentQty = maxCustomQty !== null && maxCustomQty >= moq ? Math.min(rawQty, maxCustomQty) : rawQty;
+  const currentQty = snapWholesaleQty(product, rawQty, maxCustomQty);
 
   const tiers = useMemo(() => getWholesaleTiers(product), [product]);
   const t1 = tiers[0]?.unitPrice || Math.round(product.p * 0.85);
@@ -255,42 +257,17 @@ export function WholesaleProductCard({
 
           {/* Order Actions: Stepper + Add to Basket */}
           <div className="ws-card-actions" onClick={(e) => e.stopPropagation()}>
-            <div className="ws-card-stepper">
-              <button
-                type="button"
-                className="ws-card-stepper-btn"
-                onClick={() => handleQtyChange(currentQty - 1)}
-                disabled={cannotOrder || currentQty <= moq}
-                aria-label="Decrease batch quantity"
-                title={currentQty <= moq ? `Minimum Order Quantity is ${moq}` : 'Decrease quantity'}
-              >
-                <Minus size={13} />
-              </button>
-              <input
-                type="number"
-                min={moq}
-                max={maxCustomQty ?? undefined}
-                disabled={cannotOrder}
-                className="ws-card-stepper-input"
-                value={currentQty}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (!isNaN(v)) {
-                    handleQtyChange(v);
-                  }
-                }}
-                aria-label={`Wholesale batch quantity for ${product.n}`}
-              />
-              <button
-                type="button"
-                className="ws-card-stepper-btn"
-                onClick={() => handleQtyChange(currentQty + 1)}
-                disabled={cannotOrder || (maxCustomQty !== null && currentQty >= maxCustomQty)}
-                aria-label="Increase batch quantity"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
+            <WholesaleQtyStepper
+              product={product}
+              value={currentQty}
+              maxQty={maxCustomQty}
+              disabled={cannotOrder}
+              onChange={handleQtyChange}
+              wrapperClassName="ws-card-stepper"
+              buttonClassName="ws-card-stepper-btn"
+              inputClassName="ws-card-stepper-input"
+              iconSize={13}
+            />
 
             {cannotOrder ? (
               <button

@@ -8,6 +8,8 @@ import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { getWholesaleQtyRules, snapWholesaleQty } from '@/lib/storefront/wholesale-qty';
+import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
 import { categoryLabel, compareCategories, slugifyCategory, normalizeCategoryKey } from '@/lib/storefront/categories';
 import { readFitment } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
@@ -353,10 +355,6 @@ export default function WholesaleQuickOrderPage() {
           <button type="button" onClick={handleFillAllMoqs} className="ws-btn-secondary" title="Set all item quantities to minimum order quantities">
             <WholesaleIcon name="spark" size={15} />
             <span>Fill All MOQs</span>
-          </button>
-          <button type="button" onClick={handleAddAllDraftsToBasket} className="ws-btn-secondary" title="Add all visible products to your basket">
-            <WholesaleIcon name="check" size={15} />
-            <span>Add All Visible ({filteredProducts.length})</span>
           </button>
           <Link href="/wholesale/order-basket" className="ws-btn-primary ws-btn-brand">
             <WholesaleIcon name="basket" size={15} />
@@ -730,38 +728,11 @@ export default function WholesaleQuickOrderPage() {
                       </td>
 
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
-                        <div className="ws-stepper">
-                          <button
-                            type="button"
-                            className="ws-stepper-btn"
-                            onClick={() => handleQtyChange(p.id, currentQty - 1, moq)}
-                            aria-label="Decrease quantity"
-                            title={`Decrease (min ${moq})`}
-                          >
-                            <Minus size={13} />
-                          </button>
-                          <input
-                            type="number"
-                            min={moq}
-                            className="ws-stepper-input"
-                            value={currentQty}
-                            onChange={(e) => {
-                              const v = parseInt(e.target.value, 10);
-                              if (!isNaN(v)) {
-                                handleQtyChange(p.id, v, moq);
-                              }
-                            }}
-                            aria-label={`Batch Quantity for ${p.n}`}
-                          />
-                          <button
-                            type="button"
-                            className="ws-stepper-btn"
-                            onClick={() => handleQtyChange(p.id, currentQty + 1, moq)}
-                            aria-label="Increase quantity"
-                          >
-                            <Plus size={13} />
-                          </button>
-                        </div>
+                        <WholesaleQtyStepper
+                          product={p}
+                          value={snapWholesaleQty(p, currentQty)}
+                          onChange={(nextQty) => handleQtyChange(p.id, nextQty, getWholesaleQtyRules(p).minQty)}
+                        />
                       </td>
 
                       <td style={{ textAlign: 'right' }}>
@@ -860,38 +831,12 @@ export default function WholesaleQuickOrderPage() {
 
                   {/* Bottom: Stepper + Add to Basket on the same single row */}
                   <div className="ws-qo-bottom">
-                    <div className="ws-stepper ws-qo-stepper">
-                      <button
-                        type="button"
-                        className="ws-stepper-btn"
-                        onClick={() => handleQtyChange(p.id, currentQty - 1, moq)}
-                        aria-label="Decrease quantity"
-                        title={`Decrease (min ${moq})`}
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <input
-                        type="number"
-                        min={moq}
-                        className="ws-stepper-input"
-                        value={currentQty}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value, 10);
-                          if (!isNaN(v)) {
-                            handleQtyChange(p.id, v, moq);
-                          }
-                        }}
-                        aria-label={`Batch Quantity for ${p.n}`}
-                      />
-                      <button
-                        type="button"
-                        className="ws-stepper-btn"
-                        onClick={() => handleQtyChange(p.id, currentQty + 1, moq)}
-                        aria-label="Increase quantity"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
+                    <WholesaleQtyStepper
+                      product={p}
+                      value={snapWholesaleQty(p, currentQty)}
+                      onChange={(nextQty) => handleQtyChange(p.id, nextQty, getWholesaleQtyRules(p).minQty)}
+                      wrapperClassName="ws-stepper ws-qo-stepper"
+                    />
 
                     {isInBasket && !isDraftDifferent ? (
                       <button

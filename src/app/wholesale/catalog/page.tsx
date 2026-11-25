@@ -8,6 +8,8 @@ import { ProductArt } from '@/components/ProductArt';
 import { formatINR } from '@/data/products';
 import type { Product } from '@/data/products';
 import { getWholesaleTiers } from '@/lib/storefront/wholesale-pricing';
+import { getWholesaleQtyRules, snapWholesaleQty } from '@/lib/storefront/wholesale-qty';
+import { WholesaleQtyStepper } from '@/components/wholesale/WholesaleQtyStepper';
 import { categoryLabel, compareCategories, slugifyCategory, normalizeCategoryKey } from '@/lib/storefront/categories';
 import { readFitment } from '@/lib/storefront/fitment';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
@@ -225,7 +227,7 @@ export default function WholesaleCatalogPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [rowQuantities, setRowQuantities] = useState<Record<number, number>>({});
 
-  const getProductMoq = (p: Product) => Math.max(1, p.b2bMoq || 5);
+  const getProductMoq = (p: Product) => getWholesaleQtyRules(p).minQty;
 
   const getFitmentString = (p: Product): string => {
     if (!p.fitment) return 'Universal Fit / Multi-Vehicle';
@@ -481,10 +483,6 @@ export default function WholesaleCatalogPage() {
           <button type="button" onClick={handleFillAllVisibleMoqs} className="ws-btn-secondary" title="Fill MOQs for all visible products">
             <WholesaleIcon name="spark" size={15} />
             <span>Fill MOQs</span>
-          </button>
-          <button type="button" onClick={handleAddAllToBasket} className="ws-btn-secondary" title="Add all visible products to basket">
-            <WholesaleIcon name="check" size={15} />
-            <span>Add All Visible ({filteredProducts.length})</span>
           </button>
           <Link href="/wholesale/order-basket" className="ws-btn-primary ws-btn-brand">
             <WholesaleIcon name="basket" size={15} />
@@ -948,41 +946,13 @@ export default function WholesaleCatalogPage() {
                     </td>
 
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'visible', paddingLeft: '4px', paddingRight: '4px' }}>
-                      <div className="ws-stepper">
-                        <button
-                          type="button"
-                          className="ws-stepper-btn"
-                          onClick={() => handleRowQtyChange(p.id, currentQty - 1, moq, maxCustomQty)}
-                          disabled={cannotOrder || currentQty <= moq}
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <input
-                          type="number"
-                          min={moq}
-                          max={maxCustomQty ?? undefined}
-                          disabled={cannotOrder}
-                          className="ws-stepper-input"
-                          value={currentQty}
-                          onChange={(e) => {
-                            const v = parseInt(e.target.value, 10);
-                            if (!isNaN(v)) {
-                              handleRowQtyChange(p.id, v, moq, maxCustomQty);
-                            }
-                          }}
-                          aria-label={`Batch Quantity for ${p.n}`}
-                        />
-                        <button
-                          type="button"
-                          className="ws-stepper-btn"
-                          onClick={() => handleRowQtyChange(p.id, currentQty + 1, moq, maxCustomQty)}
-                          disabled={cannotOrder || (maxCustomQty !== null && currentQty >= maxCustomQty)}
-                          aria-label="Increase quantity"
-                        >
-                          <Plus size={13} />
-                        </button>
-                      </div>
+                      <WholesaleQtyStepper
+                        product={p}
+                        value={snapWholesaleQty(p, currentQty, maxCustomQty)}
+                        maxQty={maxCustomQty}
+                        disabled={cannotOrder}
+                        onChange={(nextQty) => handleRowQtyChange(p.id, nextQty, moq, maxCustomQty)}
+                      />
                     </td>
 
                     <td style={{ textAlign: 'right' }}>
