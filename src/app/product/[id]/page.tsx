@@ -26,6 +26,7 @@ import { rankSimilarProducts } from '@/lib/storefront/similar-products';
 import { CatalogState } from '@/components/CatalogState';
 import { ProductArt } from '@/components/ProductArt';
 import { ProductCard } from '@/components/ProductCard';
+import { ModularDescription } from '@/components/storefront/ModularDescription';
 import { Footer } from '@/components/Footer';
 
 // shadcn UI components
@@ -1365,19 +1366,14 @@ function ProductDetailContent({ product }: { product: Product }) {
           {/* TAB 3: DESCRIPTION & HIGHLIGHTS */}
           {activeInfoTab === 'desc' && (
             <div className="ps-info-panel" role="tabpanel">
-              <div style={{ maxWidth: '820px', marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '8px' }}>
+              <div style={{ maxWidth: '920px', marginBottom: '28px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink, #0e0e0f)', marginBottom: '12px' }}>
                   Detailed Description
                 </h3>
-                {product.d ? (
-                  <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
-                    {product.d.replace(/Full of Corona Virus/gi, '').replace(/\s+/g, ' ').trim()}
-                  </p>
-                ) : (
-                  <p style={{ fontSize: '13.5px', lineHeight: '1.7', color: 'var(--steel, #5d5d64)' }}>
-                    No description has been published for this item yet.
-                  </p>
-                )}
+                <ModularDescription
+                  blocks={product.descriptionBlocks}
+                  fallbackDescription={product.d}
+                />
 
                 {/* Technical Product Search Tags */}
                 {Array.isArray(product.tags) && product.tags.length > 0 && (

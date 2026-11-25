@@ -30,6 +30,29 @@ export type ProductComboItem = {
   productId?: string;
 };
 
+export type DescriptionBlock =
+  | {
+      id: string;
+      type: 'text';
+      heading?: string;
+      body: string;
+    }
+  | {
+      id: string;
+      type: 'image';
+      url: string;
+      caption?: string;
+      alt?: string;
+    }
+  | {
+      id: string;
+      type: 'split';
+      layout: 'image-left' | 'image-right';
+      imageUrl: string;
+      heading?: string;
+      body: string;
+    };
+
 export interface Product {
   id: number;
   n: string;
@@ -45,6 +68,7 @@ export interface Product {
   spot?: number;
   pk?: number;
   d: string;
+  descriptionBlocks?: DescriptionBlock[];
   sp: [string, string][];
   slug?: string;
   categoryId?: string | null;

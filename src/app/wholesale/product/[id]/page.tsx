@@ -17,6 +17,7 @@ import {
   isSteeringCategory,
 } from '@/lib/storefront/categories';
 import { ProductArt } from '@/components/ProductArt';
+import { ModularDescription } from '@/components/storefront/ModularDescription';
 import { WholesaleProductCard } from '@/components/wholesale/WholesaleProductCard';
 import { WholesaleIcon } from '@/components/wholesale/WholesaleIcon';
 import {
@@ -1109,6 +1110,18 @@ function WholesaleProductDetailContent({ product }: { product: Product }) {
                   );
                 })}
               </div>
+
+              {(product.d || (Array.isArray(product.descriptionBlocks) && product.descriptionBlocks.length > 0)) && (
+                <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+                    Product Overview &amp; Merchandising Story
+                  </h3>
+                  <ModularDescription
+                    blocks={product.descriptionBlocks}
+                    fallbackDescription={product.d}
+                  />
+                </div>
+              )}
             </div>
           )}
 

@@ -237,7 +237,8 @@ function asSpecifications(value: unknown): [string, string][] {
         k === 'wholesaleTier2Qty' ||
         k === 'wholesaleTier2Discount' ||
         k === 'wholesaleTier3Qty' ||
-        k === 'wholesaleTier3Discount'
+        k === 'wholesaleTier3Discount' ||
+        k === 'descriptionBlocks'
       )
         continue;
       const key = asNonEmptyString(k);
@@ -444,6 +445,9 @@ function mapProductRow(
   })();
 
   const enforceCartonMultiples = Boolean(specsObj.enforceCartonMultiples ?? (row as any).enforceCartonMultiples);
+  const descriptionBlocks = Array.isArray(specsObj.descriptionBlocks)
+    ? (specsObj.descriptionBlocks as Product['descriptionBlocks'])
+    : undefined;
 
   return {
     id,
@@ -463,6 +467,7 @@ function mapProductRow(
     ...(row.isSpotlight ? { spot: 1 } : {}),
     ...(row.isPickup ? { pk: 1 } : {}),
     d: description,
+    ...(descriptionBlocks && descriptionBlocks.length > 0 ? { descriptionBlocks } : {}),
     sp: specifications,
     packageDimensions,
     unitDimensions,
