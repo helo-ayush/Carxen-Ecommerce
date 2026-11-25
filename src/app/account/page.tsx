@@ -18,6 +18,12 @@ import { CityAutocomplete } from '@/components/ui/CityAutocomplete';
 import { StateAutocomplete } from '@/components/ui/StateAutocomplete';
 import { PincodeAutocomplete } from '@/components/ui/PincodeAutocomplete';
 import { IndianPhoneInput } from '@/components/ui/IndianPhoneInput';
+import {
+  VehicleMakeAutocomplete,
+  VehicleModelAutocomplete,
+  type VehicleCatalogModelOption,
+} from '@/components/ui/VehicleAutocomplete';
+import { getYearsForRange } from '@/data/indian-vehicles-master';
 import { supabase } from '@/lib/supabase/client';
 import {
   Package,
@@ -171,6 +177,7 @@ function AccountContent() {
   });
   const [isCustomBrand, setIsCustomBrand] = useState(false);
   const [isCustomModel, setIsCustomModel] = useState(false);
+  const [selectedModelMeta, setSelectedModelMeta] = useState<VehicleCatalogModelOption | null>(null);
 
   // Modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -757,10 +764,12 @@ function AccountContent() {
   const handleOpenAddVehicle = () => {
     setEditingVehicle(null);
     setIsCustomBrand(false);
+    setIsCustomModel(false);
+    setSelectedModelMeta(null);
     setVehicleForm({
-      b: 'Porsche',
+      b: '',
       m: '',
-      y: '2024',
+      y: String(new Date().getFullYear()),
       f: 'Petrol',
       isDefault: false,
     });
@@ -770,24 +779,9 @@ function AccountContent() {
   const handleOpenEditVehicle = (veh: GarageVehicle, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditingVehicle(veh);
-    const standardBrands = [
-      'Porsche',
-      'BMW',
-      'Mercedes-Benz',
-      'Audi',
-      'Toyota',
-      'Maruti Suzuki',
-      'Hyundai',
-      'Tata',
-      'Mahindra',
-      'Kia',
-      'Honda',
-      'Ford',
-      'Ferrari',
-      'Lamborghini',
-      'Volkswagen',
-    ];
-    setIsCustomBrand(!standardBrands.includes(veh.b));
+    setIsCustomBrand(false);
+    setIsCustomModel(false);
+    setSelectedModelMeta(null);
     setVehicleForm({
       b: veh.b,
       m: veh.m,
@@ -2132,6 +2126,201 @@ function AccountContent() {
                     </div>
                   </div>
 
+                  {/* Inline Spacious Add / Edit Vehicle Panel */}
+                  {isVehicleModalOpen && (
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e4e4e7',
+                        borderRadius: '14px',
+                        padding: '22px',
+                        marginBottom: '22px',
+                        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '10px',
+                              background: '#fef2f2',
+                              color: '#e11d48',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <CarFront size={18} />
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '15.5px', fontWeight: 700, color: '#09090b', margin: 0 }}>
+                              {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
+                            </h4>
+                            <div style={{ fontSize: '12px', color: '#71717a', marginTop: '1px' }}>
+                              Indian &amp; global vehicle catalog with exact production years and fuel variants
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsVehicleModalOpen(false)}
+                          style={{ cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none', padding: '4px' }}
+                          aria-label="Close vehicle form"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveVehicle}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '14px', marginBottom: '14px' }}>
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '5px' }}>
+                              Make / Brand *
+                            </label>
+                            <VehicleMakeAutocomplete
+                              className="ac-input"
+                              required
+                              value={vehicleForm.b}
+                              onChange={(make) => {
+                                setVehicleForm({ ...vehicleForm, b: make });
+                                if (make.trim() !== vehicleForm.b.trim()) {
+                                  setSelectedModelMeta(null);
+                                }
+                              }}
+                              onSelectMake={(make) => {
+                                setSelectedModelMeta(null);
+                                setVehicleForm({ ...vehicleForm, b: make, m: '' });
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '5px' }}>
+                              Model &amp; Generation *
+                            </label>
+                            <VehicleModelAutocomplete
+                              className="ac-input"
+                              required
+                              make={vehicleForm.b}
+                              value={vehicleForm.m}
+                              placeholder={
+                                vehicleForm.b
+                                  ? `Search ${vehicleForm.b} model...`
+                                  : 'Select a brand first, or type any model...'
+                              }
+                              onChange={(model) => {
+                                setVehicleForm({ ...vehicleForm, m: model });
+                              }}
+                              onSelectModel={(opt) => {
+                                setSelectedModelMeta(opt);
+                                const validYears = getYearsForRange(opt.yearFrom, opt.yearTo);
+                                const nextYear = validYears.includes(vehicleForm.y)
+                                  ? vehicleForm.y
+                                  : validYears[0] || vehicleForm.y;
+                                const nextFuel =
+                                  opt.fuels.length > 0 && !opt.fuels.includes(vehicleForm.f)
+                                    ? opt.fuels[0]
+                                    : vehicleForm.f;
+                                setVehicleForm({
+                                  ...vehicleForm,
+                                  m: opt.model,
+                                  y: nextYear,
+                                  f: nextFuel,
+                                });
+                              }}
+                              onCatalogLoaded={(models) => {
+                                const match = models.find(
+                                  (m) => m.model.toLowerCase() === vehicleForm.m.trim().toLowerCase()
+                                );
+                                if (match) setSelectedModelMeta(match);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '14px', marginBottom: '16px' }}>
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '5px' }}>
+                              Model Year *
+                            </label>
+                            <select
+                              className="ac-input"
+                              required
+                              value={vehicleForm.y}
+                              onChange={(e) => setVehicleForm({ ...vehicleForm, y: e.target.value })}
+                            >
+                              {getYearsForRange(selectedModelMeta?.yearFrom, selectedModelMeta?.yearTo).map((yr) => (
+                                <option key={yr} value={yr}>
+                                  {yr}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#3f3f46', display: 'block', marginBottom: '5px' }}>
+                              Fuel / Engine
+                            </label>
+                            <select
+                              className="ac-input"
+                              value={vehicleForm.f}
+                              onChange={(e) => setVehicleForm({ ...vehicleForm, f: e.target.value })}
+                            >
+                              {(selectedModelMeta?.fuels?.length
+                                ? selectedModelMeta.fuels
+                                : ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Petrol + CNG']
+                              ).map((fuel) => (
+                                <option key={fuel} value={fuel}>
+                                  {fuel}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '13px',
+                            color: '#3f3f46',
+                            cursor: 'pointer',
+                            marginBottom: '18px',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={vehicleForm.isDefault}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, isDefault: e.target.checked })}
+                            style={{ width: '16px', height: '16px', accentColor: '#e11d48' }}
+                          />
+                          Set as active vehicle for part fitment guarantee
+                        </label>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button
+                            type="button"
+                            className="ac-btn-outline"
+                            onClick={() => setIsVehicleModalOpen(false)}
+                            style={{ height: '38px', fontSize: '13px' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="ac-btn-red"
+                            style={{ height: '38px', fontSize: '13px' }}
+                          >
+                            {editingVehicle ? 'Update Vehicle' : 'Add to Garage'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
                   {/* My Garage Vehicles Grid */}
                   <div
                     style={{
@@ -2801,217 +2990,6 @@ function AccountContent() {
                   style={{ height: '36px', fontSize: '13px', background: '#0e0e0f' }}
                 >
                   {reviewModalData.existingReview ? 'Update Review' : 'Publish Verified Review'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* MODAL: ADD / EDIT VEHICLE MODAL                                  */}
-      {/* ================================================================= */}
-      {isVehicleModalOpen && (
-        <div className="ac-dialog-overlay" onClick={() => setIsVehicleModalOpen(false)}>
-          <div className="ac-dialog-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', color: '#e2231a', display: 'grid', placeItems: 'center' }}>
-                  <CarFront size={16} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#09090b', margin: 0 }}>
-                    {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
-                  </h3>
-                  <div style={{ fontSize: '12px', color: '#71717a' }}>
-                    Saved to customer profile in database
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsVehicleModalOpen(false)}
-                style={{ fontSize: '18px', cursor: 'pointer', color: '#71717a', background: 'transparent', border: 'none' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveVehicle}>
-              {/* Brand Selector */}
-              <div className="ac-field">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ margin: 0 }}>Make / Brand</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsCustomBrand(!isCustomBrand)}
-                    style={{ fontSize: '11.5px', color: '#e2231a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    {isCustomBrand ? 'Choose from list' : '+ Enter custom brand'}
-                  </button>
-                </div>
-                {isCustomBrand ? (
-                  <input
-                    type="text"
-                    value={vehicleForm.b}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, b: e.target.value })}
-                    placeholder="e.g. Aston Martin, Ferrari, Volvo"
-                    required
-                  />
-                ) : (
-                  <select
-                    value={vehicleForm.b}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, b: e.target.value })}
-                    style={{
-                      width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
-                      border: '1px solid #d4d4d8',
-                      padding: '0 10px',
-                      fontSize: '13.5px',
-                      background: '#fff',
-                    }}
-                  >
-                    {vehicleBrands.map((brand) => (
-                      <option key={brand} value={brand}>
-                        {brand}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {/* Model */}
-              <div className="ac-field">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ margin: 0 }}>Model &amp; Generation</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsCustomModel(!isCustomModel)}
-                    style={{ fontSize: '11.5px', color: '#e2231a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    {isCustomModel ? 'Choose from list' : '+ Enter custom model'}
-                  </button>
-                </div>
-                {isCustomModel || !getModelsForBrand(vehicleForm.b).length ? (
-                  <input
-                    type="text"
-                    value={vehicleForm.m}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
-                    placeholder="e.g. Creta, Thar, Scorpio N, Fortuner"
-                    required
-                  />
-                ) : (
-                  <select
-                    value={vehicleForm.m}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, m: e.target.value })}
-                    style={{
-                      width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
-                      border: '1px solid #d4d4d8',
-                      padding: '0 10px',
-                      fontSize: '13.5px',
-                      background: '#fff',
-                    }}
-                    required
-                  >
-                    <option value="">Select {vehicleForm.b || 'car'} model...</option>
-                    {getModelsForBrand(vehicleForm.b).map((mod) => (
-                      <option key={mod} value={mod}>
-                        {mod}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {/* Year & Fuel */}
-              <div className="ac-form-grid-2" style={{ gap: '10px' }}>
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Model Year</label>
-                  <select
-                    value={vehicleForm.y}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, y: e.target.value })}
-                    style={{
-                      width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
-                      border: '1px solid #d4d4d8',
-                      padding: '0 10px',
-                      fontSize: '13.5px',
-                      background: '#fff',
-                    }}
-                  >
-                    {['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016'].map((yr) => (
-                      <option key={yr} value={yr}>
-                        {yr}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="ac-field" style={{ margin: 0 }}>
-                  <label>Fuel / Engine</label>
-                  <select
-                    value={vehicleForm.f}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, f: e.target.value })}
-                    style={{
-                      width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
-                      border: '1px solid #d4d4d8',
-                      padding: '0 10px',
-                      fontSize: '13.5px',
-                      background: '#fff',
-                    }}
-                  >
-                    {['Petrol', 'Diesel', 'Hybrid', 'Electric', 'Turbo Petrol', 'V8 Twin-Turbo'].map((fuel) => (
-                      <option key={fuel} value={fuel}>
-                        {fuel}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Set as active toggle */}
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginTop: '14px',
-                  marginBottom: '18px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  color: '#3f3f46',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={vehicleForm.isDefault}
-                  onChange={(e) => setVehicleForm({ ...vehicleForm, isDefault: e.target.checked })}
-                  style={{ width: '16px', height: '16px', accentColor: '#e2231a' }}
-                />
-                <span>Set as active vehicle for part fitment guarantee</span>
-              </label>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="ac-btn-outline"
-                  onClick={() => setIsVehicleModalOpen(false)}
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="ac-btn-red"
-                  style={{ height: '36px', fontSize: '13px' }}
-                >
-                  {editingVehicle ? 'Update Vehicle' : 'Add to Garage'}
                 </button>
               </div>
             </form>
