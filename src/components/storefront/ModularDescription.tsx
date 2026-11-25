@@ -1,30 +1,24 @@
 import React from 'react';
 import type { DescriptionBlock } from '@/data/products';
 
-function renderFormattedText(body: string) {
-  const lines = body.split(/\r?\n/);
+function renderStructuredText(body?: string, bullets?: string[]) {
+  const paragraphs = (body || '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const cleanBullets = (bullets ?? []).map((b) => b.trim()).filter(Boolean);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', lineHeight: 1.7, color: 'var(--steel, #5d5d64)' }}>
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <div key={i} style={{ height: '4px' }} />;
-        const isBullet = /^[-•*]\s+/.test(trimmed);
-        const content = isBullet ? trimmed.replace(/^[-•*]\s+/, '') : line;
-
-        const parts = content.split(/(\*\*[^*]+\*\*)/g).map((seg, j) => {
-          if (seg.startsWith('**') && seg.endsWith('**') && seg.length > 4) {
-            return (
-              <strong key={j} style={{ fontWeight: 700, color: 'var(--ink, #0e0e0f)' }}>
-                {seg.slice(2, -2)}
-              </strong>
-            );
-          }
-          return <React.Fragment key={j}>{seg}</React.Fragment>;
-        });
-
-        if (isBullet) {
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', paddingLeft: '4px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', lineHeight: 1.7, color: 'var(--steel, #5d5d64)' }}>
+      {paragraphs.map((p, i) => (
+        <p key={i} style={{ margin: 0 }}>
+          {p}
+        </p>
+      ))}
+      {cleanBullets.length > 0 && (
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {cleanBullets.map((b, i) => (
+            <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', paddingLeft: '2px' }}>
               <span
                 style={{
                   marginTop: '9px',
@@ -35,16 +29,11 @@ function renderFormattedText(body: string) {
                   flexShrink: 0,
                 }}
               />
-              <span>{parts}</span>
-            </div>
-          );
-        }
-        return (
-          <p key={i} style={{ margin: 0 }}>
-            {parts}
-          </p>
-        );
-      })}
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -134,7 +123,8 @@ export function ModularDescription({
                   {block.heading}
                 </h4>
               )}
-              {block.body && renderFormattedText(block.body)}
+              {(block.body || (block.bullets && block.bullets.length > 0)) &&
+                renderStructuredText(block.body, block.bullets)}
             </div>
           );
         }
@@ -183,7 +173,8 @@ export function ModularDescription({
                   {block.heading}
                 </h4>
               )}
-              {block.body && renderFormattedText(block.body)}
+              {(block.body || (block.bullets && block.bullets.length > 0)) &&
+                renderStructuredText(block.body, block.bullets)}
             </div>
           </div>
         );

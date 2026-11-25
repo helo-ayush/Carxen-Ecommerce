@@ -36,6 +36,7 @@ export type DescriptionBlock =
       type: 'text';
       heading?: string;
       body: string;
+      bullets?: string[];
     }
   | {
       id: string;
@@ -51,6 +52,7 @@ export type DescriptionBlock =
       imageUrl: string;
       heading?: string;
       body: string;
+      bullets?: string[];
     };
 
 export interface Product {
