@@ -64,7 +64,21 @@ export async function POST(request: Request) {
       authUser = auth.user;
       customer = auth.customer;
     } catch {
-      // Unauthenticated / guest session fallback
+      // Handled below by strict auth check
+    }
+
+    if (!authUser || !customer) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in with an approved wholesale account.' },
+        { status: 401 }
+      );
+    }
+
+    if (customer.b2bStatus !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Wholesale portal access requires an approved B2B dealer account.' },
+        { status: 403 }
+      );
     }
 
     // Resolve store & factory context early so we can validate custom stock and attach DB productIds
@@ -208,17 +222,17 @@ export async function POST(request: Request) {
         );
       }
 
-      // Check audience eligibility and targeted B2B buyer rules
+      // Check audience eligibility and targeted B2B buyer rules strictly against authenticated dealer record
       const rules = campaign.audienceRules && typeof campaign.audienceRules === 'object' ? campaign.audienceRules : {};
       const targetEmail = rules.targetWholesaleBuyerEmail ? String(rules.targetWholesaleBuyerEmail).toLowerCase().trim() : null;
       const targetName = rules.targetWholesaleBuyerName ? String(rules.targetWholesaleBuyerName).toLowerCase().trim() : null;
       const targetBuyerId = rules.targetWholesaleBuyerId ? String(rules.targetWholesaleBuyerId).trim() : null;
 
-      const buyerEmail = (email || customer?.email || authUser?.email || '').toLowerCase().trim();
-      const buyerBiz = (businessName || '').toLowerCase().trim();
-      const buyerTrade = (tradeName || '').toLowerCase().trim();
-      const buyerName = (representativeName || customer?.name || '').toLowerCase().trim();
-      const buyerId = customer?.id || authUser?.id || '';
+      const buyerEmail = (customer.email || authUser?.email || '').toLowerCase().trim();
+      const buyerBiz = (customer.businessName || '').toLowerCase().trim();
+      const buyerTrade = (customer.tradeName || '').toLowerCase().trim();
+      const buyerName = (customer.name || '').toLowerCase().trim();
+      const buyerId = customer.id || authUser?.id || '';
 
       const isTargeted = Boolean(targetEmail || targetName || targetBuyerId);
 

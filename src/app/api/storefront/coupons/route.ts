@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { getAuthenticatedCustomer } from '@/lib/server/customer';
 import type { StorefrontCoupon } from '@/lib/storefront/coupons';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = getSupabaseAdmin();
     const storeSlug = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
+
+    let authCustomer: any = null;
+    let authUser: any = null;
+    try {
+      const auth = await getAuthenticatedCustomer(request);
+      authCustomer = auth.customer;
+      authUser = auth.user;
+    } catch {
+      // Unauthenticated visitor
+    }
 
     const { data: store, error: storeError } = await supabase
       .from('ecommerce_stores')
@@ -38,22 +49,49 @@ export async function GET() {
       return true;
     });
 
-    const coupons: StorefrontCoupon[] = validCampaigns.map((c: any) => {
-      const rules = c.audienceRules && typeof c.audienceRules === 'object' ? c.audienceRules : {};
-      return {
-        code: c.code,
-        name: c.name,
-        type: c.discountType === 'PERCENTAGE' || c.discountType === 'Percentage' ? 'Percentage' : 'Fixed amount',
-        value: Number(c.discountValue) || 0,
-        status: 'Active',
-        minimumOrder: Number(c.minimumOrderAmount) || 0,
-        audience: c.audience || 'All customers',
-        targetWholesaleBuyerId: rules.targetWholesaleBuyerId || null,
-        targetWholesaleBuyerName: rules.targetWholesaleBuyerName || null,
-        targetWholesaleBuyerEmail: rules.targetWholesaleBuyerEmail || null,
-        description: rules.description || c.name,
-      };
-    });
+    const buyerEmail = (authCustomer?.email || authUser?.email || '').toLowerCase().trim();
+    const buyerBiz = (authCustomer?.businessName || '').toLowerCase().trim();
+    const buyerName = (authCustomer?.name || '').toLowerCase().trim();
+    const buyerId = authCustomer?.id || authUser?.id || '';
+    const isApprovedDealer = authCustomer?.b2bStatus === 'APPROVED';
+
+    const coupons: StorefrontCoupon[] = validCampaigns
+      .filter((c: any) => {
+        const rules = c.audienceRules && typeof c.audienceRules === 'object' ? c.audienceRules : {};
+        const targetEmail = rules.targetWholesaleBuyerEmail
+          ? String(rules.targetWholesaleBuyerEmail).toLowerCase().trim()
+          : null;
+        const targetName = rules.targetWholesaleBuyerName
+          ? String(rules.targetWholesaleBuyerName).toLowerCase().trim()
+          : null;
+        const targetBuyerId = rules.targetWholesaleBuyerId
+          ? String(rules.targetWholesaleBuyerId).trim()
+          : null;
+
+        const isTargeted = Boolean(targetEmail || targetName || targetBuyerId);
+        if (!isTargeted) return true;
+        if (!isApprovedDealer) return false;
+
+        if (targetBuyerId && buyerId && targetBuyerId === buyerId) return true;
+        if (targetEmail && buyerEmail && targetEmail === buyerEmail) return true;
+        if (targetName && ((buyerBiz && buyerBiz === targetName) || (buyerName && buyerName === targetName))) {
+          return true;
+        }
+        return false;
+      })
+      .map((c: any) => {
+        const rules = c.audienceRules && typeof c.audienceRules === 'object' ? c.audienceRules : {};
+        return {
+          code: c.code,
+          name: c.name,
+          type: c.discountType === 'PERCENTAGE' || c.discountType === 'Percentage' ? 'Percentage' : 'Fixed amount',
+          value: Number(c.discountValue) || 0,
+          status: 'Active',
+          minimumOrder: Number(c.minimumOrderAmount) || 0,
+          audience: c.audience || 'All customers',
+          description: rules.description || c.name,
+        };
+      });
 
     return NextResponse.json(
       { coupons },
