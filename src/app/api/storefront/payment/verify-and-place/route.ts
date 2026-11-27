@@ -82,30 +82,11 @@ export async function POST(request: Request) {
           isVerifiedBuyer: orderCount >= 3,
         };
       } else {
-        const guestEmail = (parsedPayload.customer?.email || (parsedPayload.shippingAddress as any)?.email)?.trim();
-        if (guestEmail) {
-          try {
-            const pastOrders = await loadCustomerOrders('', guestEmail);
-            const completedOrders = (pastOrders || []).filter((o: any) => {
-              const st = (o.status || '').toLowerCase();
-              return st !== 'cancelled' && st !== 'refunded';
-            });
-            const orderCount = completedOrders.length;
-            buyerContext = {
-              isWholesaleApproved: false,
-              email: guestEmail,
-              orderCount,
-              isVerifiedBuyer: orderCount >= 3,
-            };
-          } catch {
-            buyerContext = {
-              isWholesaleApproved: false,
-              email: guestEmail,
-              orderCount: 0,
-              isVerifiedBuyer: false,
-            };
-          }
-        }
+        buyerContext = {
+          isWholesaleApproved: false,
+          orderCount: 0,
+          isVerifiedBuyer: false,
+        };
       }
     } catch {
       // Guest or anonymous
@@ -204,32 +185,37 @@ export async function POST(request: Request) {
 
       await supabaseAdmin.from('ecommerce_orders').update(orderUpdate).eq('id', orderRow.id);
 
-      // Record payment transaction
-      try {
-        await supabaseAdmin.from('ecommerce_payments').insert({
-          id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
-          orderId: orderRow.id,
-          storeId: orderRow.storeId,
-          factoryId: orderRow.factoryId,
-          provider: 'razorpay',
-          providerPaymentId: razorpay_payment_id,
-          method: verifiedPayment?.method || 'razorpay',
-          status: 'CAPTURED',
-          amount: totals.amountInPaise / 100,
-          currency: 'INR',
-          metadata: {
-            razorpay_order_id,
-            razorpay_payment_id,
-            payment_method: verifiedPayment?.method || 'razorpay',
-            paid_amount_in_paise: totals.amountInPaise,
-            paid_at: now,
-          },
-          paidAt: now,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } catch (payErr) {
-        console.warn('Could not record payment row in ecommerce_payments:', payErr);
+      // Record payment transaction atomically; abort and rollback order on duplicate payment replay
+      const { error: payErr } = await supabaseAdmin.from('ecommerce_payments').insert({
+        id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+        orderId: orderRow.id,
+        storeId: orderRow.storeId,
+        factoryId: orderRow.factoryId,
+        provider: 'razorpay',
+        providerPaymentId: razorpay_payment_id,
+        method: verifiedPayment?.method || 'razorpay',
+        status: 'CAPTURED',
+        amount: totals.amountInPaise / 100,
+        currency: 'INR',
+        metadata: {
+          razorpay_order_id,
+          razorpay_payment_id,
+          payment_method: verifiedPayment?.method || 'razorpay',
+          paid_amount_in_paise: totals.amountInPaise,
+          paid_at: now,
+        },
+        paidAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      if (payErr) {
+        console.error('Payment record insert failed (possible replay race):', payErr);
+        await supabaseAdmin.from('ecommerce_orders').delete().eq('id', orderRow.id);
+        return NextResponse.json(
+          { error: 'This payment transaction has already been recorded for an existing order.' },
+          { status: 409 }
+        );
       }
 
       // Create shipment tracking record
@@ -248,23 +234,24 @@ export async function POST(request: Request) {
         updatedAt: now,
       });
 
-      // Auto-persist delivery address to customer's permanent address book in ecommerce_addresses
-      try {
-        const shippingSnap = orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress;
-        await persistShippingAddressToCustomer({
-          customerId,
-          customerEmail: parsedPayload.customer?.email || (shippingSnap as any)?.email,
-          recipientName: shippingSnap?.name || parsedPayload.customer?.name,
-          phone: shippingSnap?.phone || parsedPayload.customer?.phone,
-          addressLine1: shippingSnap?.addressLine1 || '',
-          addressLine2: shippingSnap?.addressLine2 || null,
-          city: shippingSnap?.city || 'Delhi',
-          state: shippingSnap?.state || 'Delhi',
-          postalCode: shippingSnap?.postalCode || '',
-          country: shippingSnap?.country || 'India',
-        });
-      } catch (addrErr) {
-        console.warn('Failed to auto-persist address after online payment:', addrErr);
+      // Auto-persist delivery address ONLY for authenticated customers
+      if (customerId) {
+        try {
+          const shippingSnap = orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress;
+          await persistShippingAddressToCustomer({
+            customerId,
+            recipientName: shippingSnap?.name || parsedPayload.customer?.name,
+            phone: shippingSnap?.phone || parsedPayload.customer?.phone,
+            addressLine1: shippingSnap?.addressLine1 || '',
+            addressLine2: shippingSnap?.addressLine2 || null,
+            city: shippingSnap?.city || 'Delhi',
+            state: shippingSnap?.state || 'Delhi',
+            postalCode: shippingSnap?.postalCode || '',
+            country: shippingSnap?.country || 'India',
+          });
+        } catch (addrErr) {
+          console.warn('Failed to auto-persist address after online payment:', addrErr);
+        }
       }
     }
 

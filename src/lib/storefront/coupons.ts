@@ -11,6 +11,7 @@ export type StorefrontCoupon = {
   name: string;
   type: 'Percentage' | 'Fixed amount';
   value: number; // e.g. 15 for 15% or 1000 for ₹1000
+  maxDiscountAmount?: number | null;
   status: 'Active' | 'Draft' | 'Scheduled' | 'Expired';
   minimumOrder?: number;
   audience: StorefrontCouponAudience | string;
@@ -254,6 +255,9 @@ export function validateCoupon(
   let discountAmount = 0;
   if (coupon.type === 'Percentage') {
     discountAmount = Math.round((cartTotal * coupon.value) / 100);
+    if (coupon.maxDiscountAmount && discountAmount > Number(coupon.maxDiscountAmount)) {
+      discountAmount = Math.round(Number(coupon.maxDiscountAmount));
+    }
   } else {
     discountAmount = Math.min(coupon.value, cartTotal);
   }

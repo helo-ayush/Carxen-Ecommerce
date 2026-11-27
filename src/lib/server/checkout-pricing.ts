@@ -131,6 +131,7 @@ export async function calculateAuthoritativeCartTotals(
             name: camp.name,
             type: camp.discountType === 'PERCENTAGE' || camp.discountType === 'Percentage' ? 'Percentage' : 'Fixed amount',
             value: Number(camp.discountValue) || 0,
+            maxDiscountAmount: camp.maxDiscountAmount ? Number(camp.maxDiscountAmount) : null,
             status: 'Active',
             minimumOrder: Number(camp.minimumOrderAmount) || 0,
             audience: camp.audience || 'All customers',

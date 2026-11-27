@@ -136,15 +136,15 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
 
   if (token) {
     try {
-      // 1. Cryptographically verified HMAC-SHA256 session token
+      // 1. Cryptographically verified HMAC-SHA256 session token (cxs.*)
       const sessionPayload = verifySessionToken(token);
       if (sessionPayload?.sub) {
         const { data: adminUserData, error: adminUserErr } = await supabase.auth.admin.getUserById(sessionPayload.sub);
         if (!adminUserErr && adminUserData?.user) {
           authUser = adminUserData.user;
         }
-      } else {
-        // 2. Supabase session token / JWT
+      } else if (!process.env.DATABASE_URL && !process.env.DIRECT_URL) {
+        // 2. Real Supabase Auth JWT fallback (only when running against Supabase Auth API, never PG adapter)
         const { data, error } = await supabase.auth.getUser(token);
         if (!error && data?.user) {
           authUser = data.user;

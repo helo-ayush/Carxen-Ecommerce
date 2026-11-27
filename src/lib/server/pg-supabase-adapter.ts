@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { verifySessionToken } from './session';
 
 let globalPool: Pool | null = null;
 
@@ -177,21 +178,36 @@ class QueryBuilder<T = any> {
     const parts = filterStr.split(',').map((p) => p.trim()).filter(Boolean);
     const orSqlParts: string[] = [];
     const orValues: any[] = [];
+    const safeIdent = (s: string) => /^[a-zA-Z0-9_]+$/.test(s);
 
     for (const part of parts) {
       if (part.includes('.eq.')) {
         const [col, val] = part.split('.eq.');
+        if (!safeIdent(col)) continue;
         orSqlParts.push(`"${col}" = $PARAM`);
         orValues.push(val);
       } else if (part.includes('.ilike.')) {
         const [fieldExpr, val] = part.split('.ilike.');
+        const hasExplicitWildcard = val.includes('*') || val.includes('%');
+        const normalizedVal = hasExplicitWildcard ? val.replace(/\*/g, '%') : val;
+
         if (fieldExpr.includes('->>')) {
           const [col, jsonKey] = fieldExpr.split('->>');
-          orSqlParts.push(`("${col}"->>'${jsonKey}') ILIKE $PARAM`);
-          orValues.push(`%${val}%`);
+          if (!safeIdent(col) || !safeIdent(jsonKey)) continue;
+          if (hasExplicitWildcard) {
+            orSqlParts.push(`("${col}"->>'${jsonKey}') ILIKE $PARAM`);
+          } else {
+            orSqlParts.push(`LOWER(COALESCE("${col}"->>'${jsonKey}', '')) = LOWER($PARAM)`);
+          }
+          orValues.push(normalizedVal);
         } else {
-          orSqlParts.push(`"${fieldExpr}" ILIKE $PARAM`);
-          orValues.push(`%${val}%`);
+          if (!safeIdent(fieldExpr)) continue;
+          if (hasExplicitWildcard) {
+            orSqlParts.push(`"${fieldExpr}" ILIKE $PARAM`);
+          } else {
+            orSqlParts.push(`LOWER(COALESCE("${fieldExpr}", '')) = LOWER($PARAM)`);
+          }
+          orValues.push(normalizedVal);
         }
       }
     }
@@ -439,13 +455,17 @@ export function createPostgresSupabaseAdapter() {
     auth: {
       getUser: async (token: string) => {
         try {
+          const session = verifySessionToken(token);
+          if (!session?.sub) {
+            return { data: { user: null }, error: new Error('Invalid or unverified session token') };
+          }
           const pool = getPostgresPool();
           const res = await pool.query(
             `SELECT u.id, u.email, u.raw_user_meta_data 
              FROM auth.users u 
-             WHERE u.id::text = $1 OR u.email = $1 
+             WHERE u.id::text = $1 
              LIMIT 1`,
-            [token]
+            [session.sub]
           );
           if (res.rows[0]) {
             return {

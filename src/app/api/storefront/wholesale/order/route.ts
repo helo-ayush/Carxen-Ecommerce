@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     for (const item of items) {
       const pid = Number(item.productId);
       const qty = Number(item.quantity);
-      if (!Number.isFinite(pid) || !Number.isFinite(qty) || qty <= 0) continue;
+      if (!Number.isFinite(pid) || !Number.isInteger(qty) || qty <= 0) continue;
 
       const p = catalog.find((x: Product) => x.id === pid);
       if (!p) continue;
@@ -238,20 +238,16 @@ export async function POST(request: Request) {
 
       if (isTargeted) {
         let matches = false;
-        if (targetEmail && buyerEmail && targetEmail === buyerEmail) {
+        if (targetBuyerId && buyerId && targetBuyerId === buyerId) {
           matches = true;
         }
-        if (!matches && targetName) {
-          if (buyerBiz && (buyerBiz === targetName || buyerBiz.includes(targetName) || targetName.includes(buyerBiz))) {
-            matches = true;
-          } else if (buyerTrade && (buyerTrade === targetName || buyerTrade.includes(targetName) || targetName.includes(buyerTrade))) {
-            matches = true;
-          } else if (buyerName && (buyerName === targetName || buyerName.includes(targetName) || targetName.includes(buyerName))) {
+        if (!matches && targetEmail && buyerEmail && targetEmail === buyerEmail) {
+          matches = true;
+        }
+        if (!matches && !targetBuyerId && !targetEmail && targetName) {
+          if ((buyerBiz && buyerBiz === targetName) || (buyerTrade && buyerTrade === targetName)) {
             matches = true;
           }
-        }
-        if (!matches && targetBuyerId && buyerId && targetBuyerId === buyerId) {
-          matches = true;
         }
 
         if (!matches) {
@@ -634,33 +630,38 @@ export async function POST(request: Request) {
       }
     }
 
-    // If paid via Razorpay, insert payment record
+    // If paid via Razorpay, insert payment record atomically; rollback order on replay conflict
     if (isRazorpay && razorpayPaymentId) {
-      try {
-        await supabase.from('ecommerce_payments').insert({
-          id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
-          orderId,
-          storeId,
-          factoryId,
-          provider: 'razorpay',
-          providerPaymentId: razorpayPaymentId,
-          method: verifiedPayment?.method || 'ONLINE',
-          status: 'CAPTURED',
-          amount: totalOrderValue,
-          currency: 'INR',
-          metadata: {
-            razorpay_order_id: razorpayOrderId,
-            razorpay_payment_id: razorpayPaymentId,
-            razorpay_signature: razorpaySignature || null,
-            paid_amount_in_paise: Math.round(totalOrderValue * 100),
-            paid_at: now,
-          },
-          paidAt: now,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } catch (payErr) {
-        console.warn('Could not record ecommerce_payments row:', payErr);
+      const { error: payErr } = await supabase.from('ecommerce_payments').insert({
+        id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+        orderId,
+        storeId,
+        factoryId,
+        provider: 'razorpay',
+        providerPaymentId: razorpayPaymentId,
+        method: verifiedPayment?.method || 'ONLINE',
+        status: 'CAPTURED',
+        amount: totalOrderValue,
+        currency: 'INR',
+        metadata: {
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
+          razorpay_signature: razorpaySignature || null,
+          paid_amount_in_paise: Math.round(totalOrderValue * 100),
+          paid_at: now,
+        },
+        paidAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      if (payErr) {
+        console.error('Wholesale payment record insert failed (possible replay race):', payErr);
+        await supabase.from('ecommerce_orders').delete().eq('id', orderId);
+        return NextResponse.json(
+          { error: 'This payment transaction has already been recorded for an existing order.' },
+          { status: 409 }
+        );
       }
     }
 

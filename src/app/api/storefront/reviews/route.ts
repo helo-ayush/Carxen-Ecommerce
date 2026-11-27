@@ -300,11 +300,6 @@ export async function POST(request: NextRequest) {
     verifiedPurchase = Boolean(purchased && purchased.length > 0);
   }
 
-  // If order was placed, allow review; fallback to true if initiated from verified order item in account
-  if (!verifiedPurchase && orderIds.length > 0) {
-    verifiedPurchase = true;
-  }
-
   if (!verifiedPurchase) {
     return NextResponse.json(
       { error: 'Only customers who have ordered this product can review it.' },

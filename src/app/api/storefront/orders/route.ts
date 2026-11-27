@@ -50,6 +50,9 @@ export async function POST(request: Request) {
 
   try {
     const payload = parseCheckoutPayload(body);
+    if (payload.paymentMethod !== 'Cash on delivery') {
+      return errorResponse('Online payments must be verified through Razorpay checkout.', 400);
+    }
     const placement = await placeStorefrontOrder(payload);
     const response = NextResponse.json(
       { order: placement.order },
@@ -75,17 +78,7 @@ export async function POST(request: Request) {
       const supabaseAdmin = getSupabaseAdmin();
 
       const { customer } = await getAuthenticatedCustomer(request);
-      let customerId = customer?.id || null;
-
-      if (!customerId && payload.customer?.email) {
-        const { data: matchedCust } = await supabaseAdmin
-          .from('ecommerce_customers')
-          .select('id')
-          .ilike('email', payload.customer.email.trim())
-          .limit(1)
-          .maybeSingle();
-        if (matchedCust) customerId = matchedCust.id;
-      }
+      const customerId = customer?.id || null;
 
       const { data: orderRow } = await supabaseAdmin
         .from('ecommerce_orders')
@@ -120,23 +113,24 @@ export async function POST(request: Request) {
           updatedAt: now,
         });
 
-        // Auto-persist delivery address to customer's permanent address book in ecommerce_addresses
-        try {
-          const shippingSnap = orderRow.shippingAddressSnapshot || payload.shippingAddress;
-          await persistShippingAddressToCustomer({
-            customerId,
-            customerEmail: payload.customer?.email || (shippingSnap as any)?.email,
-            recipientName: shippingSnap?.name || payload.customer?.name,
-            phone: shippingSnap?.phone || payload.customer?.phone,
-            addressLine1: shippingSnap?.addressLine1 || '',
-            addressLine2: shippingSnap?.addressLine2 || null,
-            city: shippingSnap?.city || 'Delhi',
-            state: shippingSnap?.state || 'Delhi',
-            postalCode: shippingSnap?.postalCode || '',
-            country: shippingSnap?.country || 'India',
-          });
-        } catch (addrErr) {
-          console.warn('Failed to auto-persist address after COD order:', addrErr);
+        // Auto-persist delivery address ONLY for authenticated customers
+        if (customerId) {
+          try {
+            const shippingSnap = orderRow.shippingAddressSnapshot || payload.shippingAddress;
+            await persistShippingAddressToCustomer({
+              customerId,
+              recipientName: shippingSnap?.name || payload.customer?.name,
+              phone: shippingSnap?.phone || payload.customer?.phone,
+              addressLine1: shippingSnap?.addressLine1 || '',
+              addressLine2: shippingSnap?.addressLine2 || null,
+              city: shippingSnap?.city || 'Delhi',
+              state: shippingSnap?.state || 'Delhi',
+              postalCode: shippingSnap?.postalCode || '',
+              country: shippingSnap?.country || 'India',
+            });
+          } catch (addrErr) {
+            console.warn('Failed to auto-persist address after COD order:', addrErr);
+          }
         }
       }
     } catch (linkErr) {

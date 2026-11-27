@@ -47,30 +47,11 @@ export async function POST(request: Request) {
           isVerifiedBuyer: orderCount >= 3,
         };
       } else {
-        const guestEmail = (customer?.email || shippingAddress?.email)?.trim();
-        if (guestEmail) {
-          try {
-            const pastOrders = await loadCustomerOrders('', guestEmail);
-            const completedOrders = (pastOrders || []).filter((o: any) => {
-              const st = (o.status || '').toLowerCase();
-              return st !== 'cancelled' && st !== 'refunded';
-            });
-            const orderCount = completedOrders.length;
-            buyerContext = {
-              isWholesaleApproved: false,
-              email: guestEmail,
-              orderCount,
-              isVerifiedBuyer: orderCount >= 3,
-            };
-          } catch {
-            buyerContext = {
-              isWholesaleApproved: false,
-              email: guestEmail,
-              orderCount: 0,
-              isVerifiedBuyer: false,
-            };
-          }
-        }
+        buyerContext = {
+          isWholesaleApproved: false,
+          orderCount: 0,
+          isVerifiedBuyer: false,
+        };
       }
     } catch {
       // Unauthenticated / guest checkout fallback

@@ -123,6 +123,8 @@ export async function PUT(request: Request) {
       expectedMonthlyVolume,
     } = body || {};
 
+    const isApprovedDealer = (customer as any).b2bStatus === 'APPROVED';
+
     const existingMeta = (customer.metadata || {}) as Record<string, any>;
     const updatedMeta: Record<string, any> = {
       ...existingMeta,
@@ -132,10 +134,10 @@ export async function PUT(request: Request) {
       ...(savedPayments !== undefined ? { savedPayments } : {}),
       ...(garageVehicles !== undefined ? { garageVehicles } : {}),
       ...(activeVehicle !== undefined ? { activeVehicle } : {}),
-      ...(businessName !== undefined ? { businessName } : {}),
-      ...(tradeName !== undefined ? { tradeName } : {}),
-      ...(gstin !== undefined ? { gstin } : {}),
-      ...(pan !== undefined ? { pan } : {}),
+      ...(!isApprovedDealer && businessName !== undefined ? { businessName } : {}),
+      ...(!isApprovedDealer && tradeName !== undefined ? { tradeName } : {}),
+      ...(!isApprovedDealer && gstin !== undefined ? { gstin } : {}),
+      ...(!isApprovedDealer && pan !== undefined ? { pan } : {}),
       ...(businessType !== undefined ? { businessType } : {}),
       ...(businessAddress !== undefined ? { businessAddress } : {}),
       ...(city !== undefined ? { city } : {}),
@@ -157,10 +159,10 @@ export async function PUT(request: Request) {
       updatedAt: now,
     };
 
-    if (businessName !== undefined) customerUpdateData.businessName = businessName?.trim() || null;
-    if (tradeName !== undefined) customerUpdateData.tradeName = tradeName?.trim() || null;
-    if (gstin !== undefined) customerUpdateData.gstin = gstin?.trim().toUpperCase() || null;
-    if (pan !== undefined) customerUpdateData.pan = pan?.trim().toUpperCase() || null;
+    if (!isApprovedDealer && businessName !== undefined) customerUpdateData.businessName = businessName?.trim() || null;
+    if (!isApprovedDealer && tradeName !== undefined) customerUpdateData.tradeName = tradeName?.trim() || null;
+    if (!isApprovedDealer && gstin !== undefined) customerUpdateData.gstin = gstin?.trim().toUpperCase() || null;
+    if (!isApprovedDealer && pan !== undefined) customerUpdateData.pan = pan?.trim().toUpperCase() || null;
     if (businessType !== undefined) customerUpdateData.businessType = businessType?.trim() || null;
     if (businessAddress !== undefined) customerUpdateData.businessAddress = businessAddress?.trim() || null;
     if (city !== undefined) customerUpdateData.city = city?.trim() || null;

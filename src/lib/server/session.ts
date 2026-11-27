@@ -1,11 +1,24 @@
 import crypto from 'crypto';
 
-const SESSION_SECRET =
-  process.env.JWT_SECRET ||
-  process.env.SUPABASE_SECRET_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXTAUTH_SECRET ||
-  'carxen-prod-session-hmac-secret-key-salt-9812';
+function getSessionSecret(): string {
+  const secret =
+    process.env.JWT_SECRET ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXTAUTH_SECRET;
+
+  if (secret && secret.trim().length > 0) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CRITICAL: No session signing secret configured (set JWT_SECRET or SUPABASE_SERVICE_ROLE_KEY).'
+    );
+  }
+
+  return 'carxen-dev-only-session-secret-do-not-use-in-prod';
+}
 
 export interface SessionPayload {
   sub: string; // Auth User ID (UUID)
@@ -32,7 +45,7 @@ export function signSessionToken(
 
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(`cxs.${payloadB64}`)
     .digest('base64url');
 
@@ -58,7 +71,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
   }
 
   const expectedSig = crypto
-    .createHmac('sha256', SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(`cxs.${payloadB64}`)
     .digest('base64url');
 

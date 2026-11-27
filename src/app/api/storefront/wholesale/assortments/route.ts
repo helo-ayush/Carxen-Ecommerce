@@ -25,7 +25,7 @@ function cleanUserAssortments(items: any[]): any[] {
 export async function GET(request: Request) {
   try {
     const { customer, user } = await getAuthenticatedCustomer(request);
-    if (!customer) {
+    if (!customer || customer.b2bStatus !== 'APPROVED') {
       return NextResponse.json({ success: true, assortments: [] });
     }
 
@@ -50,6 +50,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Authentication required to save procurement assortments.' },
         { status: 401 }
+      );
+    }
+    if (customer.b2bStatus !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Approved B2B dealer account required.' },
+        { status: 403 }
       );
     }
 
@@ -124,6 +130,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         { error: 'Authentication required to delete assortments.' },
         { status: 401 }
+      );
+    }
+    if (customer.b2bStatus !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Approved B2B dealer account required.' },
+        { status: 403 }
       );
     }
 
