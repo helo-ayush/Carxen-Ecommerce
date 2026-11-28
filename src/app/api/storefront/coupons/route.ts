@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
     const buyerEmail = (authCustomer?.email || authUser?.email || '').toLowerCase().trim();
     const buyerBiz = (authCustomer?.businessName || '').toLowerCase().trim();
-    const buyerName = (authCustomer?.name || '').toLowerCase().trim();
+    const buyerTrade = (authCustomer?.tradeName || '').toLowerCase().trim();
     const buyerId = authCustomer?.id || authUser?.id || '';
     const isApprovedDealer = authCustomer?.b2bStatus === 'APPROVED';
 
@@ -74,8 +74,10 @@ export async function GET(request: Request) {
 
         if (targetBuyerId && buyerId && targetBuyerId === buyerId) return true;
         if (targetEmail && buyerEmail && targetEmail === buyerEmail) return true;
-        if (targetName && ((buyerBiz && buyerBiz === targetName) || (buyerName && buyerName === targetName))) {
-          return true;
+        if (!targetBuyerId && !targetEmail && targetName) {
+          if ((buyerBiz && buyerBiz === targetName) || (buyerTrade && buyerTrade === targetName)) {
+            return true;
+          }
         }
         return false;
       })

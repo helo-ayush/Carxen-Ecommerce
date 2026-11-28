@@ -207,6 +207,7 @@ export async function POST(request: Request) {
       const { data: campaign } = await supabaseAdmin
         .from('ecommerce_campaigns')
         .select('*')
+        .eq('storeId', storeId)
         .eq('code', codeUpper)
         .eq('status', 'ACTIVE')
         .maybeSingle();
@@ -286,15 +287,17 @@ export async function POST(request: Request) {
       // Authoritative discount calculation strictly from DB campaign settings
       validCouponCode = campaign.code;
       campaignId = campaign.id;
-      const val = Number(campaign.discountValue) || 0;
+      const rawVal = Number(campaign.discountValue) || 0;
       if (campaign.discountType === 'PERCENTAGE' || campaign.discountType === 'Percentage') {
-        couponDiscount = Math.round((subtotal * val) / 100);
+        const pct = Math.min(100, Math.max(0, rawVal));
+        couponDiscount = Math.round((subtotal * pct) / 100);
         if (campaign.maxDiscountAmount && couponDiscount > Number(campaign.maxDiscountAmount)) {
           couponDiscount = Math.round(Number(campaign.maxDiscountAmount));
         }
       } else {
-        couponDiscount = Math.min(subtotal, Math.round(val));
+        couponDiscount = Math.max(0, Math.round(rawVal));
       }
+      couponDiscount = Math.min(subtotal, Math.max(0, couponDiscount));
     }
 
     const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
@@ -754,21 +757,43 @@ export async function POST(request: Request) {
       }
     }
 
-    // Increment coupon campaign usage if applicable
+    // Atomically increment coupon campaign usage if applicable
     if (campaignId) {
-      try {
+      if (process.env.DATABASE_URL || process.env.DIRECT_URL) {
+        const { getPostgresPool } = await import('@/lib/server/pg-supabase-adapter');
+        const pool = getPostgresPool();
+        const incRes = await pool.query(
+          `UPDATE ecommerce_campaigns
+           SET "usageCount" = COALESCE("usageCount", 0) + 1, "updatedAt" = $2
+           WHERE id = $1 AND ("usageLimit" IS NULL OR COALESCE("usageCount", 0) < "usageLimit")
+           RETURNING "usageCount"`,
+          [campaignId, now]
+        );
+        if (incRes.rows.length === 0) {
+          await rollbackFailedPaidOrder(supabase, { orderId, storeId });
+          return NextResponse.json(
+            { error: `Coupon "${validCouponCode}" has reached its maximum usage limit.` },
+            { status: 409 }
+          );
+        }
+      } else {
         const { data: currentCamp } = await supabase
           .from('ecommerce_campaigns')
-          .select('usageCount')
+          .select('usageCount, usageLimit')
           .eq('id', campaignId)
           .maybeSingle();
-        const nextCount = (Number(currentCamp?.usageCount) || 0) + 1;
+        const curCount = Number(currentCamp?.usageCount) || 0;
+        if (currentCamp?.usageLimit && curCount >= Number(currentCamp.usageLimit)) {
+          await rollbackFailedPaidOrder(supabase, { orderId, storeId });
+          return NextResponse.json(
+            { error: `Coupon "${validCouponCode}" has reached its maximum usage limit.` },
+            { status: 409 }
+          );
+        }
         await supabase
           .from('ecommerce_campaigns')
-          .update({ usageCount: nextCount, updatedAt: now })
+          .update({ usageCount: curCount + 1, updatedAt: now })
           .eq('id', campaignId);
-      } catch (campErr) {
-        console.warn('Could not increment campaign usage count:', campErr);
       }
     }
 

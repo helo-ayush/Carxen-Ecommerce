@@ -146,7 +146,7 @@ export async function PUT(request: Request) {
       ...(expectedMonthlyVolume !== undefined ? { expectedMonthlyVolume } : {}),
     };
 
-    const trimmedName = typeof name === 'string' && name.trim() ? name.trim() : customer.name;
+    const trimmedName = !isApprovedDealer && typeof name === 'string' && name.trim() ? name.trim() : customer.name;
     const trimmedPhone = typeof phone === 'string' ? phone.trim() : customer.phone;
 
     const supabase = getSupabaseAdmin();

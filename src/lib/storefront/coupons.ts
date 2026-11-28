@@ -122,27 +122,24 @@ export function isWholesaleBuyerMatch(
   const buyerTrade = normalize(buyerContext.tradeName);
   const buyerName = normalize(buyerContext.name);
 
-  // 1. Email exact match
+  // 1. User / Customer ID exact match
+  if (coupon.targetWholesaleBuyerId && buyerContext.userId && coupon.targetWholesaleBuyerId === buyerContext.userId) {
+    return true;
+  }
+
+  // 2. Email exact match
   if (targetEmail && buyerEmail && targetEmail === buyerEmail) {
     return true;
   }
 
-  // 2. Business / Trade / Contact name match
-  if (targetName) {
-    if (buyerBiz && (buyerBiz === targetName || buyerBiz.includes(targetName) || targetName.includes(buyerBiz))) {
+  // 3. Fallback exact match ONLY against locked businessName / tradeName when no ID or email target is set
+  if (!coupon.targetWholesaleBuyerId && !targetEmail && targetName) {
+    if (buyerBiz && buyerBiz === targetName) {
       return true;
     }
-    if (buyerTrade && (buyerTrade === targetName || buyerTrade.includes(targetName) || targetName.includes(buyerTrade))) {
+    if (buyerTrade && buyerTrade === targetName) {
       return true;
     }
-    if (buyerName && (buyerName === targetName || buyerName.includes(targetName) || targetName.includes(buyerName))) {
-      return true;
-    }
-  }
-
-  // 3. User ID match
-  if (coupon.targetWholesaleBuyerId && buyerContext.userId && coupon.targetWholesaleBuyerId === buyerContext.userId) {
-    return true;
   }
 
   return false;
@@ -251,16 +248,18 @@ export function validateCoupon(
     }
   }
 
-  // Calculate discount amount
+  // Calculate discount amount (reject/cap percentage > 100 and cap discount at cartTotal)
   let discountAmount = 0;
   if (coupon.type === 'Percentage') {
-    discountAmount = Math.round((cartTotal * coupon.value) / 100);
+    const pct = Math.min(100, Math.max(0, Number(coupon.value) || 0));
+    discountAmount = Math.round((cartTotal * pct) / 100);
     if (coupon.maxDiscountAmount && discountAmount > Number(coupon.maxDiscountAmount)) {
       discountAmount = Math.round(Number(coupon.maxDiscountAmount));
     }
   } else {
-    discountAmount = Math.min(coupon.value, cartTotal);
+    discountAmount = Math.max(0, Math.round(Number(coupon.value) || 0));
   }
+  discountAmount = Math.min(cartTotal, Math.max(0, discountAmount));
 
   const discountLabel =
     coupon.type === 'Percentage' ? `${coupon.value}% off` : `₹${coupon.value.toLocaleString('en-IN')} off`;
