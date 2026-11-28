@@ -17,6 +17,7 @@ import {
 } from '@/lib/storefront/order-access';
 import { getAuthenticatedCustomer, loadCustomerOrders, persistShippingAddressToCustomer } from '@/lib/server/customer';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { resolveIdempotentPaymentOrder, rollbackFailedPaidOrder } from '@/lib/server/payment-idempotency';
 import type { WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
 export const dynamic = 'force-dynamic';
@@ -131,15 +132,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 6: Anti-replay protection — check if payment ID was already used
+    // Step 6: Anti-replay & idempotent retry check
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: existingPayment } = await supabaseAdmin
-      .from('ecommerce_payments')
-      .select('id, orderId')
-      .eq('providerPaymentId', razorpay_payment_id)
-      .maybeSingle();
+    const idempotency = await resolveIdempotentPaymentOrder(
+      supabaseAdmin,
+      razorpay_payment_id,
+      customerId,
+      razorpay_order_id
+    );
 
-    if (existingPayment) {
+    if (idempotency.kind === 'idempotent') {
+      return NextResponse.json(
+        { success: true, idempotent: true, order: idempotency.order },
+        { status: 200, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+    if (idempotency.kind === 'conflict') {
       console.error('Duplicate payment reuse attempt:', razorpay_payment_id);
       return NextResponse.json(
         { error: 'This payment transaction has already been recorded for an existing order.' },
@@ -172,86 +180,125 @@ export async function POST(request: Request) {
       .eq('orderNumber', placement.order.orderNumber)
       .maybeSingle();
 
-    if (orderRow) {
-      const orderUpdate: Record<string, any> = {
-        paymentStatus: 'PAID',
-        status: 'CONFIRMED',
-        updatedAt: now,
-      };
+    if (!orderRow) {
+      return NextResponse.json(
+        { error: 'Order record could not be loaded after placement.' },
+        { status: 500 }
+      );
+    }
 
-      if (customerId) {
-        orderUpdate.customerId = customerId;
-      }
+    const orderUpdate: Record<string, any> = {
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      updatedAt: now,
+    };
 
-      await supabaseAdmin.from('ecommerce_orders').update(orderUpdate).eq('id', orderRow.id);
+    if (customerId) {
+      orderUpdate.customerId = customerId;
+    }
 
-      // Record payment transaction atomically; abort and rollback order on duplicate payment replay
-      const { error: payErr } = await supabaseAdmin.from('ecommerce_payments').insert({
-        id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+    const { error: orderUpdateErr } = await supabaseAdmin
+      .from('ecommerce_orders')
+      .update(orderUpdate)
+      .eq('id', orderRow.id);
+
+    if (orderUpdateErr) {
+      await rollbackFailedPaidOrder(supabaseAdmin, {
         orderId: orderRow.id,
         storeId: orderRow.storeId,
-        factoryId: orderRow.factoryId,
-        provider: 'razorpay',
-        providerPaymentId: razorpay_payment_id,
-        method: verifiedPayment?.method || 'razorpay',
-        status: 'CAPTURED',
-        amount: totals.amountInPaise / 100,
-        currency: 'INR',
-        metadata: {
-          razorpay_order_id,
-          razorpay_payment_id,
-          payment_method: verifiedPayment?.method || 'razorpay',
-          paid_amount_in_paise: totals.amountInPaise,
-          paid_at: now,
-        },
-        paidAt: now,
-        createdAt: now,
-        updatedAt: now,
+        couponCode: totals.appliedCoupon,
       });
+      return NextResponse.json(
+        { error: 'Failed to finalize paid order status.' },
+        { status: 500 }
+      );
+    }
 
-      if (payErr) {
-        console.error('Payment record insert failed (possible replay race):', payErr);
-        await supabaseAdmin.from('ecommerce_orders').delete().eq('id', orderRow.id);
+    // Record payment transaction atomically; abort and rollback order + coupon usage on duplicate payment replay
+    const { error: payErr } = await supabaseAdmin.from('ecommerce_payments').insert({
+      id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
+      orderId: orderRow.id,
+      storeId: orderRow.storeId,
+      factoryId: orderRow.factoryId,
+      provider: 'razorpay',
+      providerPaymentId: razorpay_payment_id,
+      method: verifiedPayment?.method || 'razorpay',
+      status: 'CAPTURED',
+      amount: totals.amountInPaise / 100,
+      currency: 'INR',
+      metadata: {
+        razorpay_order_id,
+        razorpay_payment_id,
+        payment_method: verifiedPayment?.method || 'razorpay',
+        paid_amount_in_paise: totals.amountInPaise,
+        paid_at: now,
+      },
+      paidAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (payErr) {
+      console.error('Payment record insert failed (possible replay race):', payErr);
+      await rollbackFailedPaidOrder(supabaseAdmin, {
+        orderId: orderRow.id,
+        storeId: orderRow.storeId,
+        couponCode: totals.appliedCoupon,
+      });
+      const retry = await resolveIdempotentPaymentOrder(
+        supabaseAdmin,
+        razorpay_payment_id,
+        customerId,
+        razorpay_order_id
+      );
+      if (retry.kind === 'idempotent') {
         return NextResponse.json(
-          { error: 'This payment transaction has already been recorded for an existing order.' },
-          { status: 409 }
+          { success: true, idempotent: true, order: retry.order },
+          { status: 200, headers: { 'Cache-Control': 'no-store' } }
         );
       }
+      return NextResponse.json(
+        { error: 'This payment transaction has already been recorded for an existing order.' },
+        { status: 409 }
+      );
+    }
 
-      // Create shipment tracking record
-      await supabaseAdmin.from('ecommerce_shipments').insert({
-        id: `ship_${crypto.randomUUID().replace(/-/g, '')}`,
-        orderId: orderRow.id,
-        storeId: orderRow.storeId,
-        factoryId: orderRow.factoryId,
-        shipmentNumber: `SHP-${placement.order.orderNumber}`,
-        status: 'CONFIRMED',
-        carrier,
-        trackingNumber: trackingNum,
-        shippingAddressSnapshot: orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress,
-        metadata: { estimatedDelivery },
-        createdAt: now,
-        updatedAt: now,
-      });
+    // Create shipment tracking record
+    const { error: shipErr } = await supabaseAdmin.from('ecommerce_shipments').insert({
+      id: `ship_${crypto.randomUUID().replace(/-/g, '')}`,
+      orderId: orderRow.id,
+      storeId: orderRow.storeId,
+      factoryId: orderRow.factoryId,
+      shipmentNumber: `SHP-${placement.order.orderNumber}`,
+      status: 'CONFIRMED',
+      carrier,
+      trackingNumber: trackingNum,
+      shippingAddressSnapshot: orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress,
+      metadata: { estimatedDelivery },
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (shipErr) {
+      console.error('Shipment insert failed:', shipErr);
+    }
 
-      // Auto-persist delivery address ONLY for authenticated customers
-      if (customerId) {
-        try {
-          const shippingSnap = orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress;
-          await persistShippingAddressToCustomer({
-            customerId,
-            recipientName: shippingSnap?.name || parsedPayload.customer?.name,
-            phone: shippingSnap?.phone || parsedPayload.customer?.phone,
-            addressLine1: shippingSnap?.addressLine1 || '',
-            addressLine2: shippingSnap?.addressLine2 || null,
-            city: shippingSnap?.city || 'Delhi',
-            state: shippingSnap?.state || 'Delhi',
-            postalCode: shippingSnap?.postalCode || '',
-            country: shippingSnap?.country || 'India',
-          });
-        } catch (addrErr) {
-          console.warn('Failed to auto-persist address after online payment:', addrErr);
-        }
+    // Auto-persist delivery address ONLY for authenticated customers
+    if (customerId) {
+      try {
+        const shippingSnap = orderRow.shippingAddressSnapshot || parsedPayload.shippingAddress;
+        await persistShippingAddressToCustomer({
+          customerId,
+          recipientName: shippingSnap?.name || parsedPayload.customer?.name,
+          phone: shippingSnap?.phone || parsedPayload.customer?.phone,
+          addressLine1: shippingSnap?.addressLine1 || '',
+          addressLine2: shippingSnap?.addressLine2 || null,
+          city: shippingSnap?.city || 'Delhi',
+          state: shippingSnap?.state || 'Delhi',
+          postalCode: shippingSnap?.postalCode || '',
+          country: shippingSnap?.country || 'India',
+        });
+      } catch (addrErr) {
+        console.warn('Failed to auto-persist address after online payment:', addrErr);
       }
     }
 

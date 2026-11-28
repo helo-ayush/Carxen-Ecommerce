@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
+import { resolveIdempotentPaymentOrder, rollbackFailedPaidOrder } from '@/lib/server/payment-idempotency';
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
@@ -440,15 +441,24 @@ export async function POST(request: Request) {
         );
       }
 
-      // Anti-replay protection: check if payment ID was already used
+      // Anti-replay & idempotent retry check
       const supabaseAdmin = getSupabaseAdmin();
-      const { data: existingPayment } = await supabaseAdmin
-        .from('ecommerce_payments')
-        .select('id, orderId')
-        .eq('providerPaymentId', razorpayPaymentId)
-        .maybeSingle();
+      const idempotency = await resolveIdempotentPaymentOrder(
+        supabaseAdmin,
+        razorpayPaymentId,
+        customer?.id || null,
+        razorpayOrderId
+      );
 
-      if (existingPayment) {
+      if (idempotency.kind === 'idempotent') {
+        return NextResponse.json({
+          success: true,
+          idempotent: true,
+          order: idempotency.order,
+          message: 'Wholesale order already recorded for this payment.',
+        });
+      }
+      if (idempotency.kind === 'conflict') {
         console.error('Duplicate B2B payment reuse attempt:', razorpayPaymentId);
         return NextResponse.json(
           { error: 'This payment transaction has already been recorded for an existing order.' },
@@ -624,28 +634,15 @@ export async function POST(request: Request) {
       .insert(orderItemsRows);
 
     if (itemsInsertErr) {
-      console.warn('Could not insert wholesale order line items:', itemsInsertErr);
+      console.error('Failed to insert wholesale order line items:', itemsInsertErr);
+      await rollbackFailedPaidOrder(supabase, { orderId, storeId });
+      return NextResponse.json(
+        { error: 'Could not record wholesale order line items. Please try again.' },
+        { status: 500 }
+      );
     }
 
-    // Increment coupon campaign usage if applicable
-    if (campaignId) {
-      try {
-        const { data: currentCamp } = await supabase
-          .from('ecommerce_campaigns')
-          .select('usageCount')
-          .eq('id', campaignId)
-          .maybeSingle();
-        const nextCount = (Number(currentCamp?.usageCount) || 0) + 1;
-        await supabase
-          .from('ecommerce_campaigns')
-          .update({ usageCount: nextCount, updatedAt: now })
-          .eq('id', campaignId);
-      } catch (campErr) {
-        console.warn('Could not increment campaign usage count:', campErr);
-      }
-    }
-
-    // If paid via Razorpay, insert payment record atomically; rollback order on replay conflict
+    // If paid via Razorpay, insert payment record BEFORE campaign increment/shipment; rollback on replay conflict
     if (isRazorpay && razorpayPaymentId) {
       const { error: payErr } = await supabase.from('ecommerce_payments').insert({
         id: `pay_${crypto.randomUUID().replace(/-/g, '')}`,
@@ -672,11 +669,43 @@ export async function POST(request: Request) {
 
       if (payErr) {
         console.error('Wholesale payment record insert failed (possible replay race):', payErr);
-        await supabase.from('ecommerce_orders').delete().eq('id', orderId);
+        await rollbackFailedPaidOrder(supabase, { orderId, storeId });
+        const retry = await resolveIdempotentPaymentOrder(
+          supabase,
+          razorpayPaymentId,
+          customer?.id || null,
+          razorpayOrderId
+        );
+        if (retry.kind === 'idempotent') {
+          return NextResponse.json({
+            success: true,
+            idempotent: true,
+            order: retry.order,
+            message: 'Wholesale order already recorded for this payment.',
+          });
+        }
         return NextResponse.json(
           { error: 'This payment transaction has already been recorded for an existing order.' },
           { status: 409 }
         );
+      }
+    }
+
+    // Increment coupon campaign usage if applicable
+    if (campaignId) {
+      try {
+        const { data: currentCamp } = await supabase
+          .from('ecommerce_campaigns')
+          .select('usageCount')
+          .eq('id', campaignId)
+          .maybeSingle();
+        const nextCount = (Number(currentCamp?.usageCount) || 0) + 1;
+        await supabase
+          .from('ecommerce_campaigns')
+          .update({ usageCount: nextCount, updatedAt: now })
+          .eq('id', campaignId);
+      } catch (campErr) {
+        console.warn('Could not increment campaign usage count:', campErr);
       }
     }
 
