@@ -18,3 +18,17 @@ export function normalizeStrictEmail(raw: unknown): string | null {
 export function isValidStrictEmail(raw: unknown): boolean {
   return normalizeStrictEmail(raw) !== null;
 }
+
+/**
+ * Sanitizes customer-supplied free text before order/B2B persistence so HTML/script
+ * markup cannot be stored and later executed in staff-side renderers.
+ * Strips control characters, <, >, and backticks, trims, and enforces maxLength.
+ */
+export function sanitizeOrderFreeText(raw: unknown, maxLength: number = 300): string {
+  if (typeof raw !== 'string') return '';
+  return raw
+    .replace(/[\x00-\x1F\x7F]/g, ' ')
+    .replace(/[<>`]/g, '')
+    .trim()
+    .slice(0, maxLength);
+}

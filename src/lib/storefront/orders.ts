@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { sanitizeOrderFreeText } from '@/lib/server/validation';
 import { getStorefrontProducts } from './catalog';
 import { isOrderAccessToken } from './order-access';
 import type {
@@ -60,7 +61,7 @@ function readRequiredText(
     throw new StorefrontOrderError(`${label} is required.`, 400, 'invalid_payload');
   }
 
-  const normalized = value.trim();
+  const normalized = sanitizeOrderFreeText(value, maxLength);
   if (normalized.length < minLength || normalized.length > maxLength) {
     throw new StorefrontOrderError(`${label} is invalid.`, 400, 'invalid_payload');
   }
@@ -80,11 +81,12 @@ function readOptionalText(
     throw new StorefrontOrderError(`${label} is invalid.`, 400, 'invalid_payload');
   }
 
-  const normalized = value.trim();
-  if (normalized.length > maxLength) {
+  const trimmedLen = value.trim().length;
+  if (trimmedLen > maxLength) {
     throw new StorefrontOrderError(`${label} is invalid.`, 400, 'invalid_payload');
   }
 
+  const normalized = sanitizeOrderFreeText(value, maxLength);
   return normalized || undefined;
 }
 

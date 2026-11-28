@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
+import { sanitizeOrderFreeText } from '@/lib/server/validation';
 import { formatUserFriendlyB2BError } from '@/lib/format-b2b-error';
 
 export const dynamic = 'force-dynamic';
@@ -172,17 +173,17 @@ export async function POST(request: Request) {
       : `CX-B2B-${(customer?.id || authUser?.id || crypto.randomUUID()).replace(/[^A-Za-z0-9]/g, '').slice(-6).toUpperCase()}`;
 
     const b2bData = {
-      name: name.trim(),
-      phone: normalizedPhone || null,
+      name: sanitizeOrderFreeText(name, 120),
+      phone: sanitizeOrderFreeText(normalizedPhone, 32) || null,
       b2bStatus: 'PENDING',
-      businessName: businessName.trim(),
-      tradeName: tradeName?.trim() || null,
+      businessName: sanitizeOrderFreeText(businessName, 160),
+      tradeName: sanitizeOrderFreeText(tradeName, 160) || null,
       gstin: normalizedGstin,
       pan: normalizedPan,
-      businessType: businessType?.trim() || 'Automotive Dealer / Workshop',
-      businessAddress: businessAddress?.trim() || null,
-      city: city?.trim() || null,
-      state: state?.trim() || null,
+      businessType: sanitizeOrderFreeText(businessType, 64) || 'Automotive Dealer / Workshop',
+      businessAddress: sanitizeOrderFreeText(businessAddress, 300) || null,
+      city: sanitizeOrderFreeText(city, 80) || null,
+      state: sanitizeOrderFreeText(state, 80) || null,
       pincode: pincode?.trim() || null,
       expectedMonthlyVolume: (expectedMonthlyVolume?.trim() || '₹50k–₹2L').replace(/\s*\(Tier\s*\d+\)/gi, '').trim(),
       wholesaleTier: 'tier1',

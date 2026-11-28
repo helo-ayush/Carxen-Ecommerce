@@ -10,6 +10,7 @@ import {
   verifyRazorpayOrderBinding,
 } from '@/lib/server/razorpay-binding';
 import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
+import { sanitizeOrderFreeText } from '@/lib/server/validation';
 import { resolveIdempotentPaymentOrder, rollbackFailedPaidOrder } from '@/lib/server/payment-idempotency';
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
@@ -547,62 +548,62 @@ export async function POST(request: Request) {
       : null;
 
     const customerSnapshot = {
-      businessName: businessName.trim(),
-      tradeName: tradeName?.trim() || null,
+      businessName: sanitizeOrderFreeText(businessName, 160),
+      tradeName: sanitizeOrderFreeText(tradeName, 160) || null,
       gstin: gstin?.trim().toUpperCase() || null,
       pan: pan?.trim().toUpperCase() || null,
-      representativeName: representativeName?.trim() || customer?.name || authUser?.user_metadata?.full_name || 'Authorized Buyer',
-      email: (email || customer?.email || authUser?.email || '').trim().toLowerCase(),
-      phone: (phone || customer?.phone || '').trim(),
+      representativeName: sanitizeOrderFreeText(representativeName || customer?.name || authUser?.user_metadata?.full_name || 'Authorized Buyer', 120),
+      email: (customer?.email || authUser?.email || '').trim().toLowerCase(),
+      phone: sanitizeOrderFreeText(phone || customer?.phone || '', 32),
       wholesaleTier: customer?.wholesaleTier || 'tier1',
       b2bStatus: customer?.b2bStatus || 'APPROVED',
       isB2BWholesale: true,
       paymentMethod: resolvedPaymentMethod,
       orderMetadata: orderMetadata || null,
-      poNumber: poNumber?.trim() || null,
-      requestedDeliveryDate: requestedDeliveryDate?.trim() || null,
+      poNumber: sanitizeOrderFreeText(poNumber, 64) || null,
+      requestedDeliveryDate: sanitizeOrderFreeText(requestedDeliveryDate, 64) || null,
       partialShipmentAllowed: Boolean(partialShipmentAllowed),
-      consignmentNotes: factoryNotes?.trim() || null,
+      consignmentNotes: sanitizeOrderFreeText(factoryNotes, 500) || null,
       couponCode: validCouponCode || null,
       couponDiscount,
     };
 
     const shippingSnapshot = {
-      recipientName: shippingAddress.recipientName || representativeName || businessName,
-      companyName: businessName.trim(),
-      phone: shippingAddress.phone || phone || '',
-      line1: shippingAddress.line1.trim(),
-      line2: shippingAddress.line2?.trim() || '',
-      city: shippingAddress.city.trim(),
-      state: shippingAddress.state?.trim() || 'Maharashtra',
-      postalCode: shippingAddress.postalCode.trim(),
+      recipientName: sanitizeOrderFreeText(shippingAddress.recipientName || representativeName || businessName, 120),
+      companyName: sanitizeOrderFreeText(businessName, 160),
+      phone: sanitizeOrderFreeText(shippingAddress.phone || phone || '', 32),
+      line1: sanitizeOrderFreeText(shippingAddress.line1, 200),
+      line2: sanitizeOrderFreeText(shippingAddress.line2, 200),
+      city: sanitizeOrderFreeText(shippingAddress.city, 80),
+      state: sanitizeOrderFreeText(shippingAddress.state || 'Maharashtra', 80),
+      postalCode: sanitizeOrderFreeText(shippingAddress.postalCode, 16),
       country: 'IN',
       dispatchPreference: partialShipmentAllowed ? 'Partial Dispatch Allowed' : 'Complete Dispatch Only',
-      poNumber: poNumber?.trim() || null,
-      requestedDeliveryDate: requestedDeliveryDate?.trim() || null,
-      consignmentNotes: factoryNotes?.trim() || null,
+      poNumber: sanitizeOrderFreeText(poNumber, 64) || null,
+      requestedDeliveryDate: sanitizeOrderFreeText(requestedDeliveryDate, 64) || null,
+      consignmentNotes: sanitizeOrderFreeText(factoryNotes, 500) || null,
     };
 
     const billingSnapshot = billingAddress?.line1
       ? {
-          recipientName: billingAddress.recipientName || businessName,
-          companyName: businessName.trim(),
-          phone: billingAddress.phone || phone || '',
-          line1: billingAddress.line1.trim(),
-          line2: billingAddress.line2?.trim() || '',
-          city: billingAddress.city.trim(),
-          state: billingAddress.state?.trim() || 'Maharashtra',
-          postalCode: billingAddress.postalCode.trim(),
+          recipientName: sanitizeOrderFreeText(billingAddress.recipientName || businessName, 120),
+          companyName: sanitizeOrderFreeText(businessName, 160),
+          phone: sanitizeOrderFreeText(billingAddress.phone || phone || '', 32),
+          line1: sanitizeOrderFreeText(billingAddress.line1, 200),
+          line2: sanitizeOrderFreeText(billingAddress.line2, 200),
+          city: sanitizeOrderFreeText(billingAddress.city, 80),
+          state: sanitizeOrderFreeText(billingAddress.state || 'Maharashtra', 80),
+          postalCode: sanitizeOrderFreeText(billingAddress.postalCode, 16),
           country: 'IN',
           gstin: gstin?.trim().toUpperCase() || null,
         }
       : shippingSnapshot;
 
     const formattedNotes = [
-      poNumber ? `PO Reference: ${poNumber.trim()}` : null,
-      requestedDeliveryDate ? `Target Delivery Date: ${requestedDeliveryDate.trim()}` : null,
+      customerSnapshot.poNumber ? `PO Reference: ${customerSnapshot.poNumber}` : null,
+      customerSnapshot.requestedDeliveryDate ? `Target Delivery Date: ${customerSnapshot.requestedDeliveryDate}` : null,
       partialShipmentAllowed ? 'Partial batch consignment dispatch allowed' : 'Ship complete consignment only',
-      factoryNotes?.trim() ? `Consignment Notes: ${factoryNotes.trim()}` : null,
+      customerSnapshot.consignmentNotes ? `Consignment Notes: ${customerSnapshot.consignmentNotes}` : null,
       validCouponCode ? `Coupon Applied: ${validCouponCode} (-₹${couponDiscount})` : null,
     ].filter(Boolean).join(' | ');
 
