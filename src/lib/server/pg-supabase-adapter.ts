@@ -1,5 +1,11 @@
 import { Pool } from 'pg';
 import { verifySessionToken } from './session';
+import {
+  assertSafeIdent,
+  escapeLikePattern,
+  parseOrClauses,
+  resolveSafeColumnExpr,
+} from './pg-filter-utils';
 
 let globalPool: Pool | null = null;
 
@@ -37,7 +43,7 @@ class QueryBuilder<T = any> {
   private isMaybeSingle: boolean = false;
 
   constructor(tableName: string) {
-    this.tableName = tableName;
+    this.tableName = assertSafeIdent(tableName, 'table');
   }
 
   select(columns: string = '*') {
@@ -68,7 +74,7 @@ class QueryBuilder<T = any> {
 
   eq(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" = $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} = $PARAM`,
       values: [value],
     });
     return this;
@@ -76,7 +82,7 @@ class QueryBuilder<T = any> {
 
   neq(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" != $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} != $PARAM`,
       values: [value],
     });
     return this;
@@ -84,7 +90,7 @@ class QueryBuilder<T = any> {
 
   gt(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" > $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} > $PARAM`,
       values: [value],
     });
     return this;
@@ -92,7 +98,7 @@ class QueryBuilder<T = any> {
 
   gte(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" >= $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} >= $PARAM`,
       values: [value],
     });
     return this;
@@ -100,7 +106,7 @@ class QueryBuilder<T = any> {
 
   lt(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" < $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} < $PARAM`,
       values: [value],
     });
     return this;
@@ -108,7 +114,7 @@ class QueryBuilder<T = any> {
 
   lte(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" <= $PARAM`,
+      sql: `${resolveSafeColumnExpr(column)} <= $PARAM`,
       values: [value],
     });
     return this;
@@ -116,29 +122,38 @@ class QueryBuilder<T = any> {
 
   like(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" LIKE $PARAM`,
-      values: [value],
+      sql: `${resolveSafeColumnExpr(column)} LIKE $PARAM ESCAPE '\\'`,
+      values: [escapeLikePattern(value)],
     });
     return this;
   }
 
   ilike(column: string, value: any) {
     this.conditions.push({
-      sql: `"${column}" ILIKE $PARAM`,
-      values: [value],
+      sql: `${resolveSafeColumnExpr(column)} ILIKE $PARAM ESCAPE '\\'`,
+      values: [escapeLikePattern(value)],
+    });
+    return this;
+  }
+
+  ilikeWildcard(column: string, pattern: string) {
+    this.conditions.push({
+      sql: `${resolveSafeColumnExpr(column)} ILIKE $PARAM`,
+      values: [String(pattern ?? '')],
     });
     return this;
   }
 
   is(column: string, value: any) {
+    const expr = resolveSafeColumnExpr(column);
     if (value === null) {
       this.conditions.push({
-        sql: `"${column}" IS NULL`,
+        sql: `${expr} IS NULL`,
         values: [],
       });
     } else {
       this.conditions.push({
-        sql: `"${column}" = $PARAM`,
+        sql: `${expr} = $PARAM`,
         values: [value],
       });
     }
@@ -146,85 +161,50 @@ class QueryBuilder<T = any> {
   }
 
   in(column: string, values: any[]) {
+    const expr = resolveSafeColumnExpr(column);
     if (!values || values.length === 0) {
       this.conditions.push({ sql: '1=0', values: [] });
       return this;
     }
     const placeholders = values.map(() => '$PARAM').join(', ');
     this.conditions.push({
-      sql: `"${column}" IN (${placeholders})`,
+      sql: `${expr} IN (${placeholders})`,
       values: [...values],
     });
     return this;
   }
 
   not(column: string, operator: string, value: any) {
+    const expr = resolveSafeColumnExpr(column);
     if (operator === 'is' && value === null) {
       this.conditions.push({
-        sql: `"${column}" IS NOT NULL`,
+        sql: `${expr} IS NOT NULL`,
         values: [],
       });
-    } else {
+    } else if (operator === 'eq') {
       this.conditions.push({
-        sql: `NOT ("${column}" = $PARAM)`,
+        sql: `NOT (${expr} = $PARAM)`,
         values: [value],
       });
+    } else {
+      throw new Error(`Unsupported .not() operator: "${String(operator)}"`);
     }
     return this;
   }
 
   or(filterStr: string) {
-    // Parser for PostgREST or filters like "customerId.eq.123,customerSnapshot->>email.ilike.abc@def.com"
-    const parts = filterStr.split(',').map((p) => p.trim()).filter(Boolean);
-    const orSqlParts: string[] = [];
-    const orValues: any[] = [];
-    const safeIdent = (s: string) => /^[a-zA-Z0-9_]+$/.test(s);
-
-    for (const part of parts) {
-      if (part.includes('.eq.')) {
-        const [col, val] = part.split('.eq.');
-        if (!safeIdent(col)) continue;
-        orSqlParts.push(`"${col}" = $PARAM`);
-        orValues.push(val);
-      } else if (part.includes('.ilike.')) {
-        const [fieldExpr, val] = part.split('.ilike.');
-        const hasExplicitWildcard = val.includes('*') || val.includes('%');
-        const normalizedVal = hasExplicitWildcard ? val.replace(/\*/g, '%') : val;
-
-        if (fieldExpr.includes('->>')) {
-          const [col, jsonKey] = fieldExpr.split('->>');
-          if (!safeIdent(col) || !safeIdent(jsonKey)) continue;
-          if (hasExplicitWildcard) {
-            orSqlParts.push(`("${col}"->>'${jsonKey}') ILIKE $PARAM`);
-          } else {
-            orSqlParts.push(`LOWER(COALESCE("${col}"->>'${jsonKey}', '')) = LOWER($PARAM)`);
-          }
-          orValues.push(normalizedVal);
-        } else {
-          if (!safeIdent(fieldExpr)) continue;
-          if (hasExplicitWildcard) {
-            orSqlParts.push(`"${fieldExpr}" ILIKE $PARAM`);
-          } else {
-            orSqlParts.push(`LOWER(COALESCE("${fieldExpr}", '')) = LOWER($PARAM)`);
-          }
-          orValues.push(normalizedVal);
-        }
-      }
-    }
-
-    if (orSqlParts.length > 0) {
-      this.conditions.push({
-        sql: `(${orSqlParts.join(' OR ')})`,
-        values: orValues,
-      });
-    }
+    const { sqlParts, values } = parseOrClauses(filterStr);
+    this.conditions.push({
+      sql: `(${sqlParts.join(' OR ')})`,
+      values,
+    });
     return this;
   }
 
   order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) {
     const dir = options?.ascending === false ? 'DESC' : 'ASC';
     const nulls = options?.nullsFirst === true ? 'NULLS FIRST' : 'NULLS LAST';
-    this.orderClauses.push(`"${column}" ${dir} ${nulls}`);
+    this.orderClauses.push(`"${assertSafeIdent(column, 'order column')}" ${dir} ${nulls}`);
     return this;
   }
 
@@ -280,7 +260,7 @@ class QueryBuilder<T = any> {
       if (rows.length === 0) return { text: '', values: [] };
 
       const cols = Object.keys(rows[0]);
-      const quotedCols = cols.map((c) => `"${c}"`).join(', ');
+      const quotedCols = cols.map((c) => `"${assertSafeIdent(c, 'insert column')}"`).join(', ');
 
       const rowValuesSql: string[] = [];
       for (const row of rows) {
@@ -311,7 +291,7 @@ class QueryBuilder<T = any> {
         } else {
           allValues.push(rawVal);
         }
-        return `"${col}" = ${placeholder}`;
+        return `"${assertSafeIdent(col, 'update column')}" = ${placeholder}`;
       });
 
       let whereSql = '';
@@ -347,12 +327,17 @@ class QueryBuilder<T = any> {
           const relMatch = trimmed.match(/^([a-zA-Z0-9_]+):([a-zA-Z0-9_]+)\((.+)\)$/);
           if (relMatch) {
             const [, alias, foreignTable, foreignCols] = relMatch;
-            const fkCol = foreignTable === 'ecommerce_products' ? 'productId' : foreignTable === 'ecommerce_customers' ? 'customerId' : 'id';
+            const safeAlias = assertSafeIdent(alias, 'relation alias');
+            const safeForeignTable = assertSafeIdent(foreignTable, 'relation table');
+            const fkCol = safeForeignTable === 'ecommerce_products' ? 'productId' : safeForeignTable === 'ecommerce_customers' ? 'customerId' : 'id';
             const jsonBuildArgs = foreignCols
               .split(',')
-              .map((c) => `'${c.trim()}', sub."${c.trim()}"`)
+              .map((c) => {
+                const fc = assertSafeIdent(c.trim(), 'relation column');
+                return `'${fc}', sub."${fc}"`;
+              })
               .join(', ');
-            return `(SELECT json_build_object(${jsonBuildArgs}) FROM "${foreignTable}" sub WHERE sub.id = "${this.tableName}"."${fkCol}") AS "${alias}"`;
+            return `(SELECT json_build_object(${jsonBuildArgs}) FROM "${safeForeignTable}" sub WHERE sub.id = "${this.tableName}"."${fkCol}") AS "${safeAlias}"`;
           }
           if (trimmed.includes(':') || trimmed.includes('(') || trimmed.includes('"')) return trimmed;
           return `"${trimmed}"`;
@@ -440,11 +425,12 @@ export function createPostgresSupabaseAdapter() {
         }
 
         // Generic fallback for any other RPC function
+        const safeFn = assertSafeIdent(fnName, 'RPC function');
         const keys = Object.keys(params);
         const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
         const query = placeholders
-          ? `SELECT public."${fnName}"(${placeholders}) as result`
-          : `SELECT public."${fnName}"() as result`;
+          ? `SELECT public."${safeFn}"(${placeholders}) as result`
+          : `SELECT public."${safeFn}"() as result`;
         const res = await pool.query(query, Object.values(params));
         return { data: res.rows[0]?.result ?? null, error: null };
       } catch (err: any) {
