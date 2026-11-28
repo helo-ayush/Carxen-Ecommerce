@@ -5,6 +5,7 @@ import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/custome
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import type { Product } from '@/data/products';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
+import { aggregateAndValidateCartItems } from '@/lib/storefront/cart-items';
 import {
   createRazorpayOrder,
   getRazorpayConfig,
@@ -116,13 +117,27 @@ export async function POST(request: Request) {
       totalPrice: number;
     }[] = [];
 
-    for (const item of items) {
-      const pid = Number(item.productId);
-      const qty = Number(item.quantity);
-      if (!Number.isFinite(pid) || !Number.isInteger(qty) || qty <= 0) continue;
+    let aggregatedItems;
+    try {
+      aggregatedItems = aggregateAndValidateCartItems(items);
+    } catch (aggErr: any) {
+      return NextResponse.json(
+        { error: aggErr?.message || 'Invalid wholesale basket items.' },
+        { status: 400 }
+      );
+    }
+
+    for (const item of aggregatedItems) {
+      const pid = item.productId;
+      const qty = item.quantity;
 
       const p = catalog.find((x: Product) => x.id === pid);
-      if (!p) continue;
+      if (!p) {
+        return NextResponse.json(
+          { error: `Product #${pid} was not found in the wholesale catalog.` },
+          { status: 400 }
+        );
+      }
 
       const moq = Math.max(1, p.b2bMoq || 5);
       if (qty < moq) {

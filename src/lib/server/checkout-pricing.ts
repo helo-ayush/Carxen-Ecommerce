@@ -1,6 +1,7 @@
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
 import { calculateItemPriceWithOfferLimit } from '@/lib/storefront/wholesale-pricing';
 import { validateCoupon, type WholesaleBuyerContext, type StorefrontCoupon } from '@/lib/storefront/coupons';
+import { aggregateAndValidateCartItems, RETAIL_MAX_QTY_PER_LINE } from '@/lib/storefront/cart-items';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
 export interface CartItemInput {
@@ -44,9 +45,8 @@ export interface AuthoritativeTotalsResult {
 export async function calculateAuthoritativeCartTotals(
   params: AuthoritativeTotalsParams
 ): Promise<AuthoritativeTotalsResult> {
-  if (!params.items || !Array.isArray(params.items) || params.items.length === 0) {
-    throw new Error('Your cart is empty.');
-  }
+  const maxQty = params.buyerContext?.isWholesaleApproved ? 10_000 : RETAIL_MAX_QTY_PER_LINE;
+  const aggregatedItems = aggregateAndValidateCartItems(params.items, { maxQtyPerLine: maxQty });
 
   // Fetch verified product catalog
   const catalog = await getStorefrontProducts();
@@ -55,9 +55,9 @@ export async function calculateAuthoritativeCartTotals(
   let subtotal = 0;
   const lineItems: AuthoritativeTotalsResult['lineItems'] = [];
 
-  for (const item of params.items) {
-    const qty = Math.max(1, Math.min(50000, Math.floor(Number(item.quantity) || 1)));
-    const product = products.find((p) => p.id === Number(item.productId));
+  for (const item of aggregatedItems) {
+    const qty = item.quantity;
+    const product = products.find((p) => p.id === item.productId);
 
     if (!product) {
       throw new Error(`Product #${item.productId} was not found in the verified catalog.`);
