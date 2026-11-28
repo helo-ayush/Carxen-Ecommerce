@@ -162,10 +162,7 @@ export function VehicleFilterBar({
         </div>
       </div>
 
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-        style={{ gap: '8px' }}
-      >
+      <div className="vfb-fields-grid">
         <VehicleMakeAutocomplete
           value={value.brand}
           style={inputStyle}
