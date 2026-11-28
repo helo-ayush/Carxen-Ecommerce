@@ -20,6 +20,12 @@ export async function POST(request: Request) {
     }
 
     const cleanOrderNumber = orderNumber.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(cleanOrderNumber)) {
+      return NextResponse.json(
+        { error: 'Invalid order reference number.' },
+        { status: 400 }
+      );
+    }
 
     // 1. Authenticate caller (Account session or Guest order token)
     let authUser: any = null;
@@ -50,12 +56,27 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    // 2. Query order from database
-    const { data: order, error: orderErr } = await supabase
-      .from('ecommerce_orders')
-      .select('*')
-      .or(`orderNumber.eq.${cleanOrderNumber},id.eq.${cleanOrderNumber}`)
-      .maybeSingle();
+    // 2. Query order from database using separate parameterised .eq() calls
+    let order: any = null;
+    let orderErr: any = null;
+    {
+      const byOrderNum = await supabase
+        .from('ecommerce_orders')
+        .select('*')
+        .eq('orderNumber', cleanOrderNumber)
+        .maybeSingle();
+      order = byOrderNum.data;
+      orderErr = byOrderNum.error;
+    }
+    if (!order && !orderErr) {
+      const byId = await supabase
+        .from('ecommerce_orders')
+        .select('*')
+        .eq('id', cleanOrderNumber)
+        .maybeSingle();
+      order = byId.data;
+      orderErr = byId.error;
+    }
 
     if (orderErr || !order) {
       return NextResponse.json(
@@ -68,18 +89,15 @@ export async function POST(request: Request) {
     let isAuthorized = false;
 
     if (hasAuth) {
-      const authEmail = (authUser?.email || customer?.email || '').toLowerCase().trim();
       const custId = customer?.id || '';
       const authUserId = customer?.authUserId || authUser?.id || '';
       const orderCustomerId = order.customerId || '';
-      const orderEmail = ((order.customerSnapshot as any)?.email || '').toLowerCase().trim();
       const isAdmin = authUser?.role === 'admin' || authUser?.app_metadata?.role === 'admin';
 
       if (
         isAdmin ||
         (custId && orderCustomerId && custId === orderCustomerId) ||
-        (authUserId && orderCustomerId && authUserId === orderCustomerId) ||
-        (authEmail && orderEmail && authEmail === orderEmail)
+        (authUserId && orderCustomerId && authUserId === orderCustomerId)
       ) {
         isAuthorized = true;
       }
@@ -103,25 +121,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Verify 6-hour relief period window
+    // 4. Verify 6-hour relief period window (fail closed on missing/invalid date)
     const placedTimestamp = order.placedAt || order.createdAt;
-    const placedTime = new Date(placedTimestamp).getTime();
+    const placedTime = placedTimestamp ? new Date(placedTimestamp).getTime() : NaN;
     const hoursElapsed = (Date.now() - placedTime) / (1000 * 60 * 60);
 
-    if (Number.isFinite(hoursElapsed) && hoursElapsed > 6) {
+    if (!placedTimestamp || !Number.isFinite(placedTime) || !Number.isFinite(hoursElapsed) || hoursElapsed > 6) {
       return NextResponse.json(
         {
           error:
-            'The 6-hour cancellation relief period has expired for this order. Please contact CarXen customer support to request cancellation.',
-          hoursElapsed: Math.round(hoursElapsed),
+            'This order is not eligible for online self-cancellation (the 6-hour relief period has expired or order timestamp is unavailable). Please contact CarXen customer support.',
         },
         { status: 400 }
       );
     }
 
-    // 5. Verify order status allows cancellation
-    const statusUpper = (order.status || '').toUpperCase();
-    const fulfillmentUpper = (order.fulfillmentStatus || '').toUpperCase();
+    // 5. Block self-cancellation for paid orders (refunds must go through support)
+    const paymentUpper = String(order.paymentStatus || '').toUpperCase();
+    if (paymentUpper === 'PAID' || paymentUpper === 'CAPTURED' || paymentUpper === 'SETTLED') {
+      return NextResponse.json(
+        {
+          error:
+            'Paid orders cannot be self-cancelled online. Please contact CarXen customer support to request cancellation and refund.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 6. Verify order status allows cancellation (unshipped statuses only)
+    const ALLOWED_CANCEL_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING'];
+    const statusUpper = String(order.status || '').toUpperCase();
+    const fulfillmentUpper = String(order.fulfillmentStatus || '').toUpperCase();
 
     if (statusUpper === 'CANCELLED' || fulfillmentUpper === 'CANCELLED') {
       return NextResponse.json(
@@ -130,17 +160,17 @@ export async function POST(request: Request) {
       );
     }
 
-    if (statusUpper === 'DELIVERED' || fulfillmentUpper === 'DELIVERED') {
+    if (!ALLOWED_CANCEL_STATUSES.includes(statusUpper) || !['PENDING', 'CONFIRMED', 'PROCESSING', 'UNFULFILLED', ''].includes(fulfillmentUpper)) {
       return NextResponse.json(
-        { error: `Order #${order.orderNumber} has already been delivered and cannot be cancelled.` },
+        { error: `Order #${order.orderNumber} is already in "${order.status}" state and cannot be cancelled online.` },
         { status: 400 }
       );
     }
 
     const now = new Date().toISOString();
 
-    // 6. Update order status to CANCELLED in database
-    const { error: updateErr } = await supabase
+    // 7. Atomically transition status to CANCELLED (re-checking allowed statuses to prevent double-cancel races)
+    const { data: updatedOrder, error: updateErr } = await supabase
       .from('ecommerce_orders')
       .update({
         status: 'CANCELLED',
@@ -148,11 +178,14 @@ export async function POST(request: Request) {
         updatedAt: now,
         customerSnapshot: {
           ...(order.customerSnapshot || {}),
-          cancellationReason: reason?.trim() || 'Cancelled by customer within 6h relief window',
+          cancellationReason: typeof reason === 'string' && reason.trim() ? reason.trim().slice(0, 300) : 'Cancelled by customer within 6h relief window',
           cancelledAt: now,
         },
       })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .in('status', ALLOWED_CANCEL_STATUSES)
+      .select('id')
+      .maybeSingle();
 
     if (updateErr) {
       console.error('Failed to update order status in DB:', updateErr);
@@ -160,6 +193,33 @@ export async function POST(request: Request) {
         { error: 'Database update failed while cancelling the order. Please try again.' },
         { status: 500 }
       );
+    }
+
+    if (!updatedOrder) {
+      return NextResponse.json(
+        { error: `Order #${order.orderNumber} was already cancelled or shipped.` },
+        { status: 409 }
+      );
+    }
+
+    // 7b. Restore campaign usageCount if a coupon was applied
+    if (order.couponCode && order.storeId) {
+      try {
+        const { data: camp } = await supabase
+          .from('ecommerce_campaigns')
+          .select('id, usageCount')
+          .eq('storeId', order.storeId)
+          .eq('code', order.couponCode)
+          .maybeSingle();
+        if (camp && Number(camp.usageCount) > 0) {
+          await supabase
+            .from('ecommerce_campaigns')
+            .update({ usageCount: Math.max(0, Number(camp.usageCount) - 1), updatedAt: now })
+            .eq('id', camp.id);
+        }
+      } catch (campErr) {
+        console.warn('Could not restore campaign usageCount during cancellation:', campErr);
+      }
     }
 
     // 7. Also update any related shipment records and release active stock reservations
