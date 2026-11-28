@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import {
   verifyRazorpaySignature,
   fetchAndVerifyRazorpayPayment,
   getRazorpayConfig,
 } from '@/lib/server/razorpay';
+import {
+  RAZORPAY_BINDING_COOKIE_NAME,
+  computeCartHash,
+  computeShippingAddressHash,
+  verifyRazorpayOrderBinding,
+} from '@/lib/server/razorpay-binding';
 import { calculateAuthoritativeCartTotals } from '@/lib/server/checkout-pricing';
 import {
   parseCheckoutPayload,
@@ -101,6 +108,30 @@ export async function POST(request: Request) {
       buyerContext,
     });
 
+    // Step 3b: Verify Razorpay order binding to cart, amount, currency, customer, address & coupon
+    const cookieStore = await cookies();
+    const bindingCookie = cookieStore.get(RAZORPAY_BINDING_COOKIE_NAME)?.value;
+    const bindingCheck = verifyRazorpayOrderBinding(bindingCookie, {
+      razorpayOrderId: razorpay_order_id,
+      cartHash: computeCartHash({
+        items: totals.lineItems,
+        shippingSpeed: parsedPayload.shippingSpeed,
+        couponCode: totals.appliedCoupon,
+      }),
+      amountInPaise: totals.amountInPaise,
+      currency: 'INR',
+      customerId,
+      shippingAddressHash: computeShippingAddressHash(parsedPayload.shippingAddress),
+      couponCode: totals.appliedCoupon,
+    });
+
+    if (!bindingCheck.ok) {
+      return NextResponse.json(
+        { error: bindingCheck.reason },
+        { status: 400 }
+      );
+    }
+
     // Step 4: Cryptographic HMAC-SHA256 signature verification
     const isValidSignature = verifyRazorpaySignature({
       razorpay_order_id,
@@ -151,6 +182,20 @@ export async function POST(request: Request) {
       console.error('Duplicate payment reuse attempt:', razorpay_payment_id);
       return NextResponse.json(
         { error: 'This payment transaction has already been recorded for an existing order.' },
+        { status: 409 }
+      );
+    }
+
+    // Step 6b: Ensure this razorpay_order_id has not already been consumed by a prior payment
+    const { data: consumedOrderPayment } = await supabaseAdmin
+      .from('ecommerce_payments')
+      .select('id, providerPaymentId')
+      .eq('metadata->>razorpay_order_id', razorpay_order_id)
+      .maybeSingle();
+
+    if (consumedOrderPayment && consumedOrderPayment.providerPaymentId !== razorpay_payment_id) {
+      return NextResponse.json(
+        { error: 'This Razorpay order has already been consumed.' },
         { status: 409 }
       );
     }
@@ -329,6 +374,17 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === 'production',
       path: ORDER_ACCESS_COOKIE_PATH,
       maxAge: ORDER_ACCESS_COOKIE_MAX_AGE,
+    });
+
+    // Mark Razorpay order binding cookie consumed
+    response.cookies.set({
+      name: RAZORPAY_BINDING_COOKIE_NAME,
+      value: '',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 0,
     });
 
     return response;

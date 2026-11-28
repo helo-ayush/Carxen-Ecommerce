@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import {
+  RAZORPAY_BINDING_COOKIE_NAME,
+  computeCartHash,
+  computeShippingAddressHash,
+  signRazorpayOrderBinding,
+  verifyRazorpayOrderBinding,
+} from '@/lib/server/razorpay-binding';
 import { getAuthenticatedCustomer, resolveStoreMeta } from '@/lib/server/customer';
 import { resolveIdempotentPaymentOrder, rollbackFailedPaidOrder } from '@/lib/server/payment-idempotency';
 import { getStorefrontProducts } from '@/lib/storefront/catalog';
@@ -375,7 +383,25 @@ export async function POST(request: Request) {
 
       const { keyId } = getRazorpayConfig();
 
-      return NextResponse.json({
+      const bindingToken = signRazorpayOrderBinding({
+        razorpayOrderId: rzpOrder.id,
+        cartHash: computeCartHash({
+          items: validatedItems.map((it) => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+          })),
+          shippingSpeed: 'wholesale',
+          couponCode: validCouponCode,
+        }),
+        amountInPaise,
+        currency: 'INR',
+        customerId: customer?.id || null,
+        shippingAddressHash: computeShippingAddressHash(shippingAddress),
+        couponCode: validCouponCode,
+      });
+
+      const response = NextResponse.json({
         success: true,
         razorpayOrderId: rzpOrder.id,
         amount: amountInPaise,
@@ -387,6 +413,16 @@ export async function POST(request: Request) {
         gstAmount,
         totalAmount: totalOrderValue,
       });
+
+      response.cookies.set(RAZORPAY_BINDING_COOKIE_NAME, bindingToken, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 30 * 60,
+      });
+
+      return response;
     }
 
     // ORDER PLACEMENT FLOW
@@ -408,6 +444,33 @@ export async function POST(request: Request) {
       if (!razorpayOrderId || !razorpayPaymentId) {
         return NextResponse.json(
           { error: 'Missing Razorpay order ID or payment ID for online payment.' },
+          { status: 400 }
+        );
+      }
+
+      // Verify signed checkout binding for wholesale Razorpay order
+      const cookieStore = await cookies();
+      const bindingCookie = cookieStore.get(RAZORPAY_BINDING_COOKIE_NAME)?.value;
+      const bindingCheck = verifyRazorpayOrderBinding(bindingCookie, {
+        razorpayOrderId,
+        cartHash: computeCartHash({
+          items: validatedItems.map((it) => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+          })),
+          shippingSpeed: 'wholesale',
+          couponCode: validCouponCode,
+        }),
+        amountInPaise: Math.round(totalOrderValue * 100),
+        currency: 'INR',
+        customerId: customer?.id || null,
+        shippingAddressHash: computeShippingAddressHash(shippingAddress),
+        couponCode: validCouponCode,
+      });
+      if (!bindingCheck.ok) {
+        return NextResponse.json(
+          { error: bindingCheck.reason },
           { status: 400 }
         );
       }

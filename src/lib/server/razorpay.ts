@@ -134,12 +134,13 @@ export interface FetchPaymentParams {
   razorpay_payment_id: string;
   expected_order_id: string;
   expected_amount_in_paise: number;
+  expected_currency?: string;
 }
 
 /**
  * Validates payment directly with Razorpay REST API:
- * 1. Confirms the payment status is captured/authorized
- * 2. Confirms payment amount matches authoritative order amount in paise
+ * 1. Confirms the payment status is captured
+ * 2. Confirms payment amount & currency match authoritative order amount
  * 3. Confirms payment order_id matches expected order_id
  */
 export async function fetchAndVerifyRazorpayPayment(params: FetchPaymentParams) {
@@ -170,8 +171,15 @@ export async function fetchAndVerifyRazorpayPayment(params: FetchPaymentParams) 
     );
   }
 
-  if (payment.status !== 'captured' && payment.status !== 'authorized') {
-    throw new Error(`Payment is in ${payment.status} state, expected captured or authorized.`);
+  const expectedCurrency = (params.expected_currency || 'INR').toUpperCase();
+  if (String(payment.currency || '').toUpperCase() !== expectedCurrency) {
+    throw new Error(
+      `Payment currency mismatch: received ${payment.currency}, expected ${expectedCurrency}.`
+    );
+  }
+
+  if (payment.status !== 'captured') {
+    throw new Error(`Payment is in ${payment.status} state, expected captured.`);
   }
 
   return payment;

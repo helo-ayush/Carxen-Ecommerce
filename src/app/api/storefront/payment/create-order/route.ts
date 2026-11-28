@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { getRazorpayConfig, createRazorpayOrder } from '@/lib/server/razorpay';
 import { calculateAuthoritativeCartTotals } from '@/lib/server/checkout-pricing';
 import { getAuthenticatedCustomer, loadCustomerOrders } from '@/lib/server/customer';
+import {
+  RAZORPAY_BINDING_COOKIE_NAME,
+  computeCartHash,
+  computeShippingAddressHash,
+  signRazorpayOrderBinding,
+} from '@/lib/server/razorpay-binding';
 import type { WholesaleBuyerContext } from '@/lib/storefront/coupons';
 
 export const dynamic = 'force-dynamic';
@@ -23,9 +29,11 @@ export async function POST(request: Request) {
 
     // Authenticate user to get wholesale status and buyer context
     let buyerContext: WholesaleBuyerContext | undefined;
+    let boundCustomerId: string | null = null;
     try {
       const { customer: authCust } = await getAuthenticatedCustomer(request);
       if (authCust) {
+        boundCustomerId = authCust.id;
         let orderCount = 0;
         try {
           const pastOrders = await loadCustomerOrders(authCust.id, authCust.email);
@@ -91,7 +99,21 @@ export async function POST(request: Request) {
 
     const { keyId } = getRazorpayConfig();
 
-    return NextResponse.json(
+    const bindingToken = signRazorpayOrderBinding({
+      razorpayOrderId: rzpOrder.id,
+      cartHash: computeCartHash({
+        items: totals.lineItems,
+        shippingSpeed: shippingSpeed === 'exp' ? 'exp' : 'std',
+        couponCode: totals.appliedCoupon,
+      }),
+      amountInPaise: totals.amountInPaise,
+      currency: 'INR',
+      customerId: boundCustomerId,
+      shippingAddressHash: computeShippingAddressHash(shippingAddress),
+      couponCode: totals.appliedCoupon,
+    });
+
+    const response = NextResponse.json(
       {
         success: true,
         razorpayOrderId: rzpOrder.id,
@@ -112,6 +134,16 @@ export async function POST(request: Request) {
         headers: { 'Cache-Control': 'no-store' },
       }
     );
+
+    response.cookies.set(RAZORPAY_BINDING_COOKIE_NAME, bindingToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 30 * 60,
+    });
+
+    return response;
   } catch (err: any) {
     console.error('Failed to create Razorpay checkout order:', err);
     return NextResponse.json(
