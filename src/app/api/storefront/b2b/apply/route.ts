@@ -118,7 +118,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedEmail = (email || customer?.email || authUser?.email || '').trim().toLowerCase();
+    if ((customer as any)?.b2bStatus === 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Your wholesale dealer account is already approved.' },
+        { status: 409 }
+      );
+    }
+
+    // Identity email comes strictly from the authenticated user / linked customer row.
+    // Any applicant-typed email is stored separately as metadata.b2bContactEmail.
+    const verifiedEmail = (customer?.email || authUser?.email || '').trim().toLowerCase() || null;
+    const contactEmail = typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
     const normalizedPhone = (phone || customer?.phone || '').trim();
     const normalizedGstin = (gstin || '').trim().toUpperCase() || null;
     const normalizedPan = (pan || '').trim().toUpperCase() || null;
@@ -163,7 +173,6 @@ export async function POST(request: Request) {
 
     const b2bData = {
       name: name.trim(),
-      email: normalizedEmail || null,
       phone: normalizedPhone || null,
       b2bStatus: 'PENDING',
       businessName: businessName.trim(),
@@ -189,7 +198,11 @@ export async function POST(request: Request) {
         .from('ecommerce_customers')
         .update({
           ...b2bData,
-          metadata: { ...existingMeta, referenceNumber },
+          metadata: {
+            ...existingMeta,
+            referenceNumber,
+            ...(contactEmail ? { b2bContactEmail: contactEmail } : {}),
+          },
         })
         .eq('id', customer.id);
 
@@ -206,43 +219,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Try finding customer by email or phone
-    if (normalizedEmail) {
-      const { data: existingCust, error: findError } = await supabase
-        .from('ecommerce_customers')
-        .select('id')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      if (findError) {
-        console.error('Customer lookup by email error:', findError);
-      }
-
-      if (existingCust) {
-        const existingMeta = ((existingCust as any).metadata || {}) as Record<string, any>;
-        const { error: updateError } = await supabase
-          .from('ecommerce_customers')
-          .update({
-            ...b2bData,
-            metadata: { ...existingMeta, referenceNumber },
-          })
-          .eq('id', existingCust.id);
-
-        if (updateError) {
-          console.error('Failed to update existing customer for B2B:', updateError);
-          return NextResponse.json({ error: formatUserFriendlyB2BError(updateError) }, { status: 500 });
-        }
-
-        return NextResponse.json({
-          success: true,
-          b2bStatus: 'PENDING',
-          referenceNumber,
-          message: 'Your B2B application has been received and is under review by CarXen.',
-        });
-      }
-    }
-
-    // Create new customer with PENDING B2B status
+    // Create new customer with PENDING B2B status linked to authUser.id (never look up by body.email)
     const { storeId, factoryId } = await resolveStoreMeta();
     const newId = `cust_${crypto.randomUUID().replace(/-/g, '')}`;
     const { error: insertError } = await supabase
@@ -252,12 +229,14 @@ export async function POST(request: Request) {
         storeId,
         factoryId,
         authUserId: authUser?.id || null,
+        email: verifiedEmail,
         status: 'ACTIVE',
         metadata: {
           tier: 'Wholesale Applicant',
           rewardPoints: 500,
           joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
           referenceNumber,
+          ...(contactEmail ? { b2bContactEmail: contactEmail } : {}),
         },
         createdAt: now,
         ...b2bData,
