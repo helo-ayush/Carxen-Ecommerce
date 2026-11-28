@@ -1,7 +1,11 @@
 import crypto from 'crypto';
 
-function getSessionSecret(): string {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_TOKEN_LIFETIME_SECONDS = 31 * 24 * 60 * 60; // 31 days
+
+export function getSessionSecret(): string {
   const secret =
+    process.env.SESSION_SECRET ||
     process.env.JWT_SECRET ||
     process.env.SUPABASE_SECRET_KEY ||
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -13,7 +17,7 @@ function getSessionSecret(): string {
 
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
-      'CRITICAL: No session signing secret configured (set JWT_SECRET or SUPABASE_SERVICE_ROLE_KEY).'
+      'CRITICAL: No session signing secret configured (set SESSION_SECRET or JWT_SECRET).'
     );
   }
 
@@ -56,7 +60,7 @@ export function signSessionToken(
  * Verifies a session token using HMAC-SHA256 constant-time comparison and checks expiration.
  */
 export function verifySessionToken(token: string): SessionPayload | null {
-  if (!token || typeof token !== 'string' || !token.startsWith('cxs.')) {
+  if (!token || typeof token !== 'string' || !token.startsWith('cxs.') || token.length > 4096) {
     return null;
   }
 
@@ -70,32 +74,50 @@ export function verifySessionToken(token: string): SessionPayload | null {
     return null;
   }
 
-  const expectedSig = crypto
-    .createHmac('sha256', getSessionSecret())
-    .update(`cxs.${payloadB64}`)
-    .digest('base64url');
-
-  const sigBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSig);
-
-  if (
-    sigBuffer.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
-  ) {
-    return null;
-  }
-
   try {
+    const expectedSig = crypto
+      .createHmac('sha256', getSessionSecret())
+      .update(`cxs.${payloadB64}`)
+      .digest('base64url');
+
+    const sigBuffer = Buffer.from(signature, 'utf8');
+    const expectedBuffer = Buffer.from(expectedSig, 'utf8');
+
+    if (
+      sigBuffer.length !== expectedBuffer.length ||
+      !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+    ) {
+      return null;
+    }
+
     const payload: SessionPayload = JSON.parse(
       Buffer.from(payloadB64, 'base64url').toString('utf-8')
     );
     const now = Math.floor(Date.now() / 1000);
 
-    if (!payload.sub || typeof payload.sub !== 'string') {
+    if (!payload || typeof payload !== 'object') {
       return null;
     }
 
-    if (!payload.exp || typeof payload.exp !== 'number' || payload.exp < now) {
+    if (!payload.sub || typeof payload.sub !== 'string' || !UUID_REGEX.test(payload.sub)) {
+      return null;
+    }
+
+    if (
+      typeof payload.iat !== 'number' ||
+      !Number.isFinite(payload.iat) ||
+      payload.iat > now + 60
+    ) {
+      return null;
+    }
+
+    if (
+      typeof payload.exp !== 'number' ||
+      !Number.isFinite(payload.exp) ||
+      payload.exp <= now ||
+      payload.exp - payload.iat <= 0 ||
+      payload.exp - payload.iat > MAX_TOKEN_LIFETIME_SECONDS
+    ) {
       return null;
     }
 
