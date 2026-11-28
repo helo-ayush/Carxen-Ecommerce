@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getPostgresPool } from '@/lib/server/pg-supabase-adapter';
+import { normalizeStrictEmail } from '@/lib/server/validation';
 
 const STORE_SLUG = process.env.NEXT_PUBLIC_ECOMMERCE_STORE_SLUG?.trim() || 'carxen';
 
@@ -9,10 +10,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password, fullName } = body || {};
 
-    const trimmedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const trimmedEmail = normalizeStrictEmail(email);
     const trimmedName = typeof fullName === 'string' ? fullName.trim() : 'Driver';
 
-    if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+    if (!trimmedEmail) {
       return NextResponse.json(
         { error: 'A valid email address is required.' },
         { status: 400 }

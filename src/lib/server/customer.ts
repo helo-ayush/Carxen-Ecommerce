@@ -159,16 +159,11 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
     return { user: null, customer: null };
   }
 
-  // Find customer by authUserId or verified email
-  const authOrFilters: string[] = [`authUserId.eq.${authUser.id}`];
-  if (authUser.email && authUser.email.trim()) {
-    authOrFilters.push(`email.ilike.${authUser.email.trim()}`);
-  }
-
+  // Find customer strictly by authUserId (never link/lookup by unverified email)
   let { data: customer } = await supabase
     .from('ecommerce_customers')
     .select('*')
-    .or(authOrFilters.join(','))
+    .eq('authUserId', authUser.id)
     .order('createdAt', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -213,20 +208,13 @@ export async function getAuthenticatedCustomer(request: Request): Promise<{
       const { data: retry } = await supabase
         .from('ecommerce_customers')
         .select('*')
-        .or(authOrFilters.join(','))
+        .eq('authUserId', authUser.id)
         .limit(1)
         .maybeSingle();
       customer = retry;
     } else {
       customer = created;
     }
-  } else if (!customer.authUserId) {
-    // Link existing customer row with this auth user ID
-    await supabase
-      .from('ecommerce_customers')
-      .update({ authUserId: authUser.id, updatedAt: new Date().toISOString() })
-      .eq('id', customer.id);
-    customer.authUserId = authUser.id;
   }
 
   return { user: authUser, customer: customer || null };
@@ -268,23 +256,25 @@ export async function loadCustomerAddresses(customerId: string): Promise<Custome
 
 export async function loadCustomerOrders(
   customerId: string,
-  customerEmail?: string | null,
+  _customerEmail?: string | null,
   authUserId?: string | null
 ): Promise<CustomerOrderHistoryRecord[]> {
   const supabase = getSupabaseAdmin();
 
-  const filters: string[] = [`customerId.eq.${customerId}`];
-  if (authUserId && authUserId.trim()) {
-    filters.push(`customerId.eq.${authUserId.trim()}`);
-  }
-  if (customerEmail && customerEmail.trim()) {
-    filters.push(`customerSnapshot->>email.ilike.${customerEmail.trim()}`);
-  }
+  // Load orders strictly by customerId or authUserId (never by unverified email).
+  const customerIds = Array.from(
+    new Set(
+      [customerId, authUserId]
+        .map((id) => (typeof id === 'string' ? id.trim() : ''))
+        .filter(Boolean)
+    )
+  );
+  if (customerIds.length === 0) return [];
 
   const { data: orders, error: ordersErr } = await supabase
     .from('ecommerce_orders')
     .select('*')
-    .or(filters.join(','))
+    .in('customerId', customerIds)
     .order('placedAt', { ascending: false })
     .order('createdAt', { ascending: false });
 
@@ -441,51 +431,11 @@ export async function persistShippingAddressToCustomer({
 
   try {
     const supabase = getSupabaseAdmin();
-    const cleanEmail = (customerEmail || '').trim().toLowerCase();
-    let targetCustId = customerId?.trim() || null;
+    const targetCustId = customerId?.trim() || null;
 
-    if (!targetCustId && cleanEmail) {
-      const { data: matchedCust } = await supabase
-        .from('ecommerce_customers')
-        .select('id')
-        .ilike('email', cleanEmail)
-        .limit(1)
-        .maybeSingle();
-
-      if (matchedCust?.id) {
-        targetCustId = matchedCust.id;
-      } else {
-        // Auto-provision customer record so future logins immediately link orders & addresses
-        const { storeId, factoryId } = await resolveStoreMeta();
-        const newCustId = `cust_${crypto.randomUUID().replace(/-/g, '')}`;
-        const now = new Date().toISOString();
-        const { data: createdCust } = await supabase
-          .from('ecommerce_customers')
-          .insert({
-            id: newCustId,
-            storeId,
-            factoryId,
-            authUserId: null,
-            name: (recipientName || cleanEmail.split('@')[0] || 'Driver').trim(),
-            email: cleanEmail,
-            phone: phone?.trim() || null,
-            status: 'ACTIVE',
-            metadata: {
-              avatarUrl: '',
-              rewardPoints: 250,
-              joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            },
-            createdAt: now,
-            updatedAt: now,
-          })
-          .select('id')
-          .maybeSingle();
-
-        targetCustId = createdCust?.id || newCustId;
-      }
+    if (!targetCustId) {
+      return;
     }
-
-    if (!targetCustId) return;
 
     // Check existing addresses for this customer
     const { data: existingAddresses } = await supabase

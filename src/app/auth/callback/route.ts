@@ -104,11 +104,11 @@ export async function GET(request: Request) {
 
     const now = new Date().toISOString();
 
-    // Look up customer by authUserId or email
+    // Look up customer strictly by authUserId (never link existing rows by email)
     let { data: customer } = await admin
       .from('ecommerce_customers')
       .select('*')
-      .or(`authUserId.eq.${authUser.id},email.eq.${cleanEmail}`)
+      .eq('authUserId', authUser.id)
       .limit(1)
       .maybeSingle();
 
